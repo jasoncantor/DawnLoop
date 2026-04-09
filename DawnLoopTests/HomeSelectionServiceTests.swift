@@ -4,12 +4,15 @@ import SwiftData
 @testable import DawnLoop
 
 /// Mock HomeKit adapter for HomeSelectionService testing
+/// Drives real HomeSelectionService behavior through controlled adapter outputs
 @preconcurrency
 actor HomeSelectionMockAdapter: HomeKitAdapterProtocol {
     private var _authorizationStatus: HMHomeManagerAuthorizationStatus = [.determined, .authorized]
     private var _homes: [HMHome] = []
     private var _shouldThrowOnFetchHomes = false
     private var _compatibleAccessories: [HMAccessory] = []
+
+    // MARK: - Test Control Methods
 
     func setAuthorizationStatus(_ status: HMHomeManagerAuthorizationStatus) {
         _authorizationStatus = status
@@ -27,18 +30,22 @@ actor HomeSelectionMockAdapter: HomeKitAdapterProtocol {
         _compatibleAccessories = accessories
     }
 
+    // MARK: - HomeKitAdapterProtocol Implementation
+
     nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
         HMHomeManagerAuthorizationStatus([.determined, .authorized])
     }
 
-    func getAuthorizationStatus() -> HMHomeManagerAuthorizationStatus {
+    /// Returns the configured authorization status for test control
+    func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
         return _authorizationStatus
     }
 
     nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
-        return [.determined, .authorized]
+        return HMHomeManagerAuthorizationStatus([.determined, .authorized])
     }
 
+    /// Returns configured homes or throws based on test setup
     func fetchHomes() async throws -> [HMHome] {
         if _shouldThrowOnFetchHomes {
             throw HomeSelectionTestError.fetchFailed
@@ -46,6 +53,7 @@ actor HomeSelectionMockAdapter: HomeKitAdapterProtocol {
         return _homes
     }
 
+    /// Returns configured compatible accessories
     func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
         return _compatibleAccessories
     }

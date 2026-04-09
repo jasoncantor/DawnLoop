@@ -4,10 +4,14 @@ import SwiftData
 @testable import DawnLoop
 
 /// Mock HomeKit adapter for AccessoryDiscoveryService testing
+/// Drives real AccessoryDiscoveryService behavior through controlled adapter outputs
 @preconcurrency
 actor AccessoryDiscoveryMockAdapter: HomeKitAdapterProtocol {
     private var _compatibleAccessories: [HMAccessory] = []
     private var _authorizationStatus: HMHomeManagerAuthorizationStatus = [.determined, .authorized]
+    private var _homes: [HMHome] = []
+
+    // MARK: - Test Control Methods
 
     func setCompatibleAccessories(_ accessories: [HMAccessory]) {
         _compatibleAccessories = accessories
@@ -17,20 +21,34 @@ actor AccessoryDiscoveryMockAdapter: HomeKitAdapterProtocol {
         _authorizationStatus = status
     }
 
+    func setHomes(_ homes: [HMHome]) {
+        _homes = homes
+    }
+
+    // MARK: - HomeKitAdapterProtocol Implementation
+
     nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
         HMHomeManagerAuthorizationStatus([.determined, .authorized])
     }
 
+    /// Returns the configured authorization status for test control
+    func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
+        return _authorizationStatus
+    }
+
     nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
-        [.determined, .authorized]
+        HMHomeManagerAuthorizationStatus([.determined, .authorized])
     }
 
+    /// Returns configured homes (empty by default for discovery tests)
     func fetchHomes() async throws -> [HMHome] {
-        []
+        return _homes
     }
 
+    /// Returns configured compatible accessories
+    /// Tests control this via setCompatibleAccessories()
     func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
-        _compatibleAccessories
+        return _compatibleAccessories
     }
 }
 
@@ -244,12 +262,12 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
     func testCapabilityFiltering_OnlyBrightnessSupported() {
         let compatible1 = MockHMAccessory(
             name: "Smart Light",
-            identifier: "c1",
+            identifier: "550e8400-e29b-41d4-a716-446655440001",
             services: [MockHMService(characteristics: [MockHMCharacteristic(characteristicType: HMCharacteristicTypeBrightness)])]
         )
         let compatible2 = MockHMAccessory(
             name: "Dimmer Bulb",
-            identifier: "c2",
+            identifier: "550e8400-e29b-41d4-a716-446655440002",
             services: [MockHMService(characteristics: [
                 MockHMCharacteristic(characteristicType: HMCharacteristicTypeBrightness),
                 MockHMCharacteristic(characteristicType: HMCharacteristicTypeColorTemperature)
@@ -257,7 +275,7 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
         )
         let incompatible = MockHMAccessory(
             name: "Smart Switch",
-            identifier: "i1",
+            identifier: "550e8400-e29b-41d4-a716-446655440003",
             services: [MockHMService(characteristics: [MockHMCharacteristic(characteristicType: HMCharacteristicTypePowerState)])]
         )
 
@@ -265,22 +283,24 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
         let compatible = accessories.filter { AccessoryCapabilityDetector.detectCapability(for: $0).supportsBrightness }
 
         XCTAssertEqual(compatible.count, 2)
-        XCTAssertTrue(compatible.contains { $0.uniqueIdentifier.uuidString == "c1" })
-        XCTAssertTrue(compatible.contains { $0.uniqueIdentifier.uuidString == "c2" })
-        XCTAssertFalse(compatible.contains { $0.uniqueIdentifier.uuidString == "i1" })
+        // Compare by name instead of UUID since that's reliable
+        XCTAssertTrue(compatible.contains { $0.name == "Smart Light" })
+        XCTAssertTrue(compatible.contains { $0.name == "Dimmer Bulb" })
+        XCTAssertFalse(compatible.contains { $0.name == "Smart Switch" })
     }
 
     // MARK: - VAL-HOME-003: Room Grouping Tests
 
     func testRoomGroup_EmptyRoomNameShowsUnassigned() {
-        let unassignedLight = AccessoryViewModel(
+        // Create accessory reference and then view model from it
+        let unassignedRef = AccessoryReference(
             homeKitIdentifier: "unassigned-1",
             name: "Unassigned Light",
+            homeIdentifier: "home-1",
             roomName: "",
-            capability: .brightnessOnly,
-            isReachable: true,
-            isSelected: false
+            capability: .brightnessOnly
         )
+        let unassignedLight = AccessoryViewModel(from: unassignedRef)
 
         let group = RoomAccessoryGroup(roomName: unassignedLight.roomName, accessories: [unassignedLight])
 
@@ -289,30 +309,35 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
     }
 
     func testRoomGroup_HasSelection_TracksSelectedCount() {
-        let light1 = AccessoryViewModel(
+        // Create accessory references and view models from them
+        let ref1 = AccessoryReference(
             homeKitIdentifier: "l1",
             name: "Light 1",
+            homeIdentifier: "home-1",
             roomName: "Living Room",
             capability: .brightnessOnly,
-            isReachable: true,
             isSelected: true
         )
-        let light2 = AccessoryViewModel(
+        let ref2 = AccessoryReference(
             homeKitIdentifier: "l2",
             name: "Light 2",
+            homeIdentifier: "home-1",
             roomName: "Living Room",
             capability: .brightnessOnly,
-            isReachable: true,
             isSelected: false
         )
-        let light3 = AccessoryViewModel(
+        let ref3 = AccessoryReference(
             homeKitIdentifier: "l3",
             name: "Light 3",
+            homeIdentifier: "home-1",
             roomName: "Living Room",
             capability: .fullColor,
-            isReachable: true,
             isSelected: true
         )
+
+        let light1 = AccessoryViewModel(from: ref1)
+        let light2 = AccessoryViewModel(from: ref2)
+        let light3 = AccessoryViewModel(from: ref3)
 
         let group = RoomAccessoryGroup(roomName: "Living Room", accessories: [light1, light2, light3])
 

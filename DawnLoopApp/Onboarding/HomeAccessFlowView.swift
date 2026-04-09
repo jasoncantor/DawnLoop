@@ -40,14 +40,6 @@ struct HomeAccessCheckView: View {
                     .background(Theme.Colors.background)
                     .task {
                         await environment.homeAccessState.startHomeAccessFlow()
-
-                        // For UI testing: simulate ready state if requested
-                        // This allows tests to experience the full visible flow without
-                        // requiring real HomeKit infrastructure. Tests must still manually
-                        // complete onboarding through the visible UI.
-                        if LaunchArgumentHandler.shouldSimulateHomeReady {
-                            environment.homeAccessState.simulateReadyState()
-                        }
                     }
                     
             case .permissionDenied:

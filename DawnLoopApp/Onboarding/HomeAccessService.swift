@@ -4,9 +4,19 @@ import HomeKit
 /// Protocol for HomeKit platform adapter - enables mocking in tests
 @preconcurrency
 protocol HomeKitAdapterProtocol: Sendable {
+    /// Current authorization status - prefer checkAuthorizationStatus() for test control
     var authorizationStatus: HMHomeManagerAuthorizationStatus { get }
+
+    /// Checks current authorization status - tests can control this via mock adapter
+    func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus
+
+    /// Requests authorization from the user
     func requestAuthorization() async -> HMHomeManagerAuthorizationStatus
+
+    /// Fetches available homes
     func fetchHomes() async throws -> [HMHome]
+
+    /// Fetches compatible accessories from a home
     func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory]
 }
 
@@ -16,13 +26,17 @@ actor LiveHomeKitAdapter: HomeKitAdapterProtocol {
     nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
         HMHomeManager().authorizationStatus
     }
-    
+
+    nonisolated func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
+        return HMHomeManager().authorizationStatus
+    }
+
     nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
         // HomeKit authorization is triggered by first access to HMHomeManager
         // The status will update via notification center, but we return current
         return HMHomeManager().authorizationStatus
     }
-    
+
     func fetchHomes() async throws -> [HMHome] {
         let homeManager = HMHomeManager()
         // Wait for homes to be available
@@ -32,7 +46,7 @@ actor LiveHomeKitAdapter: HomeKitAdapterProtocol {
         }
         return homeManager.homes
     }
-    
+
     func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
         return home.accessories.filter { accessory in
             // Check for brightness control capability
@@ -95,7 +109,8 @@ final class HomeAccessState {
     
     /// Checks current Home access readiness state
     func checkReadiness() async {
-        let status = await adapter.authorizationStatus
+        // Use checkAuthorizationStatus() for test-controllable authorization checks
+        let status = await adapter.checkAuthorizationStatus()
         
         // Handle permission states
         if status.contains(.determined) {
@@ -154,23 +169,7 @@ final class HomeAccessState {
         await checkReadiness()
     }
 
-    /// Simulates a ready state for UI testing purposes.
-    /// This allows tests to experience the full visible flow through completion
-    /// without requiring real HomeKit infrastructure.
-    @MainActor
-    func simulateReadyState() {
-        // Only allow in test environments where the flag is set
-        guard LaunchArgumentHandler.shouldSimulateHomeReady else { return }
 
-        // For UI testing, we set to a non-blocked state that allows the flow to proceed
-        // The actual transition to .ready happens through the adapter when running
-        // with real HomeKit; for tests we transition to a state that enables completion
-        // via the visible UI flow rather than auto-completing.
-        if case .unknown = readiness {
-            // First move out of unknown to checking state
-            readiness = .checkingPermission
-        }
-    }
 
     private func hasHomeHub(homes: [HMHome]) -> Bool {
         // Check if any home has a home hub configured

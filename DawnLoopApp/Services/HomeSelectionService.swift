@@ -42,8 +42,8 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
     /// Returns the currently active home, or appropriate error state
     /// Falls back cleanly if the home no longer exists (VAL-HOME-002)
     func activeHome() async -> ActiveHomeResult {
-        // Check permission first
-        let status = await adapter.authorizationStatus
+        // Check permission first using the test-controllable method
+        let status = await adapter.checkAuthorizationStatus()
         guard status.contains(.authorized) else {
             return .error(.permissionDenied)
         }
