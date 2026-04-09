@@ -31,6 +31,7 @@ None.
    - pure planner tests for ordered steps and capability degradation
    - mocked adapter/repository tests for HomeKit binding, diff, rollback, cleanup, and repair behavior
    - intent/widget tests for canonical state mutation and blocked-state handling where supported
+   - when testing readiness or discovery logic, drive the real decision path through controlled adapter outputs; do not bypass the logic by manually assigning end-state values
 5. Implement the feature with reliability-first behavior:
    - avoid foreground timers for alarm execution
    - namescape app-created HomeKit objects
@@ -40,8 +41,12 @@ None.
 7. Manually verify the changed surface:
    - simulator for planner/UI/platform-independent state
    - real iPhone + Apple Home when the feature genuinely requires live HomeKit, widget interaction, or App Intent validation
-8. Record exactly what was and was not validated in the handoff. If real-device validation was required but unavailable, return to the orchestrator instead of guessing.
-9. Confirm repeated runs do not duplicate HomeKit bindings, widget controls, or intent entities.
+8. Before handing off success, verify that the committed revision matches your validation claim:
+   - re-run the final validator commands after your last code edit
+   - ensure the results come from the code you are actually committing
+   - do not rely on temporary local edits that are not part of the final commit
+9. Record exactly what was and was not validated in the handoff. If real-device validation was required but unavailable, return to the orchestrator instead of guessing.
+10. Confirm repeated runs do not duplicate HomeKit bindings, widget controls, or intent entities.
 
 ## Example Handoff
 
@@ -101,3 +106,4 @@ None.
 - HomeKit public APIs do not support the requested behavior without changing the product approach.
 - A feature would require violating the no-private-API or no-foreground-timer boundary.
 - Widget or App Intent behavior is OS-version-dependent enough that the product requirement needs a human decision on fallback behavior.
+- Tests can only be made to pass by bypassing the real decision logic or by relying on uncommitted local edits.

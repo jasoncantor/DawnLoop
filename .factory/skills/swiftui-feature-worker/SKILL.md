@@ -34,8 +34,12 @@ None.
 5. Use protocols and dependency injection for anything that could later need HomeKit, WidgetKit, App Intents, StoreKit, time, UUID, or persistence seams.
 6. Run the narrowest targeted tests first, then run the project validation commands from `.factory/services.yaml`.
 7. Manually verify the changed UX on iPhone Simulator when the feature affects visible UI. Capture the exact flow in `verification.interactiveChecks`.
-8. Confirm no duplicate rows, stale state, or broken navigation were introduced in adjacent DawnLoop flows.
-9. Leave the tree clean: no watch processes, no orphaned simulators started by your session, no TODO-only “implement later” placeholders for required behavior.
+8. Before handing off success, verify that the committed revision matches your validation claim:
+   - re-run the final validator commands after your last code edit
+   - ensure the results come from the code you are actually committing
+   - if a command failed or was cancelled earlier, do not report it as passing
+9. Confirm no duplicate rows, stale state, broken navigation, or test-order dependencies were introduced in adjacent DawnLoop flows. If tests use launch arguments or reset hooks, confirm the app actually handles them.
+10. Leave the tree clean: no watch processes, no orphaned simulators started by your session, no TODO-only “implement later” placeholders for required behavior.
 
 ## Example Handoff
 
@@ -91,3 +95,4 @@ None.
 - The feature depends on a HomeKit adapter or shared model that does not exist yet.
 - The visual requirement conflicts with an existing architecture boundary or validation assertion.
 - `xcodebuild` commands or simulator destinations in `.factory/services.yaml` are broken and require orchestrator updates.
+- You cannot provide the required `verification.interactiveChecks` evidence for a visible UI change.
