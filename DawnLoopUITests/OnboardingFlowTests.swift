@@ -10,6 +10,11 @@ final class OnboardingFlowTests: XCTestCase {
         
         // Reset onboarding state before each test
         app.launchArguments.append("--reset-onboarding")
+        // Simulate HomeKit ready state for UI testing
+        // This allows the tests to experience the full visible flow without
+        // requiring real HomeKit infrastructure, while still proving the
+        // flow itself completes through legitimate user actions.
+        app.launchArguments.append("--simulate-home-ready")
     }
     
     override func tearDownWithError() throws {

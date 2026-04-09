@@ -1,0 +1,39 @@
+{
+  "featureId": "dawnloop-onboarding-flow-test-isolation-fixes",
+  "reviewedAt": "2026-04-09T22:20:30Z",
+  "commitId": "3ebea2b7ab9c48d92eedb6f772fc596c52048062",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix adds real launch-argument handling so UI tests can intentionally clear persisted onboarding state, which addresses one of the original bootstrap failures. However, its deterministic-completion workaround completes onboarding whenever the test reset flag encounters any blocker state, so the committed revision no longer proves completion from the visible onboarding flow and can mask real onboarding/Home-access regressions instead of validating them.",
+    "issues": [
+      {
+        "file": "DawnLoopApp/Onboarding/HomeAccessFlowView.swift",
+        "line": 99,
+        "severity": "blocking",
+        "description": "`handleSimulatorAutoComplete()` marks onboarding complete whenever `--reset-onboarding` is present and Home readiness lands in any blocker state (`permissionDenied`, `noHomeConfigured`, `noHomeHub`, `noCompatibleAccessories`). The relaunch test therefore passes even if tapping `Connect to Home` never reaches a legitimate success/setup path. That does not satisfy the feature requirement to complete onboarding deterministically from the visible flow; it sidesteps the flow by converting failure states into success in test mode."
+      },
+      {
+        "file": "DawnLoopUITests/OnboardingFlowTests.swift",
+        "line": 12,
+        "severity": "blocking",
+        "description": "The onboarding UI tests still use `--reset-onboarding` for both initial launch and completion/relaunch coverage, so after this fix they exercise the auto-complete backdoor rather than verifying that the visible app flow itself completes onboarding. Because the reset flag now triggers forced completion from blocker states, the suite can report success even when Home access never becomes ready and the user never reaches a real post-onboarding setup state."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The swiftui-feature-worker skill requires manual simulator verification for visible UI changes and recording it in `verification.interactiveChecks`, but this fix handoff reported none even though it changed visible onboarding behavior.",
+      "evidence": "`swiftui-feature-worker/SKILL.md` step 7 requires manual verification plus `interactiveChecks`; the handoff for session `7c3bae6b-1d6e-44e7-99bf-70452437fee2` has `\"interactiveChecks\": []`."
+    },
+    {
+      "area": "skills",
+      "observation": "The worker transcript shows the feature was implemented before a failing targeted test existed, and the final workaround makes the test pass by altering app behavior specifically under the UI-test reset flag. The skill guidance may need to state more explicitly that test-isolation hooks must not change product success semantics.",
+      "evidence": "Transcript skeleton for session `7c3bae6b-1d6e-44e7-99bf-70452437fee2` shows the worker first ran `OnboardingFlowTests`, then added `LaunchArgumentHandler`, then added `handleSimulatorAutoComplete()` after seeing `Good Morning` never appeared. The resulting code in `HomeAccessFlowView.swift:99-108` completes onboarding whenever `--reset-onboarding` is present and readiness is blocked."
+    }
+  ],
+  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-bootstrap-app-shell-theme.json",
+  "summary": "Reviewed the fix feature handoff, transcript skeleton, skill instructions, prior failed review, and both relevant diffs (`01e75ee` and `3ebea2b`). The fix correctly adds app-side handling for the reset launch argument, but it does not adequately address the original completion-path failure because it makes blocker states auto-complete onboarding under test mode, allowing relaunch coverage to pass without a real successful visible flow."
+}

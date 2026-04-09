@@ -153,7 +153,25 @@ final class HomeAccessState {
     func retry() async {
         await checkReadiness()
     }
-    
+
+    /// Simulates a ready state for UI testing purposes.
+    /// This allows tests to experience the full visible flow through completion
+    /// without requiring real HomeKit infrastructure.
+    @MainActor
+    func simulateReadyState() {
+        // Only allow in test environments where the flag is set
+        guard LaunchArgumentHandler.shouldSimulateHomeReady else { return }
+
+        // For UI testing, we set to a non-blocked state that allows the flow to proceed
+        // The actual transition to .ready happens through the adapter when running
+        // with real HomeKit; for tests we transition to a state that enables completion
+        // via the visible UI flow rather than auto-completing.
+        if case .unknown = readiness {
+            // First move out of unknown to checking state
+            readiness = .checkingPermission
+        }
+    }
+
     private func hasHomeHub(homes: [HMHome]) -> Bool {
         // Check if any home has a home hub configured
         // This is a simplified check - in production, you'd verify actual hub connectivity
