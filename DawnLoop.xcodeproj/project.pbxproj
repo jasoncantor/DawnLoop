@@ -116,13 +116,13 @@
 		};
 		G002 = {
 			isa = PBXGroup;
-			children = ( F009, F015, F015B, F022, F023 );
+			children = ( F009, F015, F015B, F022 );
 			path = DawnLoopTests;
 			sourceTree = "<group>";
 		};
 		G003 = {
 			isa = PBXGroup;
-			children = ( F010, F011 );
+			children = ( F010, F011, F023 );
 			path = DawnLoopUITests;
 			sourceTree = "<group>";
 		};
@@ -254,13 +254,13 @@
 		ST001 = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ( D009, D015, D015B, D022, D023 );
+			files = ( D009, D015, D015B, D022 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		ST002 = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ( D010, D011 );
+			files = ( D010, D011, D023 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

@@ -8,7 +8,7 @@ import SwiftData
 final class HomeSelectionServiceTests: XCTestCase {
     
     var modelContainer: ModelContainer!
-    var mockAdapter: MockHomeKitAdapter!
+    var mockAdapter: MockHomeKitAdapter2!
     var service: HomeSelectionService!
     
     override func setUp() {
@@ -25,7 +25,7 @@ final class HomeSelectionServiceTests: XCTestCase {
             return
         }
         
-        mockAdapter = MockHomeKitAdapter()
+        mockAdapter = MockHomeKitAdapter2()
         service = HomeSelectionService(adapter: mockAdapter, modelContainer: modelContainer)
     }
     
@@ -242,7 +242,7 @@ final class HomeSelectionServiceTests: XCTestCase {
 // MARK: - Mock Objects
 
 /// Mock HMHome for testing
-actor MockHomeKitAdapter: HomeKitAdapterProtocol {
+actor MockHomeKitAdapter2: HomeKitAdapterProtocol {
     private var mockHomes: [MockHome] = []
     private var mockStatus: HMHomeManagerAuthorizationStatus = [.determined, .authorized]
     
