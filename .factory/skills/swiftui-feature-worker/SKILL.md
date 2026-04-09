@@ -39,6 +39,7 @@ None.
    - ensure the results come from the code you are actually committing
    - if a command failed or was cancelled earlier, do not report it as passing
 9. Confirm no duplicate rows, stale state, broken navigation, or test-order dependencies were introduced in adjacent DawnLoop flows. If tests use launch arguments or reset hooks, confirm the app actually handles them.
+   - reset hooks may clear persisted state for isolation, but they must never auto-complete product flows or convert blocked states into success semantics
 10. Leave the tree clean: no watch processes, no orphaned simulators started by your session, no TODO-only “implement later” placeholders for required behavior.
 
 ## Example Handoff

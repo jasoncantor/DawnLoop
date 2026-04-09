@@ -45,6 +45,7 @@ None.
    - re-run the final validator commands after your last code edit
    - ensure the results come from the code you are actually committing
    - do not rely on temporary local edits that are not part of the final commit
+   - test-isolation hooks may reset data only; they must not change blocked/product semantics into success paths
 9. Record exactly what was and was not validated in the handoff. If real-device validation was required but unavailable, return to the orchestrator instead of guessing.
 10. Confirm repeated runs do not duplicate HomeKit bindings, widget controls, or intent entities.
 
