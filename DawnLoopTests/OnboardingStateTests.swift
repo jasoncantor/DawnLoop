@@ -1,6 +1,7 @@
 import XCTest
-@testable import DawnLoopApp
+@testable import DawnLoop
 
+@MainActor
 final class OnboardingStateTests: XCTestCase {
     
     override func setUp() {

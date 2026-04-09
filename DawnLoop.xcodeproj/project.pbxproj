@@ -18,6 +18,10 @@
 		D009 /* OnboardingStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009 /* OnboardingStateTests.swift */; };
 		D010 /* OnboardingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F010 /* OnboardingFlowTests.swift */; };
 		D011 /* DawnLoopUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F011 /* DawnLoopUITestsLaunchTests.swift */; };
+		D012 /* HomeAccessService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F012 /* HomeAccessService.swift */; };
+		D013 /* HomeAccessFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F013 /* HomeAccessFlowView.swift */; };
+		D014 /* HomeAccessBlockerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F014 /* HomeAccessBlockerView.swift */; };
+		D015 /* HomeAccessStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F015 /* HomeAccessStateTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +54,10 @@
 		F009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStateTests.swift; sourceTree = "<group>"; };
 		F010 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowTests.swift; sourceTree = "<group>"; };
 		F011 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DawnLoopUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		F012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessService.swift; sourceTree = "<group>"; };
+		F013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessFlowView.swift; sourceTree = "<group>"; };
+		F014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessBlockerView.swift; sourceTree = "<group>"; };
+		F015 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessStateTests.swift; sourceTree = "<group>"; };
 		F100 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		T001 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		T002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -90,7 +98,7 @@
 		};
 		G002 = {
 			isa = PBXGroup;
-			children = ( F009 );
+			children = ( F009, F015 );
 			path = DawnLoopTests;
 			sourceTree = "<group>";
 		};
@@ -126,7 +134,7 @@
 		};
 		G008 = {
 			isa = PBXGroup;
-			children = ( F005, F006 );
+			children = ( F005, F006, F012, F013, F014 );
 			path = Onboarding;
 			sourceTree = "<group>";
 		};
@@ -214,14 +222,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D001, D002, D003, D004, D005, D006, D007, D008,
+				D001, D002, D003, D004, D005, D006, D007, D008, D012, D013, D014,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		ST001 = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ( D009 );
+			files = ( D009, D015 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		ST002 = {
@@ -316,7 +324,7 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@loader_path/Frameworks" );
+				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@loader_path/Frameworks", "@loader_path/../Frameworks" );
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dawnloop.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

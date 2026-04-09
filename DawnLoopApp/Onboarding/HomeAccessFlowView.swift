@@ -1,4 +1,5 @@
 import SwiftUI
+import HomeKit
 
 /// Flow view that handles onboarding completion and Home access orchestration
 struct HomeAccessFlowView: View {
@@ -139,15 +140,8 @@ extension Theme.Gradients {
 
 #Preview("Home Access Flow - Ready") {
     let env = AppEnvironment()
-    env.homeAccessState.readiness = .ready(home: PreviewHome(), accessories: [])
-    return HomeAccessFlowView()
+    // Note: Ready state with actual HomeKit types can only be tested on real device
+    // Simulator preview shows the setup ready UI
+    return AlarmSetupReadyView()
         .environment(env)
-}
-
-// Preview helper
-private struct PreviewHome: HMHome {
-    var uniqueIdentifier: UUID = UUID()
-    var name: String = "Preview Home"
-    var isPrimary: Bool = true
-    var accessories: [HMAccessory] = []
 }

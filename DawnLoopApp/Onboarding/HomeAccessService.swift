@@ -2,6 +2,7 @@ import Foundation
 import HomeKit
 
 /// Protocol for HomeKit platform adapter - enables mocking in tests
+@preconcurrency
 protocol HomeKitAdapterProtocol: Sendable {
     var authorizationStatus: HMHomeManagerAuthorizationStatus { get }
     func requestAuthorization() async -> HMHomeManagerAuthorizationStatus
@@ -10,20 +11,20 @@ protocol HomeKitAdapterProtocol: Sendable {
 }
 
 /// Live HomeKit adapter implementation
+@preconcurrency
 actor LiveHomeKitAdapter: HomeKitAdapterProtocol {
-    private let homeManager = HMHomeManager()
-    
-    var authorizationStatus: HMHomeManagerAuthorizationStatus {
-        homeManager.authorizationStatus
+    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
+        HMHomeManager().authorizationStatus
     }
     
-    func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
+    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
         // HomeKit authorization is triggered by first access to HMHomeManager
         // The status will update via notification center, but we return current
-        return homeManager.authorizationStatus
+        return HMHomeManager().authorizationStatus
     }
     
     func fetchHomes() async throws -> [HMHome] {
+        let homeManager = HMHomeManager()
         // Wait for homes to be available
         if homeManager.homes.isEmpty {
             // Brief delay to allow HomeKit to populate
@@ -98,7 +99,8 @@ final class HomeAccessState {
         
         // Handle permission states
         if status.contains(.determined) {
-            if status.contains(.restricted) || status.contains(.denied) {
+            // When determined, check if authorized - if not authorized, it's denied
+            if status.contains(.restricted) || !status.contains(.authorized) {
                 readiness = .permissionDenied
                 return
             }
@@ -108,7 +110,7 @@ final class HomeAccessState {
             let newStatus = await adapter.requestAuthorization()
             
             // Re-check after request
-            if newStatus.contains(.restricted) || newStatus.contains(.denied) {
+            if newStatus.contains(.restricted) || !newStatus.contains(.authorized) {
                 readiness = .permissionDenied
                 return
             }
