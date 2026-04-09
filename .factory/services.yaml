@@ -1,0 +1,33 @@
+commands:
+  install: >-
+    if [ -d "DawnLoop.xcworkspace" ]; then
+      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -resolvePackageDependencies;
+    elif [ -d "DawnLoop.xcodeproj" ]; then
+      xcodebuild -project DawnLoop.xcodeproj -resolvePackageDependencies;
+    else
+      echo "Bootstrap pending: Xcode project not created yet.";
+    fi
+  build: >-
+    if [ -d "DawnLoop.xcworkspace" ]; then
+      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build;
+    elif [ -d "DawnLoop.xcodeproj" ]; then
+      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build;
+    else
+      echo "Bootstrap pending: Xcode project not created yet.";
+    fi
+  test: >-
+    if [ -d "DawnLoop.xcworkspace" ]; then
+      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3;
+    elif [ -d "DawnLoop.xcodeproj" ]; then
+      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3;
+    else
+      echo "Bootstrap pending: Xcode project not created yet.";
+    fi
+  lint: >-
+    if command -v xcrun >/dev/null 2>&1; then
+      xcrun swift-format lint -r DawnLoopApp Packages DawnLoopWidgetExtension DawnLoopIntentsExtension DawnLoopTests 2>/dev/null || true;
+    else
+      echo "xcrun not available";
+    fi
+
+services: {}
