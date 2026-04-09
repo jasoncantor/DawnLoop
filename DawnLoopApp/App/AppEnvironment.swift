@@ -2,12 +2,15 @@ import SwiftUI
 import SwiftData
 
 @Observable
+@MainActor
 final class AppEnvironment {
     let onboardingState: OnboardingState
+    let homeAccessState: HomeAccessState
     let modelContainer: ModelContainer
     
     init() {
         self.onboardingState = OnboardingState()
+        self.homeAccessState = HomeAccessState()
         
         let schema = Schema([
             OnboardingCompletion.self,

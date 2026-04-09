@@ -3,8 +3,10 @@ import SwiftData
 
 /// Observable state for onboarding flow and persistence
 @Observable
+@MainActor
 final class OnboardingState {
     private let onboardingKey = "hasCompletedOnboarding"
+    private let homeAccessStartedKey = "hasStartedHomeAccessFlow"
     
     var hasCompletedOnboarding: Bool {
         didSet {
@@ -12,20 +14,33 @@ final class OnboardingState {
         }
     }
     
+    var showingHomeAccessFlow = false
     var currentScreen: OnboardingScreen = .welcome
     
     init() {
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: onboardingKey)
     }
     
+    /// Called from the final onboarding CTA to start Home access handling
+    func startHomeAccessFlow() {
+        showingHomeAccessFlow = true
+    }
+    
+    /// Called when Home access flow should exit (either completed or blocked)
+    func exitHomeAccessFlow() {
+        showingHomeAccessFlow = false
+    }
+    
     func completeOnboarding() {
         hasCompletedOnboarding = true
         currentScreen = .welcome
+        showingHomeAccessFlow = false
     }
     
     func resetOnboarding() {
         hasCompletedOnboarding = false
         currentScreen = .welcome
+        showingHomeAccessFlow = false
     }
 }
 

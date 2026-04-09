@@ -4,6 +4,16 @@ struct OnboardingView: View {
     @Environment(AppEnvironment.self) private var environment
     
     var body: some View {
+        Group {
+            if environment.onboardingState.showingHomeAccessFlow {
+                HomeAccessFlowView()
+            } else {
+                onboardingContent
+            }
+        }
+    }
+    
+    private var onboardingContent: some View {
         VStack(spacing: 0) {
             // Progress indicator
             ProgressIndicator(
@@ -60,8 +70,8 @@ struct OnboardingView: View {
                 environment.onboardingState.currentScreen = OnboardingScreen.allCases[currentIndex + 1]
             }
         } else {
-            // Complete onboarding
-            environment.onboardingState.completeOnboarding()
+            // Start Home access flow from final onboarding step
+            environment.onboardingState.startHomeAccessFlow()
         }
     }
     
