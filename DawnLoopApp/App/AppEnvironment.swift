@@ -32,7 +32,12 @@ final class AppEnvironment {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
         
-        self.homeAccessState = HomeAccessState()
+        // Use mock adapter for testing when --simulate-home-ready is set
+        let homeKitAdapter: (any HomeKitAdapterProtocol)? = TestEnvironment.isSimulatingHomeReady
+            ? MockHomeKitAdapter()
+            : nil
+        
+        self.homeAccessState = HomeAccessState(adapter: homeKitAdapter)
         self.homeSelectionService = HomeSelectionService(modelContainer: modelContainer)
         self.accessoryDiscoveryService = AccessoryDiscoveryService(modelContainer: modelContainer)
     }

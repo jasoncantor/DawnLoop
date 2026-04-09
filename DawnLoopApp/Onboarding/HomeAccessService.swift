@@ -20,6 +20,33 @@ protocol HomeKitAdapterProtocol: Sendable {
     func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory]
 }
 
+/// Mock HomeKit adapter for UI testing - simulates a ready Home environment
+@preconcurrency
+actor MockHomeKitAdapter: HomeKitAdapterProtocol {
+    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
+        [.determined, .authorized]
+    }
+
+    nonisolated func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
+        [.determined, .authorized]
+    }
+
+    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
+        [.determined, .authorized]
+    }
+
+    func fetchHomes() async throws -> [HMHome] {
+        // Return empty array - the flow will proceed to home selection
+        // which will show "No Homes Available" state
+        // This allows the test to verify the flow structure without real HomeKit
+        return []
+    }
+
+    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
+        return []
+    }
+}
+
 /// Live HomeKit adapter implementation
 @preconcurrency
 actor LiveHomeKitAdapter: HomeKitAdapterProtocol {
@@ -95,8 +122,15 @@ final class HomeAccessState {
     var isLoading = false
     var lastError: Error?
     
-    init(adapter: any HomeKitAdapterProtocol = LiveHomeKitAdapter()) {
-        self.adapter = adapter
+    init(adapter: (any HomeKitAdapterProtocol)? = nil) {
+        // Use provided adapter, or create appropriate adapter based on test environment
+        if let providedAdapter = adapter {
+            self.adapter = providedAdapter
+        } else if TestEnvironment.isSimulatingHomeReady {
+            self.adapter = MockHomeKitAdapter()
+        } else {
+            self.adapter = LiveHomeKitAdapter()
+        }
     }
     
     /// Initiates the Home access flow from onboarding

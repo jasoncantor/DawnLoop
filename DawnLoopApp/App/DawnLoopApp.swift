@@ -30,6 +30,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
 }
 
+/// Global flag set by launch arguments for test environment detection
+/// nonisolated(unsafe) because this is set once at app startup and never modified after
+enum TestEnvironment {
+    nonisolated(unsafe) static var isSimulatingHomeReady: Bool = false
+}
+
 /// Handles launch arguments for testing and debugging
 enum LaunchArgumentHandler {
     static func handleTestArguments() {
@@ -43,6 +49,12 @@ enum LaunchArgumentHandler {
         // Reset home selection for UI tests
         if arguments.contains("--reset-home-selection") {
             resetHomeSelection()
+        }
+        
+        // Simulate Home ready state for UI tests
+        // This allows tests to complete the onboarding flow without real HomeKit
+        if arguments.contains("--simulate-home-ready") {
+            TestEnvironment.isSimulatingHomeReady = true
         }
     }
     
