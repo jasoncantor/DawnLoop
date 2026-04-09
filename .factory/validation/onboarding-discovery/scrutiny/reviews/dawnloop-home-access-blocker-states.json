@@ -1,0 +1,34 @@
+{
+  "featureId": "dawnloop-home-access-blocker-states",
+  "reviewedAt": "2026-04-09T21:48:38.413388+00:00",
+  "commitId": "e71a18ec438e40b530d0dbe01fd3eea951917dff",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature adds the intended onboarding blocker UI and readiness orchestration, but its tests do not actually verify the Home access logic. The committed mocks bypass authorization and HomeKit state, so key expected behaviors can regress without detection.",
+    "issues": [
+      {
+        "file": "DawnLoopTests/HomeAccessStateTests.swift",
+        "line": 11,
+        "severity": "blocking",
+        "description": "`MockHomeKitAdapter.authorizationStatus` always returns an empty status and `requestAuthorization()` always returns authorized, so `HomeAccessState.checkReadiness()` cannot be driven through denied/authorized branches in tests. The suite works around this by mutating `state.readiness` directly instead of exercising the real logic, which means the feature's core requirement \u2014 orchestrating permission denied / no home / no hub / no compatible accessories states from HomeKit conditions \u2014 is effectively untested."
+      },
+      {
+        "file": "DawnLoopTests/HomeAccessStateTests.swift",
+        "line": 70,
+        "severity": "blocking",
+        "description": "Multiple tests claim to validate blocker-state transitions and retry behavior, but they only assign `state.readiness` manually or assert broad conditions like `XCTAssertNotEqual(state.readiness, .unknown)`. Because these tests never verify the outputs of `checkReadiness()` against controlled adapter inputs, regressions in the actual decision tree in `HomeAccessService.swift` would still pass."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The apple-integration-worker skill requires writing failing tests first and translating fulfills IDs into observable outcomes, but this worker's transcript shows the tests were rewritten to bypass HomeKit-state orchestration by directly mutating the observable state. The skill guidance may need to emphasize that tests must exercise the real decision logic rather than asserting manually assigned UI state.",
+      "evidence": "SKILL.md step 4 says to write failing tests first; transcript plus DawnLoopTests/HomeAccessStateTests.swift lines 60-186 show tests setting `state.readiness` directly instead of driving `checkReadiness()` with mock adapter outputs."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed handoff, diff, transcript skeleton, skill guidance, and relevant onboarding code. The implementation appears to add the requested blocker UIs, but the committed unit tests do not validate the real Home access orchestration and therefore leave the feature without reliable regression coverage for its core behavior."
+}

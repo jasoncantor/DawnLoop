@@ -230,7 +230,7 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
         await service.toggleAccessorySelection("selectable-1")
         
         // Then: State is persisted
-        let descriptor = FetchDescriptor<AccessoryReference>()
+        var descriptor = FetchDescriptor<AccessoryReference>()
         descriptor.predicate = #Predicate { $0.homeKitIdentifier == "selectable-1" }
         let updated = try context.fetch(descriptor).first
         

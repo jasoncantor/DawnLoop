@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct DawnLoopApp: App {
@@ -7,6 +8,8 @@ struct DawnLoopApp: App {
     let container: AppEnvironment
     
     init() {
+        // Check for test launch arguments before initializing environment
+        LaunchArgumentHandler.handleTestArguments()
         self.container = AppEnvironment()
     }
     
@@ -24,5 +27,50 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         return true
+    }
+}
+
+/// Handles launch arguments for testing and debugging
+enum LaunchArgumentHandler {
+    static func handleTestArguments() {
+        let arguments = ProcessInfo.processInfo.arguments
+        
+        // Reset onboarding state for UI tests
+        if arguments.contains("--reset-onboarding") {
+            resetOnboardingState()
+        }
+        
+        // Reset home selection for UI tests
+        if arguments.contains("--reset-home-selection") {
+            resetHomeSelection()
+        }
+    }
+    
+    private static func resetOnboardingState() {
+        // Clear UserDefaults
+        UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
+        UserDefaults.standard.removeObject(forKey: "hasStartedHomeAccessFlow")
+        
+        // Clear SwiftData onboarding records
+        do {
+            let schema = Schema([OnboardingCompletion.self])
+            let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+            let container = try ModelContainer(for: schema, configurations: [config])
+            let context = ModelContext(container)
+            
+            let descriptor = FetchDescriptor<OnboardingCompletion>()
+            let completions = try context.fetch(descriptor)
+            for completion in completions {
+                context.delete(completion)
+            }
+            try context.save()
+        } catch {
+            print("Failed to reset onboarding state: \(error)")
+        }
+    }
+    
+    private static func resetHomeSelection() {
+        UserDefaults.standard.removeObject(forKey: "activeHomeIdentifier")
+        UserDefaults.standard.removeObject(forKey: "activeHomeName")
     }
 }

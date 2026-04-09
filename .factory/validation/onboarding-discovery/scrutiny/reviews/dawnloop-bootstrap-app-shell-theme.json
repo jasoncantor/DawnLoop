@@ -1,0 +1,39 @@
+{
+  "featureId": "dawnloop-bootstrap-app-shell-theme",
+  "reviewedAt": "2026-04-09T22:00:00Z",
+  "commitId": "01e75eecde3bceb42e5c0ed48426f69a865def83",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The bootstrap feature established the initial app shell and theme, but it did not fully satisfy the claimed onboarding completion/relaunch behavior. The reviewed commit routes the final onboarding CTA into the Home access flow instead of completing onboarding, and the app code contains no test-only reset hook even though the UI tests depend on one.",
+    "issues": [
+      {
+        "file": "DawnLoopApp/Onboarding/OnboardingView.swift",
+        "line": 63,
+        "severity": "blocking",
+        "description": "The final onboarding CTA does not complete onboarding or route to the main app flow. On the last screen, `advanceToNextScreen()` calls `startHomeAccessFlow()` instead of `completeOnboarding()`, so this commit alone cannot satisfy the feature requirement that onboarding completion is remembered and relaunch returns to the main app flow. The claimed `testCompletedOnboardingDoesNotReappearOnRelaunch` behavior only becomes possible after later Home access/discovery features add alternate completion paths."
+      },
+      {
+        "file": "DawnLoopUITests/OnboardingFlowTests.swift",
+        "line": 12,
+        "severity": "blocking",
+        "description": "The UI tests rely on `app.launchArguments.append(\"--reset-onboarding\")` to reset persisted onboarding state, but the reviewed commit contains no application-side handling of that launch argument. This means the tests are order-dependent on prior simulator state and are not actually self-isolating as written."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The feature commit included macOS workspace noise in source control during bootstrap work.",
+      "evidence": "Commit 01e75ee adds `.DS_Store` at repo root, while mission AGENTS.md says `.DS_Store` noise is a known pre-existing issue and should be treated as unrelated workspace hygiene unless explicitly requested."
+    },
+    {
+      "area": "skills",
+      "observation": "The worker transcript claims the bootstrap feature's UI tests passed, but the captured transcript also shows a failed/cancelled UI-test invocation and no manual simulator verification entry, despite the skill requiring manual verification for visible UI changes.",
+      "evidence": "`worker-transcripts.jsonl` for session `edfbd774-9639-4008-b149-d4fe2ca19743` includes `Testing failed: Testing cancelled because the build failed.` immediately before the success handoff, and the handoff JSON has no `verification.interactiveChecks` field even though `swiftui-feature-worker/SKILL.md` step 7 requires it."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed the bootstrap feature's handoff, transcript skeleton, skill instructions, and commit diff (`01e75ee`). I found two blocking issues: onboarding completion/relaunch behavior was not actually implemented in this commit, and the UI tests depended on an unimplemented reset launch argument, making the reported coverage unreliable."
+}

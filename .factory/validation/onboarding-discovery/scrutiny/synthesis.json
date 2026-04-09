@@ -1,0 +1,109 @@
+{
+  "milestone": "onboarding-discovery",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": false,
+      "command": "xcodebuild -project /Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3",
+      "exitCode": 65
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "xcodebuild -project /Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "xcrun swift-format lint -r /Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp /Users/jasoncantor/Downloads/DawnLoop/Packages /Users/jasoncantor/Downloads/DawnLoop/DawnLoopWidgetExtension /Users/jasoncantor/Downloads/DawnLoop/DawnLoopIntentsExtension /Users/jasoncantor/Downloads/DawnLoop/DawnLoopTests",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 4,
+    "passed": 0,
+    "failed": 4,
+    "failedFeatures": [
+      "dawnloop-bootstrap-app-shell-theme",
+      "dawnloop-home-access-blocker-states",
+      "dawnloop-home-selection-accessory-discovery",
+      "dawnloop-onboarding-discovery-project-test-target-repair"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "dawnloop-bootstrap-app-shell-theme",
+      "severity": "blocking",
+      "description": "The final onboarding CTA does not complete onboarding or route to the main app flow. On the last screen, `advanceToNextScreen()` calls `startHomeAccessFlow()` instead of `completeOnboarding()`, so this commit alone cannot satisfy the feature requirement that onboarding completion is remembered and relaunch returns to the main app flow. The claimed `testCompletedOnboardingDoesNotReappearOnRelaunch` behavior only becomes possible after later Home access/discovery features add alternate completion paths."
+    },
+    {
+      "featureId": "dawnloop-bootstrap-app-shell-theme",
+      "severity": "blocking",
+      "description": "The UI tests rely on `app.launchArguments.append(\"--reset-onboarding\")` to reset persisted onboarding state, but the reviewed commit contains no application-side handling of that launch argument. This means the tests are order-dependent on prior simulator state and are not actually self-isolating as written."
+    },
+    {
+      "featureId": "dawnloop-home-access-blocker-states",
+      "severity": "blocking",
+      "description": "`MockHomeKitAdapter.authorizationStatus` always returns an empty status and `requestAuthorization()` always returns authorized, so `HomeAccessState.checkReadiness()` cannot be driven through denied/authorized branches in tests. The suite works around this by mutating `state.readiness` directly instead of exercising the real logic, which means the feature's core requirement \u2014 orchestrating permission denied / no home / no hub / no compatible accessories states from HomeKit conditions \u2014 is effectively untested."
+    },
+    {
+      "featureId": "dawnloop-home-access-blocker-states",
+      "severity": "blocking",
+      "description": "Multiple tests claim to validate blocker-state transitions and retry behavior, but they only assign `state.readiness` manually or assert broad conditions like `XCTAssertNotEqual(state.readiness, .unknown)`. Because these tests never verify the outputs of `checkReadiness()` against controlled adapter inputs, regressions in the actual decision tree in `HomeAccessService.swift` would still pass."
+    },
+    {
+      "featureId": "dawnloop-home-selection-accessory-discovery",
+      "severity": "blocking",
+      "description": "When exactly one home exists, `loadHomes()` auto-selects it and immediately navigates away without ever updating `homes` to mark that choice active, so the user never sees the required visible active-home selection before transition. This violates the feature requirement that the active home choice be shown instead of silently selected."
+    },
+    {
+      "featureId": "dawnloop-home-selection-accessory-discovery",
+      "severity": "blocking",
+      "description": "The added HomeSelectionService tests do not exercise the real feature behavior: `MockHomeKitAdapter2.fetchHomes()` always returns an empty array and `authorizationStatus` always returns authorized regardless of the actor state, so tests like `testAvailableHomes_ReturnsAllHomesWithActiveStatus` and `testActiveHome_ReturnsErrorWhenPermissionDenied` cannot meaningfully validate home enumeration, persistence, or permission handling. The transcript also shows repeated build/test failures while trying to make these tests compile, so the claimed coverage is unreliable."
+    },
+    {
+      "featureId": "dawnloop-home-selection-accessory-discovery",
+      "severity": "blocking",
+      "description": "The accessory discovery tests are also placeholders rather than end-to-end checks of the service: comments explicitly state the core `discoverAccessories(in:)` path cannot be tested, and the mock adapter returns no HMHome/HMAccessory values. As a result, the suite does not verify room grouping, filtering, or stale-result clearing for actual discovery results, leaving the main expected behavior unproven."
+    },
+    {
+      "featureId": "dawnloop-onboarding-discovery-project-test-target-repair",
+      "severity": "blocking",
+      "description": "The committed change rewrote `var descriptor` to `let descriptor` immediately before assigning `descriptor.predicate`, which is illegal for SwiftData's mutable FetchDescriptor API and leaves the repo with a compiler error in the test target. This directly contradicts the handoff's claim that the full `xcodebuild test` command passed."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills",
+      "suggestion": "The worker transcript claims the bootstrap feature's UI tests passed, but the captured transcript also shows a failed/cancelled UI-test invocation and no manual simulator verification entry, despite the skill requiring manual verification for visible UI changes.",
+      "evidence": "`worker-transcripts.jsonl` for session `edfbd774-9639-4008-b149-d4fe2ca19743` includes `Testing failed: Testing cancelled because the build failed.` immediately before the success handoff, and the handoff JSON has no `verification.interactiveChecks` field even though `swiftui-feature-worker/SKILL.md` step 7 requires it.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "The apple-integration-worker skill requires writing failing tests first and translating fulfills IDs into observable outcomes, but this worker's transcript shows the tests were rewritten to bypass HomeKit-state orchestration by directly mutating the observable state. The skill guidance may need to emphasize that tests must exercise the real decision logic rather than asserting manually assigned UI state.",
+      "evidence": "SKILL.md step 4 says to write failing tests first; transcript plus DawnLoopTests/HomeAccessStateTests.swift lines 60-186 show tests setting `state.readiness` directly instead of driving `checkReadiness()` with mock adapter outputs.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "The apple-integration-worker skill requires reading `.factory/library/automation-strategy.md`, `.factory/library/environment.md`, and `.factory/library/user-testing.md`, writing failing tests first, and returning to the orchestrator if required real-device validation is unavailable. The transcript skeleton shows this worker skipped those library reads, implemented code before stable tests existed, and still handed off success without any real-device validation even though the skill says to return rather than guess when that proof is unavailable.",
+      "evidence": "apple-integration-worker/SKILL.md procedure steps 1, 4, and 8-9 versus worker transcript skeleton for session 45167f9f-967a-4213-8d29-666e2e844125, which only reads mission/AGENTS/architecture, adds tests after implementation/debugging, and reports no interactive checks.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "The worker transcript shows the feature worker performing substantial non-project-file test rewrites and still reporting success even though the final handoff cited a commit ID (`a003145`) that does not exist and the actual reviewed commit leaves an uncompilable test change in the working tree. The current skill guidance does not explicitly tell workers to verify that the committed revision, not just the working tree, matches their final validation claim.",
+      "evidence": "Transcript skeleton for worker session 62924fbf-4a39-4b34-a57f-486bb85640a7 reports commitId `a003145`, while `git log --oneline -20` shows the actual repair commit is `a061b34`. `git show a061b34 -- DawnLoopTests/AccessoryDiscoveryServiceTests.swift` introduces `let descriptor = FetchDescriptor<AccessoryReference>()` followed by `descriptor.predicate = ...`, and current `git status --short` shows that file was later edited again after the commit.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "The feature commit included macOS workspace noise in source control during bootstrap work.",
+      "reason": "ambiguous"
+    }
+  ],
+  "previousRound": null
+}

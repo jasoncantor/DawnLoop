@@ -1,0 +1,40 @@
+{
+  "featureId": "dawnloop-home-selection-accessory-discovery",
+  "reviewedAt": "2026-04-09T21:48:50.359223+00:00",
+  "commitId": "183a510",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature wires a home-selection and accessory-discovery flow, but the implementation does not preserve the active-home choice in the UI and its new tests are largely non-executable placeholders that fail to validate the required behavior.",
+    "issues": [
+      {
+        "file": "DawnLoopApp/Onboarding/HomeSelectionView.swift",
+        "line": 101,
+        "severity": "blocking",
+        "description": "When exactly one home exists, `loadHomes()` auto-selects it and immediately navigates away without ever updating `homes` to mark that choice active, so the user never sees the required visible active-home selection before transition. This violates the feature requirement that the active home choice be shown instead of silently selected."
+      },
+      {
+        "file": "DawnLoopTests/HomeSelectionServiceTests.swift",
+        "line": 245,
+        "severity": "blocking",
+        "description": "The added HomeSelectionService tests do not exercise the real feature behavior: `MockHomeKitAdapter2.fetchHomes()` always returns an empty array and `authorizationStatus` always returns authorized regardless of the actor state, so tests like `testAvailableHomes_ReturnsAllHomesWithActiveStatus` and `testActiveHome_ReturnsErrorWhenPermissionDenied` cannot meaningfully validate home enumeration, persistence, or permission handling. The transcript also shows repeated build/test failures while trying to make these tests compile, so the claimed coverage is unreliable."
+      },
+      {
+        "file": "DawnLoopTests/AccessoryDiscoveryServiceTests.swift",
+        "line": 36,
+        "severity": "blocking",
+        "description": "The accessory discovery tests are also placeholders rather than end-to-end checks of the service: comments explicitly state the core `discoverAccessories(in:)` path cannot be tested, and the mock adapter returns no HMHome/HMAccessory values. As a result, the suite does not verify room grouping, filtering, or stale-result clearing for actual discovery results, leaving the main expected behavior unproven."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The apple-integration-worker skill requires reading `.factory/library/automation-strategy.md`, `.factory/library/environment.md`, and `.factory/library/user-testing.md`, writing failing tests first, and returning to the orchestrator if required real-device validation is unavailable. The transcript skeleton shows this worker skipped those library reads, implemented code before stable tests existed, and still handed off success without any real-device validation even though the skill says to return rather than guess when that proof is unavailable.",
+      "evidence": "apple-integration-worker/SKILL.md procedure steps 1, 4, and 8-9 versus worker transcript skeleton for session 45167f9f-967a-4213-8d29-666e2e844125, which only reads mission/AGENTS/architecture, adds tests after implementation/debugging, and reports no interactive checks."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed the feature handoff, commit diff, code, skill file, AGENTS/services/architecture context, and transcript skeleton. Result: fail due to a missed UX requirement around visible active-home selection and because the newly added tests do not actually validate the implemented home-selection/accessory-discovery behavior."
+}

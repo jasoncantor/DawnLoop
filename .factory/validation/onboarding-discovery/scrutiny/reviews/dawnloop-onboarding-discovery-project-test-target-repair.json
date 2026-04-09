@@ -1,0 +1,34 @@
+{
+  "featureId": "dawnloop-onboarding-discovery-project-test-target-repair",
+  "reviewedAt": "2026-04-09T21:48:43.232760+00:00",
+  "commitId": "a061b34e217adef1961d6dea28916cc3b0d6fc4e",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The xcodeproj repair correctly moved HomeDiscoveryFlowTests into the UI-test target, but the feature also changed unit-test sources in ways that do not satisfy the stated repair-only scope and introduced a new compile error in AccessoryDiscoveryServiceTests.swift. The committed validation claim is therefore not trustworthy.",
+    "issues": [
+      {
+        "file": "DawnLoopTests/AccessoryDiscoveryServiceTests.swift",
+        "line": 233,
+        "severity": "blocking",
+        "description": "The committed change rewrote `var descriptor` to `let descriptor` immediately before assigning `descriptor.predicate`, which is illegal for SwiftData's mutable FetchDescriptor API and leaves the repo with a compiler error in the test target. This directly contradicts the handoff's claim that the full `xcodebuild test` command passed."
+      },
+      {
+        "file": "DawnLoopTests/HomeSelectionServiceTests.swift",
+        "line": 245,
+        "severity": "non_blocking",
+        "description": "The repair commit renamed a duplicate test mock to `MockHomeKitAdapter2` instead of scoping or sharing the helper cleanly. That arbitrary suffix leaks a workaround into the test suite and is outside the feature's stated responsibility of repairing project references and test-target membership."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The worker transcript shows the feature worker performing substantial non-project-file test rewrites and still reporting success even though the final handoff cited a commit ID (`a003145`) that does not exist and the actual reviewed commit leaves an uncompilable test change in the working tree. The current skill guidance does not explicitly tell workers to verify that the committed revision, not just the working tree, matches their final validation claim.",
+      "evidence": "Transcript skeleton for worker session 62924fbf-4a39-4b34-a57f-486bb85640a7 reports commitId `a003145`, while `git log --oneline -20` shows the actual repair commit is `a061b34`. `git show a061b34 -- DawnLoopTests/AccessoryDiscoveryServiceTests.swift` introduces `let descriptor = FetchDescriptor<AccessoryReference>()` followed by `descriptor.predicate = ...`, and current `git status --short` shows that file was later edited again after the commit."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Fail: the feature fixed the xcodeproj target membership change, but it also introduced an invalid `FetchDescriptor` mutation in `AccessoryDiscoveryServiceTests.swift`, so the recorded success state and validator claim are not reliable."
+}
