@@ -7,6 +7,30 @@ struct HomeAccessFlowView: View {
     
     var body: some View {
         Group {
+            switch environment.onboardingState.discoveryStep {
+            case .none, .checkingAccess:
+                // Check initial readiness and determine next step
+                HomeAccessCheckView()
+                
+            case .homeSelection:
+                // Show home selection when multiple homes or explicit selection needed
+                HomeSelectionView()
+                
+            case .accessoryDiscovery:
+                // Show accessory discovery grouped by room
+                AccessoryDiscoveryView()
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: environment.onboardingState.discoveryStep)
+    }
+}
+
+/// Initial view that checks Home access readiness and routes appropriately
+struct HomeAccessCheckView: View {
+    @Environment(AppEnvironment.self) private var environment
+    
+    var body: some View {
+        Group {
             switch environment.homeAccessState.readiness {
             case .unknown, .checkingPermission:
                 // Show loading during initial check
@@ -31,11 +55,60 @@ struct HomeAccessFlowView: View {
                 HomeAccessBlockerView(blockerState: .noCompatibleAccessories)
                 
             case .ready:
-                // Show setup surface for alarm creation
-                AlarmSetupReadyView()
+                // Home is ready - determine next step based on discovery state
+                ReadyTransitionView()
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: environment.homeAccessState.readiness)
+        .task {
+            await evaluateNextStep()
+        }
+    }
+    
+    private func evaluateNextStep() async {
+        // Small delay to allow UI to settle
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        
+        switch environment.homeAccessState.readiness {
+        case .ready(let home, _):
+            // Check if we have multiple homes or need explicit selection
+            let homes = await environment.homeSelectionService.availableHomes()
+            
+            if homes.count > 1 {
+                // Multiple homes - show selection
+                environment.onboardingState.moveToHomeSelection()
+            } else {
+                // Single home - auto-select and move to accessory discovery
+                let homeId = home.uniqueIdentifier.uuidString
+                let selected = await environment.homeSelectionService.selectHome(homeId)
+                
+                if selected {
+                    environment.onboardingState.moveToAccessoryDiscovery()
+                } else {
+                    // Fall back to home selection if auto-select fails
+                    environment.onboardingState.moveToHomeSelection()
+                }
+            }
+            
+        default:
+            break
+        }
+    }
+}
+
+/// Transition view shown briefly when home access is ready
+struct ReadyTransitionView: View {
+    var body: some View {
+        VStack {
+            ProgressView()
+                .scaleEffect(1.5)
+            
+            Text("Preparing your home...")
+                .font(Theme.Typography.body)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .padding(.top, Theme.Spacing.large)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.Colors.background)
     }
 }
 

@@ -16,6 +16,7 @@ final class OnboardingState {
     
     var showingHomeAccessFlow = false
     var currentScreen: OnboardingScreen = .welcome
+    var discoveryStep: DiscoveryStep = .none
     
     init() {
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: onboardingKey)
@@ -24,24 +25,46 @@ final class OnboardingState {
     /// Called from the final onboarding CTA to start Home access handling
     func startHomeAccessFlow() {
         showingHomeAccessFlow = true
+        discoveryStep = .checkingAccess
     }
     
     /// Called when Home access flow should exit (either completed or blocked)
     func exitHomeAccessFlow() {
         showingHomeAccessFlow = false
+        discoveryStep = .none
+    }
+    
+    /// Move to home selection step (for multiple homes)
+    func moveToHomeSelection() {
+        discoveryStep = .homeSelection
+    }
+    
+    /// Move to accessory discovery step
+    func moveToAccessoryDiscovery() {
+        discoveryStep = .accessoryDiscovery
     }
     
     func completeOnboarding() {
         hasCompletedOnboarding = true
         currentScreen = .welcome
         showingHomeAccessFlow = false
+        discoveryStep = .none
     }
     
     func resetOnboarding() {
         hasCompletedOnboarding = false
         currentScreen = .welcome
         showingHomeAccessFlow = false
+        discoveryStep = .none
     }
+}
+
+/// Steps in the home and accessory discovery flow
+enum DiscoveryStep: Equatable {
+    case none
+    case checkingAccess      // Initial permission and readiness check
+    case homeSelection       // Multiple homes available, need selection
+    case accessoryDiscovery    // Discovering and selecting accessories
 }
 
 enum OnboardingScreen: Int, CaseIterable {

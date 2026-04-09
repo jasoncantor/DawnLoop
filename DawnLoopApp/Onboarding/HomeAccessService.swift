@@ -165,6 +165,29 @@ final class HomeAccessState {
     }
 }
 
+/// Result type for active home lookup
+enum ActiveHomeResult {
+    case success(home: HMHome)
+    case notFound(identifier: String)
+    case noSelection
+    case error(HomeSelectionError)
+}
+
+/// Errors that can occur during home selection
+enum HomeSelectionError: Error {
+    case permissionDenied
+    case homeKitError(underlying: String)
+    
+    var userFacingMessage: String {
+        switch self {
+        case .permissionDenied:
+            return "Home access is required to select a home."
+        case .homeKitError(let underlying):
+            return "Unable to access HomeKit: \(underlying)"
+        }
+    }
+}
+
 /// User-facing descriptions for blocker states
 enum HomeAccessBlockerCopy {
     static let permissionDenied = BlockerCopy(

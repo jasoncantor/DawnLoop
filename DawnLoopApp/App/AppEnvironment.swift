@@ -6,14 +6,17 @@ import SwiftData
 final class AppEnvironment {
     let onboardingState: OnboardingState
     let homeAccessState: HomeAccessState
+    let homeSelectionService: HomeSelectionService
+    let accessoryDiscoveryService: AccessoryDiscoveryService
     let modelContainer: ModelContainer
     
     init() {
         self.onboardingState = OnboardingState()
-        self.homeAccessState = HomeAccessState()
         
         let schema = Schema([
             OnboardingCompletion.self,
+            HomeReference.self,
+            AccessoryReference.self,
         ])
         let modelConfiguration = ModelConfiguration(
             schema: schema,
@@ -28,5 +31,9 @@ final class AppEnvironment {
         } catch {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
+        
+        self.homeAccessState = HomeAccessState()
+        self.homeSelectionService = HomeSelectionService(modelContainer: modelContainer)
+        self.accessoryDiscoveryService = AccessoryDiscoveryService(modelContainer: modelContainer)
     }
 }

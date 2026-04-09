@@ -22,6 +22,15 @@
 		D013 /* HomeAccessFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F013 /* HomeAccessFlowView.swift */; };
 		D014 /* HomeAccessBlockerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F014 /* HomeAccessBlockerView.swift */; };
 		D015 /* HomeAccessStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F015 /* HomeAccessStateTests.swift */; };
+		D015B /* HomeSelectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F015B /* HomeSelectionServiceTests.swift */; };
+		D016 /* HomeReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F016 /* HomeReference.swift */; };
+		D017 /* AccessoryReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F017 /* AccessoryReference.swift */; };
+		D018 /* AccessoryDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F018 /* AccessoryDiscoveryService.swift */; };
+		D019 /* HomeSelectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F019 /* HomeSelectionService.swift */; };
+		D020 /* HomeSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F020 /* HomeSelectionView.swift */; };
+		D021 /* AccessoryDiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F021 /* AccessoryDiscoveryView.swift */; };
+		D022 /* AccessoryDiscoveryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F022 /* AccessoryDiscoveryServiceTests.swift */; };
+		D023 /* HomeDiscoveryFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F023 /* HomeDiscoveryFlowTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,6 +67,15 @@
 		F013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessFlowView.swift; sourceTree = "<group>"; };
 		F014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessBlockerView.swift; sourceTree = "<group>"; };
 		F015 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessStateTests.swift; sourceTree = "<group>"; };
+		F015B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSelectionServiceTests.swift; sourceTree = "<group>"; };
+		F016 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeReference.swift; sourceTree = "<group>"; };
+		F017 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryReference.swift; sourceTree = "<group>"; };
+		F018 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryDiscoveryService.swift; sourceTree = "<group>"; };
+		F019 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSelectionService.swift; sourceTree = "<group>"; };
+		F020 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSelectionView.swift; sourceTree = "<group>"; };
+		F021 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryDiscoveryView.swift; sourceTree = "<group>"; };
+		F022 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryDiscoveryServiceTests.swift; sourceTree = "<group>"; };
+		F023 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDiscoveryFlowTests.swift; sourceTree = "<group>"; };
 		F100 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		T001 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		T002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -92,13 +110,13 @@
 		};
 		G001 = {
 			isa = PBXGroup;
-			children = ( G005, G006, G007, G008, G009, F100 );
+			children = ( G005, G006, G007, G008, G009, G010, F100 );
 			path = DawnLoopApp;
 			sourceTree = "<group>";
 		};
 		G002 = {
 			isa = PBXGroup;
-			children = ( F009, F015 );
+			children = ( F009, F015, F015B, F022, F023 );
 			path = DawnLoopTests;
 			sourceTree = "<group>";
 		};
@@ -128,14 +146,20 @@
 		};
 		G007 = {
 			isa = PBXGroup;
-			children = ( F007 );
+			children = ( F007, F016, F017 );
 			path = Models;
 			sourceTree = "<group>";
 		};
 		G008 = {
 			isa = PBXGroup;
-			children = ( F005, F006, F012, F013, F014 );
+			children = ( F005, F006, F012, F013, F014, F020, F021 );
 			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		G010 = {
+			isa = PBXGroup;
+			children = ( F018, F019 );
+			path = Services;
 			sourceTree = "<group>";
 		};
 		G009 = {
@@ -223,13 +247,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				D001, D002, D003, D004, D005, D006, D007, D008, D012, D013, D014,
+				D016, D017, D018, D019, D020, D021,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		ST001 = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ( D009, D015 );
+			files = ( D009, D015, D015B, D022, D023 );
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		ST002 = {

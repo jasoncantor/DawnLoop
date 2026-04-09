@@ -39,6 +39,12 @@ enum Theme {
         
         /// Tertiary/placeholder text
         static let textTertiary = Color(white: 0.5)
+        
+        /// Primary accent color (dawn purple)
+        static let primary = dawnPurple
+        
+        /// Warning/error color (sunrise orange)
+        static let warning = sunriseOrange
     }
     
     // MARK: - Gradients
@@ -99,11 +105,13 @@ enum Theme {
         static let title3 = Font.system(size: 20, weight: .semibold, design: .rounded)
         static let headline = Font.system(size: 17, weight: .semibold, design: .rounded)
         static let body = Font.system(size: 17, weight: .regular, design: .rounded)
+        static let bodyBold = Font.system(size: 17, weight: .semibold, design: .rounded)
         static let callout = Font.system(size: 16, weight: .regular, design: .rounded)
         static let subheadline = Font.system(size: 15, weight: .regular, design: .rounded)
         static let footnote = Font.system(size: 13, weight: .regular, design: .rounded)
         static let caption1 = Font.system(size: 12, weight: .regular, design: .rounded)
         static let caption2 = Font.system(size: 11, weight: .regular, design: .rounded)
+        static let caption = Font.system(size: 12, weight: .regular, design: .rounded)
     }
     
     // MARK: - Spacing
