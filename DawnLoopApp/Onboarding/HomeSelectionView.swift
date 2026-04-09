@@ -106,14 +106,9 @@ struct HomeSelectionView: View {
         
         do {
             homes = await environment.homeSelectionService.availableHomes()
-            
-            // If there's only one home, auto-select it after a brief delay
-            // But still show it visibly selected first (VAL-HOME-001)
-            if homes.count == 1, let onlyHome = homes.first {
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
-                await selectHome(onlyHome)
-                return
-            }
+            // Note: Even with a single home, we show the selection UI
+            // so the user can visibly see and confirm the active-home choice.
+            // The user must explicitly tap to proceed (VAL-HOME-001).
         } catch {
             errorMessage = "Unable to load homes. Please try again."
         }

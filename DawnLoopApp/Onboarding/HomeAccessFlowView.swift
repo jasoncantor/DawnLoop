@@ -73,25 +73,11 @@ struct HomeAccessCheckView: View {
         try? await Task.sleep(nanoseconds: 100_000_000)
         
         switch environment.homeAccessState.readiness {
-        case .ready(let home, _):
-            // Check if we have multiple homes or need explicit selection
-            let homes = await environment.homeSelectionService.availableHomes()
-            
-            if homes.count > 1 {
-                // Multiple homes - show selection
-                environment.onboardingState.moveToHomeSelection()
-            } else {
-                // Single home - auto-select and move to accessory discovery
-                let homeId = home.uniqueIdentifier.uuidString
-                let selected = await environment.homeSelectionService.selectHome(homeId)
-                
-                if selected {
-                    environment.onboardingState.moveToAccessoryDiscovery()
-                } else {
-                    // Fall back to home selection if auto-select fails
-                    environment.onboardingState.moveToHomeSelection()
-                }
-            }
+        case .ready:
+            // Always show home selection to make active-home choice visible (VAL-HOME-001)
+            // Even with a single home, the user sees the home visibly selected
+            // before moving deeper into setup
+            environment.onboardingState.moveToHomeSelection()
             
         default:
             break

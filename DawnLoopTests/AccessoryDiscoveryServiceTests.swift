@@ -3,18 +3,114 @@ import HomeKit
 import SwiftData
 @testable import DawnLoop
 
+/// Mock HomeKit adapter for AccessoryDiscoveryService testing
+@preconcurrency
+actor AccessoryDiscoveryMockAdapter: HomeKitAdapterProtocol {
+    private var _compatibleAccessories: [HMAccessory] = []
+    private var _authorizationStatus: HMHomeManagerAuthorizationStatus = [.determined, .authorized]
+
+    func setCompatibleAccessories(_ accessories: [HMAccessory]) {
+        _compatibleAccessories = accessories
+    }
+
+    func setAuthorizationStatus(_ status: HMHomeManagerAuthorizationStatus) {
+        _authorizationStatus = status
+    }
+
+    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
+        HMHomeManagerAuthorizationStatus([.determined, .authorized])
+    }
+
+    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
+        [.determined, .authorized]
+    }
+
+    func fetchHomes() async throws -> [HMHome] {
+        []
+    }
+
+    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
+        _compatibleAccessories
+    }
+}
+
+// MARK: - Mock HM Types for Capability Detection
+
+struct MockHMCharacteristic {
+    let characteristicType: String
+}
+
+struct MockHMService {
+    let characteristics: [MockHMCharacteristic]
+}
+
+struct MockHMAccessory: HMAccessoryProtocol {
+    let name: String
+    let uniqueIdentifier: UUID
+    let services: [MockHMService]
+    let isReachable: Bool = true
+
+    init(name: String, identifier: String, services: [MockHMService]) {
+        self.name = name
+        self.uniqueIdentifier = UUID(uuidString: identifier) ?? UUID()
+        self.services = services
+    }
+}
+
+protocol HMAccessoryProtocol {
+    var name: String { get }
+    var uniqueIdentifier: UUID { get }
+    var services: [MockHMService] { get }
+    var isReachable: Bool { get }
+}
+
+extension AccessoryCapabilityDetector {
+    static func detectCapability(for accessory: HMAccessoryProtocol) -> AccessoryCapability {
+        var hasBrightness = false
+        var hasHue = false
+        var hasSaturation = false
+        var hasColorTemp = false
+
+        for service in accessory.services {
+            for characteristic in service.characteristics {
+                switch characteristic.characteristicType {
+                case HMCharacteristicTypeBrightness:
+                    hasBrightness = true
+                case HMCharacteristicTypeHue:
+                    hasHue = true
+                case HMCharacteristicTypeSaturation:
+                    hasSaturation = true
+                case HMCharacteristicTypeColorTemperature:
+                    hasColorTemp = true
+                default:
+                    break
+                }
+            }
+        }
+
+        if hasBrightness && hasHue && hasSaturation {
+            return .fullColor
+        } else if hasBrightness && hasColorTemp {
+            return .tunableWhite
+        } else if hasBrightness {
+            return .brightnessOnly
+        } else {
+            return .unsupported
+        }
+    }
+}
+
 /// Tests for AccessoryDiscoveryService accessory discovery and filtering behavior
 @MainActor
 final class AccessoryDiscoveryServiceTests: XCTestCase {
 
     var modelContainer: ModelContainer!
-    var mockAdapter: MockHomeKitAdapterForDiscovery!
+    var mockAdapter: AccessoryDiscoveryMockAdapter!
     var service: AccessoryDiscoveryService!
 
     override func setUp() {
         super.setUp()
 
-        // Set up in-memory SwiftData container for testing
         let schema = Schema([HomeReference.self, AccessoryReference.self, OnboardingCompletion.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
 
@@ -25,7 +121,7 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
             return
         }
 
-        mockAdapter = MockHomeKitAdapterForDiscovery()
+        mockAdapter = AccessoryDiscoveryMockAdapter()
         service = AccessoryDiscoveryService(adapter: mockAdapter, modelContainer: modelContainer)
     }
 
@@ -35,51 +131,37 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
         service = nil
         super.tearDown()
     }
-    
-    // MARK: - VAL-HOME-003: Compatible accessories grouped by room
-    
-    func testDiscoverAccessories_GroupsByRoom() async throws {
-        // We can't easily create HMHome/HMAccessory objects for testing
-        // So we test the service behavior with mocks
-        
-        // Given: Mock discovery returns accessories from different rooms
-        let accessory1 = MockAccessory(name: "Living Room Light", identifier: "acc-1", roomName: "Living Room", hasBrightness: true)
-        let accessory2 = MockAccessory(name: "Bedroom Lamp", identifier: "acc-2", roomName: "Bedroom", hasBrightness: true)
-        let accessory3 = MockAccessory(name: "Kitchen Light", identifier: "acc-3", roomName: "Kitchen", hasBrightness: true)
-        
-        await mockAdapter.setMockAccessories([accessory1, accessory2, accessory3])
-        
-        // When: Discovery is run
-        // Note: We can't test the actual discoverAccessories method without real HMHome
-        // So we test the filtering and grouping logic directly
-        
-        // Then: Accessories should be grouped by room
-        // This is validated through the mock adapter behavior
-        let count = await mockAdapter.mockAccessories.count
-        XCTAssertEqual(count, 3)
-    }
-    
-    // MARK: - VAL-HOME-004: Unsupported accessories are filtered
-    
-    func testDiscoverAccessories_FiltersUnsupportedDevices() async {
-        // Given: Mix of compatible and incompatible accessories
-        let compatible1 = MockAccessory(name: "Smart Light", identifier: "c1", roomName: "Living Room", hasBrightness: true)
-        let compatible2 = MockAccessory(name: "Dimmer Bulb", identifier: "c2", roomName: "Bedroom", hasBrightness: true)
-        let incompatible = MockAccessory(name: "Smart Switch", identifier: "i1", roomName: "Hallway", hasBrightness: false)
-        
-        await mockAdapter.setMockAccessories([compatible1, compatible2, incompatible])
-        
-        // Verify mock adapter contains all accessories
-        let count = await mockAdapter.mockAccessories.count
-        XCTAssertEqual(count, 3)
 
-        // Verify filtering would work (through capability detection)
-        let accessories = await mockAdapter.mockAccessories
-        let compatible = accessories.filter { $0.hasBrightness }
-        XCTAssertEqual(compatible.count, 2)
-        XCTAssertFalse(compatible.contains { $0.identifier == "i1" })
+    // MARK: - VAL-HOME-006: Switching homes clears stale accessory results
+
+    func testClearDiscoveredAccessories_RemovesAllReferences() async throws {
+        let context = ModelContext(modelContainer)
+
+        for i in 0..<5 {
+            let ref = AccessoryReference(
+                homeKitIdentifier: "acc-\(i)",
+                name: "Light \(i)",
+                homeIdentifier: "home-1",
+                roomName: "Room \(i)",
+                capability: .brightnessOnly
+            )
+            context.insert(ref)
+        }
+        try context.save()
+
+        let descriptor = FetchDescriptor<AccessoryReference>()
+        let beforeCount = try context.fetch(descriptor).count
+        XCTAssertEqual(beforeCount, 5)
+
+        await service.clearDiscoveredAccessories()
+
+        let afterContext = ModelContext(modelContainer)
+        let afterCount = try afterContext.fetch(descriptor).count
+        XCTAssertEqual(afterCount, 0)
     }
-    
+
+    // MARK: - VAL-HOME-004: Capability Detection Tests
+
     func testCapabilityDetection_BrightnessOnly() {
         let accessory = MockHMAccessory(
             name: "Basic Bulb",
@@ -98,7 +180,7 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
         XCTAssertFalse(capability.supportsColorTemperature)
         XCTAssertFalse(capability.supportsHueSaturation)
     }
-    
+
     func testCapabilityDetection_TunableWhite() {
         let accessory = MockHMAccessory(
             name: "Tunable Bulb",
@@ -156,64 +238,91 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
         XCTAssertEqual(capability, .unsupported)
         XCTAssertFalse(capability.supportsBrightness)
     }
-    
-    // MARK: - VAL-HOME-006: Switching homes clears stale accessory results
-    
-    func testDiscoverAccessories_ClearsPreviousResults() async {
-        // Given: Some accessories exist in persistence
-        let context = ModelContext(modelContainer)
-        let existingRef = AccessoryReference(
-            homeKitIdentifier: "old-acc-1",
-            name: "Old Light",
-            homeIdentifier: "old-home",
-            roomName: "Old Room",
-            capability: .brightnessOnly
+
+    // MARK: - VAL-HOME-004: Filtering Tests
+
+    func testCapabilityFiltering_OnlyBrightnessSupported() {
+        let compatible1 = MockHMAccessory(
+            name: "Smart Light",
+            identifier: "c1",
+            services: [MockHMService(characteristics: [MockHMCharacteristic(characteristicType: HMCharacteristicTypeBrightness)])]
         )
-        context.insert(existingRef)
-        try? context.save()
-        
-        // Verify accessory exists
-        let descriptor = FetchDescriptor<AccessoryReference>()
-        let beforeCount = (try? context.fetch(descriptor).count) ?? 0
-        XCTAssertGreaterThan(beforeCount, 0)
-        
-        // When: Clear discovered accessories is called
-        await service.clearDiscoveredAccessories()
-        
-        // Then: No accessories should remain
-        let afterCount = (try? context.fetch(descriptor).count) ?? 0
-        XCTAssertEqual(afterCount, 0)
+        let compatible2 = MockHMAccessory(
+            name: "Dimmer Bulb",
+            identifier: "c2",
+            services: [MockHMService(characteristics: [
+                MockHMCharacteristic(characteristicType: HMCharacteristicTypeBrightness),
+                MockHMCharacteristic(characteristicType: HMCharacteristicTypeColorTemperature)
+            ])]
+        )
+        let incompatible = MockHMAccessory(
+            name: "Smart Switch",
+            identifier: "i1",
+            services: [MockHMService(characteristics: [MockHMCharacteristic(characteristicType: HMCharacteristicTypePowerState)])]
+        )
+
+        let accessories = [compatible1, compatible2, incompatible]
+        let compatible = accessories.filter { AccessoryCapabilityDetector.detectCapability(for: $0).supportsBrightness }
+
+        XCTAssertEqual(compatible.count, 2)
+        XCTAssertTrue(compatible.contains { $0.uniqueIdentifier.uuidString == "c1" })
+        XCTAssertTrue(compatible.contains { $0.uniqueIdentifier.uuidString == "c2" })
+        XCTAssertFalse(compatible.contains { $0.uniqueIdentifier.uuidString == "i1" })
     }
-    
-    func testClearDiscoveredAccessories_RemovesAllReferences() async throws {
-        // Given: Multiple accessories persisted
-        let context = ModelContext(modelContainer)
-        
-        for i in 0..<5 {
-            let ref = AccessoryReference(
-                homeKitIdentifier: "acc-\(i)",
-                name: "Light \(i)",
-                homeIdentifier: "home-1",
-                roomName: "Room \(i)",
-                capability: .brightnessOnly
-            )
-            context.insert(ref)
-        }
-        try context.save()
-        
-        // When: Clear is called
-        await service.clearDiscoveredAccessories()
-        
-        // Then: All references removed
-        let descriptor = FetchDescriptor<AccessoryReference>()
-        let count = try context.fetch(descriptor).count
-        XCTAssertEqual(count, 0)
+
+    // MARK: - VAL-HOME-003: Room Grouping Tests
+
+    func testRoomGroup_EmptyRoomNameShowsUnassigned() {
+        let unassignedLight = AccessoryViewModel(
+            homeKitIdentifier: "unassigned-1",
+            name: "Unassigned Light",
+            roomName: "",
+            capability: .brightnessOnly,
+            isReachable: true,
+            isSelected: false
+        )
+
+        let group = RoomAccessoryGroup(roomName: unassignedLight.roomName, accessories: [unassignedLight])
+
+        XCTAssertEqual(group.roomName, "Unassigned")
+        XCTAssertEqual(group.id, "unassigned")
     }
-    
-    // MARK: - Accessory Selection
-    
+
+    func testRoomGroup_HasSelection_TracksSelectedCount() {
+        let light1 = AccessoryViewModel(
+            homeKitIdentifier: "l1",
+            name: "Light 1",
+            roomName: "Living Room",
+            capability: .brightnessOnly,
+            isReachable: true,
+            isSelected: true
+        )
+        let light2 = AccessoryViewModel(
+            homeKitIdentifier: "l2",
+            name: "Light 2",
+            roomName: "Living Room",
+            capability: .brightnessOnly,
+            isReachable: true,
+            isSelected: false
+        )
+        let light3 = AccessoryViewModel(
+            homeKitIdentifier: "l3",
+            name: "Light 3",
+            roomName: "Living Room",
+            capability: .fullColor,
+            isReachable: true,
+            isSelected: true
+        )
+
+        let group = RoomAccessoryGroup(roomName: "Living Room", accessories: [light1, light2, light3])
+
+        XCTAssertTrue(group.hasSelection)
+        XCTAssertEqual(group.selectedCount, 2)
+    }
+
+    // MARK: - Accessory Selection Tests
+
     func testToggleAccessorySelection_PersistsState() async throws {
-        // Given: An accessory reference exists
         let context = ModelContext(modelContainer)
         let ref = AccessoryReference(
             homeKitIdentifier: "selectable-1",
@@ -225,22 +334,46 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
         )
         context.insert(ref)
         try context.save()
-        
-        // When: Toggle selection
-        await service.toggleAccessorySelection("selectable-1")
-        
-        // Then: State is persisted
+
         var descriptor = FetchDescriptor<AccessoryReference>()
         descriptor.predicate = #Predicate { $0.homeKitIdentifier == "selectable-1" }
-        let updated = try context.fetch(descriptor).first
-        
-        XCTAssertTrue(updated?.isSelected ?? false)
+        let beforeToggle = try context.fetch(descriptor).first
+        XCTAssertFalse(beforeToggle?.isSelected ?? true)
+
+        await service.toggleAccessorySelection("selectable-1")
+
+        let afterContext = ModelContext(modelContainer)
+        var afterDescriptor = FetchDescriptor<AccessoryReference>()
+        afterDescriptor.predicate = #Predicate { $0.homeKitIdentifier == "selectable-1" }
+        let afterToggle = try afterContext.fetch(afterDescriptor).first
+        XCTAssertTrue(afterToggle?.isSelected ?? false)
     }
-    
-    func testSelectedAccessories_ReturnsOnlySelected() async throws {
-        // Given: Mix of selected and unselected accessories
+
+    func testToggleAccessorySelection_TogglesOffWhenSelected() async throws {
         let context = ModelContext(modelContainer)
-        
+        let ref = AccessoryReference(
+            homeKitIdentifier: "already-selected",
+            name: "Selected Light",
+            homeIdentifier: "home-1",
+            roomName: "Bedroom",
+            capability: .brightnessOnly,
+            isSelected: true
+        )
+        context.insert(ref)
+        try context.save()
+
+        await service.toggleAccessorySelection("already-selected")
+
+        let afterContext = ModelContext(modelContainer)
+        var descriptor = FetchDescriptor<AccessoryReference>()
+        descriptor.predicate = #Predicate { $0.homeKitIdentifier == "already-selected" }
+        let afterToggle = try afterContext.fetch(descriptor).first
+        XCTAssertFalse(afterToggle?.isSelected ?? true)
+    }
+
+    func testSelectedAccessories_ReturnsOnlySelected() async throws {
+        let context = ModelContext(modelContainer)
+
         let selected1 = AccessoryReference(
             homeKitIdentifier: "sel-1",
             name: "Selected 1",
@@ -265,130 +398,20 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
             capability: .brightnessOnly,
             isSelected: false
         )
-        
+
         context.insert(selected1)
         context.insert(selected2)
         context.insert(unselected)
         try context.save()
-        
-        // When: Get selected accessories
+
         let selected = await service.selectedAccessories()
-        
-        // Then: Only selected accessories returned
+
         XCTAssertEqual(selected.count, 2)
         XCTAssertTrue(selected.allSatisfy { $0.isSelected })
     }
-    
-    // MARK: - Room Grouping
 
-    func testRoomGroup_EmptyRoomNameShowsUnassigned() {
-        // Test RoomAccessoryGroup initialization with empty room name
-        // Note: AccessoryViewModel requires HMAccessory or AccessoryReference,
-        // so we test the RoomAccessoryGroup behavior directly
-        let group = RoomAccessoryGroup(roomName: "", accessories: [])
-
-        XCTAssertEqual(group.roomName, "Unassigned")
-        XCTAssertEqual(group.id, "unassigned")
-    }
-}
-
-// MARK: - Mock Objects for Discovery Tests
-
-actor MockHomeKitAdapterForDiscovery: HomeKitAdapterProtocol {
-    var mockAccessories: [MockAccessory] = []
-    
-    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
-        [.determined, .authorized]
-    }
-    
-    func setMockAccessories(_ accessories: [MockAccessory]) {
-        self.mockAccessories = accessories
-    }
-    
-    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
-        [.determined, .authorized]
-    }
-    
-    func fetchHomes() async throws -> [HMHome] {
-        return []
-    }
-    
-    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
-        return []
-    }
-}
-
-struct MockAccessory {
-    let name: String
-    let identifier: String
-    let roomName: String
-    let hasBrightness: Bool
-}
-
-// MARK: - Mock HM Types for Capability Detection
-
-struct MockHMCharacteristic {
-    let characteristicType: String
-}
-
-struct MockHMService {
-    let characteristics: [MockHMCharacteristic]
-}
-
-struct MockHMAccessory: HMAccessoryProtocol {
-    let name: String
-    let uniqueIdentifier: UUID
-    let services: [MockHMService]
-    let isReachable: Bool = true
-    
-    init(name: String, identifier: String, services: [MockHMService]) {
-        self.name = name
-        self.uniqueIdentifier = UUID(uuidString: identifier) ?? UUID()
-        self.services = services
-    }
-}
-
-// Protocol to make testing capability detection possible
-protocol HMAccessoryProtocol {
-    var name: String { get }
-    var uniqueIdentifier: UUID { get }
-    var services: [MockHMService] { get }
-    var isReachable: Bool { get }
-}
-
-// Extend the detector to work with our protocol
-extension AccessoryCapabilityDetector {
-    static func detectCapability(for accessory: HMAccessoryProtocol) -> AccessoryCapability {
-        var hasBrightness = false
-        var hasHue = false
-        var hasSaturation = false
-        var hasColorTemp = false
-        
-        for service in accessory.services {
-            for characteristic in service.characteristics {
-                switch characteristic.characteristicType {
-                case HMCharacteristicTypeBrightness:
-                    hasBrightness = true
-                case HMCharacteristicTypeHue:
-                    hasHue = true
-                case HMCharacteristicTypeSaturation:
-                    hasSaturation = true
-                case HMCharacteristicTypeColorTemperature:
-                    hasColorTemp = true
-                default:
-                    break
-                }
-            }
-        }
-        
-        if hasBrightness && hasHue && hasSaturation {
-            return .fullColor
-        } else if hasBrightness && hasColorTemp {
-            return .tunableWhite
-        } else if hasBrightness {
-            return .brightnessOnly
-        } else {
-            return .unsupported
-        }
+    func testSelectedAccessories_NoAccessoriesPersisted_ReturnsEmpty() async {
+        let selected = await service.selectedAccessories()
+        XCTAssertTrue(selected.isEmpty)
     }
 }
