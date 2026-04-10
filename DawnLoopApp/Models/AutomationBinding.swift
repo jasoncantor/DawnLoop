@@ -15,6 +15,10 @@ final class AutomationBinding {
     /// The step number in the alarm sequence (0-indexed)
     var stepNumber: Int
 
+    /// Repeating bindings are stored per weekday (1 = Sunday ... 7 = Saturday).
+    /// One-shot bindings use nil.
+    var weekday: Int?
+
     /// HomeKit Action Set identifier (for the scene/action at this step)
     var actionSetIdentifier: String?
 
@@ -52,6 +56,7 @@ final class AutomationBinding {
         id: UUID = UUID(),
         alarmId: UUID,
         stepNumber: Int,
+        weekday: Int? = nil,
         actionSetIdentifier: String? = nil,
         triggerIdentifier: String? = nil,
         scheduledTime: Date? = nil,
@@ -63,6 +68,7 @@ final class AutomationBinding {
         self.id = id
         self.alarmId = alarmId
         self.stepNumber = stepNumber
+        self.weekday = weekday
         self.actionSetIdentifier = actionSetIdentifier
         self.triggerIdentifier = triggerIdentifier
         self.scheduledTime = scheduledTime
@@ -147,11 +153,11 @@ final class AutomationBindingService {
         do {
             var descriptor = FetchDescriptor<AutomationBinding>()
             descriptor.predicate = #Predicate { $0.alarmId == alarmId }
-            descriptor.sortBy = [SortDescriptor(\.stepNumber)]
+            descriptor.sortBy = [SortDescriptor(\.stepNumber), SortDescriptor(\.weekday)]
 
             return try context.fetch(descriptor)
         } catch {
-            print("Failed to fetch bindings for alarm \(alarmId): \(error)")
+            DawnLoopLogger.persistence.error("Failed to fetch bindings for alarm \(alarmId.uuidString): \(error.localizedDescription)")
             return []
         }
     }
@@ -172,6 +178,7 @@ final class AutomationBindingService {
             let binding = AutomationBinding(
                 alarmId: alarmId,
                 stepNumber: index,
+                weekday: nil,
                 scheduledTime: step.timestamp,
                 brightness: step.brightness,
                 colorTemperature: step.colorTemperature,
@@ -185,7 +192,7 @@ final class AutomationBindingService {
         do {
             try context.save()
         } catch {
-            print("Failed to save bindings: \(error)")
+            DawnLoopLogger.persistence.error("Failed to save bindings: \(error.localizedDescription)")
         }
 
         return bindings
@@ -206,7 +213,7 @@ final class AutomationBindingService {
 
             try context.save()
         } catch {
-            print("Failed to remove bindings for alarm \(alarmId): \(error)")
+            DawnLoopLogger.persistence.error("Failed to remove bindings for alarm \(alarmId.uuidString): \(error.localizedDescription)")
         }
     }
 
@@ -252,7 +259,7 @@ final class AutomationBindingService {
         do {
             try context.save()
         } catch {
-            print("Failed to save validation results: \(error)")
+            DawnLoopLogger.persistence.error("Failed to save validation results: \(error.localizedDescription)")
         }
 
         return AlarmBindingSummary(

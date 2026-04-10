@@ -1,10 +1,9 @@
 import Foundation
-import HomeKit
 import SwiftData
 
 /// Protocol for accessory discovery operations - enables mocking in tests
-protocol AccessoryDiscoveryServiceProtocol: Sendable {
-    func discoverAccessories(in home: HMHome) async -> AccessoryDiscoveryResult
+protocol AccessoryDiscoveryServiceProtocol {
+    func discoverAccessories(in home: HomeSnapshot) async -> AccessoryDiscoveryResult
     func clearDiscoveredAccessories() async
     func selectedAccessories() async -> [AccessoryViewModel]
     func toggleAccessorySelection(_ accessoryId: String) async
@@ -18,7 +17,7 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
     private let modelContainer: ModelContainer
     
     init(
-        adapter: any HomeKitAdapterProtocol = LiveHomeKitAdapter(),
+        adapter: any HomeKitAdapterProtocol,
         modelContainer: ModelContainer
     ) {
         self.adapter = adapter
@@ -27,18 +26,11 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
     
     /// Discovers compatible accessories in the given home and groups them by room
     /// Clears any previous accessory results before loading new ones
-    func discoverAccessories(in home: HMHome) async -> AccessoryDiscoveryResult {
+    func discoverAccessories(in home: HomeSnapshot) async -> AccessoryDiscoveryResult {
         // Clear stale results first (VAL-HOME-006)
         await clearDiscoveredAccessories()
         
-        // Fetch all accessories from HomeKit
-        let allAccessories = await adapter.fetchCompatibleAccessories(in: home)
-        
-        // Filter to only compatible accessories (VAL-HOME-004)
-        let compatibleAccessories = allAccessories.filter { accessory in
-            let capability = AccessoryCapabilityDetector.detectCapability(for: accessory)
-            return capability.supportsBrightness
-        }
+        let compatibleAccessories = await adapter.fetchCompatibleAccessories(in: home.id)
         
         guard !compatibleAccessories.isEmpty else {
             return .noCompatibleAccessories
@@ -74,8 +66,7 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
             
             try context.save()
         } catch {
-            // Log but don't throw - clearing is best-effort
-            print("Warning: Could not clear accessory references: \(error)")
+            DawnLoopLogger.persistence.error("Could not clear accessory references: \(error.localizedDescription)")
         }
     }
     
@@ -90,6 +81,7 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
             
             return selected.map { AccessoryViewModel(from: $0) }
         } catch {
+            DawnLoopLogger.persistence.error("Could not fetch selected accessories: \(error.localizedDescription)")
             return []
         }
     }
@@ -108,36 +100,26 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
                 try context.save()
             }
         } catch {
-            print("Warning: Could not toggle accessory selection: \(error)")
+            DawnLoopLogger.persistence.error("Could not toggle accessory selection: \(error.localizedDescription)")
         }
     }
     
     // MARK: - Private Helpers
     
     private func buildRoomGroups(
-        accessories: [HMAccessory],
-        in home: HMHome
+        accessories: [AccessorySnapshot],
+        in home: HomeSnapshot
     ) async -> [RoomAccessoryGroup] {
-        // Create a map of accessory ID to room name
-        var accessoryRoomMap: [String: String] = [:]
-        
-        for room in home.rooms {
-            for accessory in room.accessories {
-                accessoryRoomMap[accessory.uniqueIdentifier.uuidString] = room.name
-            }
-        }
-        
-        // Handle accessories not assigned to any room
-        for accessory in accessories {
-            if accessoryRoomMap[accessory.uniqueIdentifier.uuidString] == nil {
-                accessoryRoomMap[accessory.uniqueIdentifier.uuidString] = ""
-            }
-        }
-        
-        // Build view models
         let viewModels = accessories.map { accessory in
-            let roomName = accessoryRoomMap[accessory.uniqueIdentifier.uuidString] ?? ""
-            return AccessoryViewModel(from: accessory, roomName: roomName)
+            AccessoryViewModel(
+                id: accessory.id,
+                homeKitIdentifier: accessory.id,
+                name: accessory.name,
+                roomName: accessory.roomName,
+                capability: accessory.capability,
+                isSelected: false,
+                isReachable: accessory.isReachable
+            )
         }
         
         // Group by room
@@ -157,29 +139,18 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
     }
     
     private func persistDiscoveredAccessories(
-        _ accessories: [HMAccessory],
-        in home: HMHome
+        _ accessories: [AccessorySnapshot],
+        in home: HomeSnapshot
     ) async {
         let context = ModelContext(modelContainer)
         
-        // Build room map
-        var accessoryRoomMap: [String: String] = [:]
-        for room in home.rooms {
-            for accessory in room.accessories {
-                accessoryRoomMap[accessory.uniqueIdentifier.uuidString] = room.name
-            }
-        }
-        
         for accessory in accessories {
-            let roomName = accessoryRoomMap[accessory.uniqueIdentifier.uuidString] ?? ""
-            let capability = AccessoryCapabilityDetector.detectCapability(for: accessory)
-            
             let reference = AccessoryReference(
-                homeKitIdentifier: accessory.uniqueIdentifier.uuidString,
+                homeKitIdentifier: accessory.id,
                 name: accessory.name,
-                homeIdentifier: home.uniqueIdentifier.uuidString,
-                roomName: roomName,
-                capability: capability
+                homeIdentifier: home.id,
+                roomName: accessory.roomName,
+                capability: accessory.capability
             )
             
             context.insert(reference)
@@ -188,13 +159,13 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
         do {
             try context.save()
         } catch {
-            print("Warning: Could not persist accessory references: \(error)")
+            DawnLoopLogger.persistence.error("Could not persist accessory references: \(error.localizedDescription)")
         }
     }
 }
 
 /// Actor-based mock implementation for testing
-actor MockAccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
+final class MockAccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
     var mockResult: AccessoryDiscoveryResult?
     var mockSelectedAccessories: [AccessoryViewModel] = []
     var cleared = false
@@ -207,7 +178,7 @@ actor MockAccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
         self.mockSelectedAccessories = accessories
     }
     
-    func discoverAccessories(in home: HMHome) async -> AccessoryDiscoveryResult {
+    func discoverAccessories(in home: HomeSnapshot) async -> AccessoryDiscoveryResult {
         // Clear stale results (VAL-HOME-006)
         await clearDiscoveredAccessories()
         return mockResult ?? .noCompatibleAccessories

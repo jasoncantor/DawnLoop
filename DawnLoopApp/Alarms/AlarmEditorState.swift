@@ -91,6 +91,8 @@ final class AlarmEditorState {
         didSet { clearValidationError(for: \.selectedAccessoryIds) }
     }
 
+    var repeatSchedule: WeekdaySchedule = .never
+
     var isEnabled: Bool = true
 
     // MARK: - Validation State
@@ -286,7 +288,11 @@ final class AlarmEditorState {
 
     /// Loads an existing alarm into the editor state
     /// Checks for invalidated accessories (VAL-ALARM-008)
-    func load(alarm: WakeAlarm, availableAccessories: [AccessoryViewModel]) {
+    func load(
+        alarm: WakeAlarm,
+        availableAccessories: [AccessoryViewModel],
+        schedule: WeekdaySchedule = .never
+    ) {
         self.editingAlarmId = alarm.id
         self.alarmName = alarm.name
         self.durationMinutes = alarm.durationMinutes
@@ -298,6 +304,7 @@ final class AlarmEditorState {
         self.targetHue = alarm.targetHue
         self.targetSaturation = alarm.targetSaturation
         self.isEnabled = alarm.isEnabled
+        self.repeatSchedule = schedule
         self.availableAccessories = availableAccessories
 
         // Set wake time
@@ -364,6 +371,7 @@ final class AlarmEditorState {
         self.targetHue = nil
         self.targetSaturation = nil
         self.isEnabled = true
+        self.repeatSchedule = .never
         self.selectedAccessoryIds = []
         self.availableAccessories = []
         self.invalidatedAccessoryIds = []

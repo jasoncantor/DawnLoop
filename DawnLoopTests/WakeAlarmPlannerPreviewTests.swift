@@ -228,6 +228,7 @@ final class WakeAlarmPlannerPreviewTests: XCTestCase {
             createAccessory(id: "acc-2", name: "Warm Light", capability: .tunableWhite)
         ]
         editorState.colorMode = .colorTemperature
+        editorState.targetColorTemperature = 220
 
         // Act
         editorState.regeneratePreview()

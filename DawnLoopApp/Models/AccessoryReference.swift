@@ -131,6 +131,24 @@ struct AccessoryViewModel: Identifiable, Equatable, Sendable {
     let capability: AccessoryCapability
     var isSelected: Bool
     let isReachable: Bool
+
+    init(
+        id: String,
+        homeKitIdentifier: String,
+        name: String,
+        roomName: String,
+        capability: AccessoryCapability,
+        isSelected: Bool,
+        isReachable: Bool
+    ) {
+        self.id = id
+        self.homeKitIdentifier = homeKitIdentifier
+        self.name = name
+        self.roomName = roomName
+        self.capability = capability
+        self.isSelected = isSelected
+        self.isReachable = isReachable
+    }
     
     init(from accessory: HMAccessory, roomName: String, isSelected: Bool = false) {
         self.id = accessory.uniqueIdentifier.uuidString

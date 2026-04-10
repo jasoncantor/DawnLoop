@@ -1,16 +1,14 @@
 import XCTest
-import HomeKit
 import SwiftData
+import HomeKit
 @testable import DawnLoop
 
 /// Mock HomeKit adapter for HomeSelectionService testing
 /// Drives real HomeSelectionService behavior through controlled adapter outputs
-@preconcurrency
-actor HomeSelectionMockAdapter: HomeKitAdapterProtocol {
+final class HomeSelectionMockAdapter: HomeKitAdapterProtocol {
     private var _authorizationStatus: HMHomeManagerAuthorizationStatus = [.determined, .authorized]
-    private var _homes: [HMHome] = []
+    private var _homes: [HomeSnapshot] = []
     private var _shouldThrowOnFetchHomes = false
-    private var _compatibleAccessories: [HMAccessory] = []
 
     // MARK: - Test Control Methods
 
@@ -18,7 +16,7 @@ actor HomeSelectionMockAdapter: HomeKitAdapterProtocol {
         _authorizationStatus = status
     }
 
-    func setHomes(_ homes: [HMHome]) {
+    func setHomes(_ homes: [HomeSnapshot]) {
         _homes = homes
     }
 
@@ -26,36 +24,23 @@ actor HomeSelectionMockAdapter: HomeKitAdapterProtocol {
         _shouldThrowOnFetchHomes = value
     }
 
-    func setCompatibleAccessories(_ accessories: [HMAccessory]) {
-        _compatibleAccessories = accessories
-    }
-
     // MARK: - HomeKitAdapterProtocol Implementation
-
-    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
-        HMHomeManagerAuthorizationStatus([.determined, .authorized])
-    }
 
     /// Returns the configured authorization status for test control
     func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
         return _authorizationStatus
     }
 
-    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
-        return HMHomeManagerAuthorizationStatus([.determined, .authorized])
-    }
-
     /// Returns configured homes or throws based on test setup
-    func fetchHomes() async throws -> [HMHome] {
+    func fetchHomes() async throws -> [HomeSnapshot] {
         if _shouldThrowOnFetchHomes {
             throw HomeSelectionTestError.fetchFailed
         }
         return _homes
     }
 
-    /// Returns configured compatible accessories
-    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
-        return _compatibleAccessories
+    func fetchCompatibleAccessories(in homeIdentifier: String) async -> [AccessorySnapshot] {
+        []
     }
 }
 
@@ -123,8 +108,17 @@ final class HomeSelectionServiceTests: XCTestCase {
 
     func testSelectHome_WithValidHome_PersistsSelection() async {
         let testHomeId = "test-home-uuid"
+        mockAdapter.setHomes([
+            HomeSnapshot(
+                id: testHomeId,
+                name: "Test Home",
+                roomCount: 3,
+                accessoryCount: 5,
+                homeHubState: .connected
+            )
+        ])
         let result = await service.selectHome(testHomeId)
-        XCTAssertFalse(result)
+        XCTAssertTrue(result)
     }
 
     func testSelectHome_NonExistentHome_ReturnsFalse() async {

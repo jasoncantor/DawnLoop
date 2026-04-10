@@ -4,13 +4,11 @@ import HomeKit
 
 /// Mock HomeKit adapter for HomeAccessState testing - properly drives the real decision tree
 /// through controlled adapter outputs rather than manually assigning state
-@preconcurrency
-actor HomeAccessMockAdapter: HomeKitAdapterProtocol {
+final class HomeAccessMockAdapter: HomeKitAdapterProtocol {
     private var _authorizationStatus: HMHomeManagerAuthorizationStatus = [.determined, .authorized]
-    private var _requestAuthorizationResult: HMHomeManagerAuthorizationStatus = [.determined, .authorized]
-    private var _homes: [HMHome] = []
+    private var _homes: [HomeSnapshot] = []
     private var _shouldThrowOnFetchHomes = false
-    private var _compatibleAccessories: [HMAccessory] = []
+    private var _compatibleAccessories: [AccessorySnapshot] = []
 
     // MARK: - Test Control Methods
 
@@ -18,11 +16,7 @@ actor HomeAccessMockAdapter: HomeKitAdapterProtocol {
         _authorizationStatus = status
     }
 
-    func setRequestAuthorizationResult(_ status: HMHomeManagerAuthorizationStatus) {
-        _requestAuthorizationResult = status
-    }
-
-    func setHomes(_ homes: [HMHome]) {
+    func setHomes(_ homes: [HomeSnapshot]) {
         _homes = homes
     }
 
@@ -30,17 +24,11 @@ actor HomeAccessMockAdapter: HomeKitAdapterProtocol {
         _shouldThrowOnFetchHomes = value
     }
 
-    func setCompatibleAccessories(_ accessories: [HMAccessory]) {
+    func setCompatibleAccessories(_ accessories: [AccessorySnapshot]) {
         _compatibleAccessories = accessories
     }
 
     // MARK: - HomeKitAdapterProtocol Implementation
-
-    /// Returns a default authorized status for nonisolated access.
-    /// Tests should use setAuthorizationStatus() to control the authorization state.
-    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
-        HMHomeManagerAuthorizationStatus([.determined, .authorized])
-    }
 
     /// Returns the configured authorization status - this is what checkReadiness() calls.
     /// Tests control this via setAuthorizationStatus().
@@ -48,24 +36,9 @@ actor HomeAccessMockAdapter: HomeKitAdapterProtocol {
         return _authorizationStatus
     }
 
-    /// Returns the configured authorization result after a request.
-    /// Tests control this via setRequestAuthorizationResult().
-    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
-        // Note: In a real implementation, this would show UI.
-        // For tests, we return the configured result.
-        // Since we can't access actor state from nonisolated, we return a default
-        // that matches the typical test expectation (authorized).
-        return HMHomeManagerAuthorizationStatus([.determined, .authorized])
-    }
-
-    /// Actor-isolated version for tests that need full control
-    func requestAuthorizationIsolated() async -> HMHomeManagerAuthorizationStatus {
-        return _requestAuthorizationResult
-    }
-
     /// Returns the configured homes array.
     /// Tests control this via setHomes() and setShouldThrowOnFetchHomes().
-    func fetchHomes() async throws -> [HMHome] {
+    func fetchHomes() async throws -> [HomeSnapshot] {
         if _shouldThrowOnFetchHomes {
             throw HomeAccessTestError.fetchFailed
         }
@@ -74,7 +47,7 @@ actor HomeAccessMockAdapter: HomeKitAdapterProtocol {
 
     /// Returns the configured compatible accessories.
     /// Tests control this via setCompatibleAccessories().
-    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
+    func fetchCompatibleAccessories(in homeIdentifier: String) async -> [AccessorySnapshot] {
         return _compatibleAccessories
     }
 }
@@ -123,21 +96,15 @@ final class HomeAccessStateTests: XCTestCase {
         XCTAssertFalse(state.readiness.isReady, "Should not be ready")
     }
 
-    func testCheckReadiness_NotDetermined_RequestsPermission() async {
+    func testCheckReadiness_NotAuthorized_ShowsPermissionDenied() async {
         let mockAdapter = HomeAccessMockAdapter()
-        // Set authorization status to empty (not determined)
-        await mockAdapter.setAuthorizationStatus([])
+        await mockAdapter.setAuthorizationStatus([.determined])
 
         let state = HomeAccessState(adapter: mockAdapter)
         XCTAssertEqual(state.readiness, .unknown, "Initial state should be unknown")
 
-        // Drive the real checkReadiness() logic
         await state.checkReadiness()
-
-        // When not determined, the flow first sets .checkingPermission, then proceeds
-        // Since requestAuthorization is nonisolated in the mock, it returns authorized
-        // and the flow continues to check homes
-        XCTAssertNotEqual(state.readiness, .unknown, "Should have progressed from unknown")
+        XCTAssertEqual(state.readiness, .permissionDenied)
     }
 
     // MARK: - Home Configuration State Tests
@@ -178,18 +145,21 @@ final class HomeAccessStateTests: XCTestCase {
     func testCheckReadiness_NoHubDetected_ShowsNoHomeHub() async throws {
         let mockAdapter = HomeAccessMockAdapter()
         await mockAdapter.setAuthorizationStatus([.determined, .authorized])
-        // Note: To fully test hub detection, we'd need a mock home with no accessories and not primary
-        // For now, this validates the adapter-driven flow structure
+        await mockAdapter.setHomes([
+            HomeSnapshot(
+                id: "home-1",
+                name: "Test Home",
+                roomCount: 1,
+                accessoryCount: 1,
+                homeHubState: .notAvailable
+            )
+        ])
 
         let state = HomeAccessState(adapter: mockAdapter)
         XCTAssertEqual(state.readiness, .unknown, "Initial state should be unknown")
 
-        // Drive the real checkReadiness() logic
         await state.checkReadiness()
-
-        // The state progression depends on adapter configuration
-        // This test validates that checkReadiness() can be driven through the adapter
-        XCTAssertNotEqual(state.readiness, .unknown, "Should have progressed from unknown")
+        XCTAssertEqual(state.readiness, .noHomeHub)
     }
 
     // MARK: - Accessory State Tests
@@ -197,6 +167,15 @@ final class HomeAccessStateTests: XCTestCase {
     func testCheckReadiness_NoCompatibleAccessories_ShowsBlockedState() async {
         let mockAdapter = HomeAccessMockAdapter()
         await mockAdapter.setAuthorizationStatus([.determined, .authorized])
+        await mockAdapter.setHomes([
+            HomeSnapshot(
+                id: "home-1",
+                name: "Test Home",
+                roomCount: 1,
+                accessoryCount: 0,
+                homeHubState: .connected
+            )
+        ])
         await mockAdapter.setCompatibleAccessories([])
 
         let state = HomeAccessState(adapter: mockAdapter)
@@ -205,9 +184,7 @@ final class HomeAccessStateTests: XCTestCase {
         // Drive the real checkReadiness() logic
         await state.checkReadiness()
 
-        // The state progression depends on adapter configuration (homes + accessories)
-        // This test validates the adapter-driven flow structure
-        XCTAssertNotEqual(state.readiness, .unknown, "Should have progressed from unknown")
+        XCTAssertEqual(state.readiness, .noCompatibleAccessories)
     }
 
     // MARK: - Success State Tests
@@ -303,8 +280,7 @@ extension HomeAccessStateTests {
 
     func testNonBlockedStates_ReturnIsBlockedFalse() {
         let nonBlockedStates: [HomeAccessReadiness] = [
-            .unknown,
-            .checkingPermission
+            .unknown
         ]
 
         for state in nonBlockedStates {
@@ -403,16 +379,18 @@ extension HomeAccessStateTests {
 
     func testAdapter_FetchCompatibleAccessoriesCalledWithHome() async throws {
         let mockAdapter = HomeAccessMockAdapter()
-        await mockAdapter.setCompatibleAccessories([])
+        await mockAdapter.setCompatibleAccessories([
+            AccessorySnapshot(
+                id: "light-1",
+                homeIdentifier: "home-1",
+                name: "Light",
+                roomName: "Bedroom",
+                capability: .brightnessOnly,
+                isReachable: true
+            )
+        ])
 
-        // Use a mock home object via the adapter's own storage instead of creating HMHome directly
-        // HMHome() constructor is not available - we test the adapter contract instead
-        let mockHomes = try await mockAdapter.fetchHomes()
-        XCTAssertEqual(mockHomes.count, 0)
-
-        // Verify the adapter returns the configured accessories count when queried
-        // Note: Since we can't create HMHome directly, we verify the adapter contract
-        // by checking that setCompatibleAccessories stores the value correctly
-        // In real usage, fetchCompatibleAccessories(in:) would be called with a real HMHome
+        let accessories = await mockAdapter.fetchCompatibleAccessories(in: "home-1")
+        XCTAssertEqual(accessories.count, 1)
     }
 }

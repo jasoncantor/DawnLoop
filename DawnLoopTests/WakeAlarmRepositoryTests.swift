@@ -10,8 +10,8 @@ final class WakeAlarmRepositoryTests: XCTestCase {
     var modelContainer: ModelContainer!
     var repository: WakeAlarmRepository!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
 
         let schema = Schema([
             WakeAlarm.self,
@@ -34,10 +34,10 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         repository = WakeAlarmRepository(modelContainer: modelContainer)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         modelContainer = nil
         repository = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Helper Methods
@@ -318,6 +318,33 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         // Verify removed
         let fetched = await repository.fetchAlarm(byId: alarm.id)
         XCTAssertNil(fetched)
+    }
+
+    func testDeleteAlarm_CleansRelatedRecords() async throws {
+        let alarm = createTestAlarm(name: "Delete Related")
+        try await repository.saveAlarm(alarm, schedule: .weekdays, validationState: .valid)
+
+        let context = ModelContext(modelContainer)
+        context.insert(
+            AutomationBinding(
+                alarmId: alarm.id,
+                stepNumber: 0,
+                actionSetIdentifier: "action",
+                triggerIdentifier: "trigger",
+                scheduledTime: Date(),
+                brightness: 10
+            )
+        )
+        try context.save()
+
+        try await repository.deleteAlarm(alarm)
+
+        let fetchedSchedule = await repository.fetchSchedule(for: alarm.id)
+        XCTAssertNil(fetchedSchedule)
+        let fetchedValidation = await repository.fetchValidationState(for: alarm.id)
+        XCTAssertNil(fetchedValidation)
+        let bindings = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
+        XCTAssertTrue(bindings.isEmpty)
     }
 
     func testDeleteAlarmById_ThrowsForUnknownId() async {

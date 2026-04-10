@@ -56,7 +56,9 @@ enum TestEnvironment {
 enum PendingTestActions {
     nonisolated(unsafe) static var shouldResetOnboarding: Bool = false
     nonisolated(unsafe) static var shouldResetHomeSelection: Bool = false
+    nonisolated(unsafe) static var shouldResetAlarms: Bool = false
     nonisolated(unsafe) static var shouldSeedTestHome: Bool = false
+    nonisolated(unsafe) static var shouldSeedRepairNeededAlarm: Bool = false
 }
 
 /// Handles launch arguments for testing and debugging
@@ -69,6 +71,12 @@ enum LaunchArgumentHandler {
             TestEnvironment.isSeedingTestHome = true
             PendingTestActions.shouldSeedTestHome = true
         }
+
+        if arguments.contains("--seed-repair-needed-alarm") {
+            TestEnvironment.isSeedingTestHome = true
+            PendingTestActions.shouldSeedTestHome = true
+            PendingTestActions.shouldSeedRepairNeededAlarm = true
+        }
         
         // Queue reset actions to be executed after environment initialization
         if arguments.contains("--reset-onboarding") {
@@ -77,6 +85,10 @@ enum LaunchArgumentHandler {
         
         if arguments.contains("--reset-home-selection") {
             PendingTestActions.shouldResetHomeSelection = true
+        }
+
+        if arguments.contains("--reset-alarms") {
+            PendingTestActions.shouldResetAlarms = true
         }
     }
     
@@ -113,9 +125,17 @@ enum LaunchArgumentHandler {
         if PendingTestActions.shouldResetHomeSelection {
             resetHomeSelectionSwiftData(using: environment)
         }
+
+        if PendingTestActions.shouldResetAlarms {
+            resetAlarmSwiftData(using: environment)
+        }
         
         if PendingTestActions.shouldSeedTestHome {
             seedTestHomes(using: environment)
+        }
+
+        if PendingTestActions.shouldSeedRepairNeededAlarm {
+            seedRepairNeededAlarm(using: environment)
         }
     }
     
@@ -131,7 +151,7 @@ enum LaunchArgumentHandler {
             }
             try context.save()
         } catch {
-            print("Failed to reset onboarding SwiftData: \(error)")
+            DawnLoopLogger.persistence.error("Failed to reset onboarding SwiftData: \(error.localizedDescription)")
         }
     }
     
@@ -146,10 +166,31 @@ enum LaunchArgumentHandler {
             if let active = try context.fetch(descriptor).first {
                 active.isActive = false
                 active.updatedAt = Date()
-                try context.save()
             }
+
+            let accessories = try context.fetch(FetchDescriptor<AccessoryReference>())
+            for accessory in accessories {
+                accessory.isSelected = false
+                accessory.updatedAt = Date()
+            }
+
+            try context.save()
         } catch {
-            print("Failed to reset home selection SwiftData: \(error)")
+            DawnLoopLogger.persistence.error("Failed to reset home selection SwiftData: \(error.localizedDescription)")
+        }
+    }
+
+    private static func resetAlarmSwiftData(using environment: AppEnvironment) {
+        let context = ModelContext(environment.modelContainer)
+
+        do {
+            try context.fetch(FetchDescriptor<AutomationBinding>()).forEach(context.delete)
+            try context.fetch(FetchDescriptor<ValidationStateRecord>()).forEach(context.delete)
+            try context.fetch(FetchDescriptor<WakeAlarmSchedule>()).forEach(context.delete)
+            try context.fetch(FetchDescriptor<WakeAlarm>()).forEach(context.delete)
+            try context.save()
+        } catch {
+            DawnLoopLogger.persistence.error("Failed to reset alarm SwiftData: \(error.localizedDescription)")
         }
     }
     
@@ -209,7 +250,120 @@ enum LaunchArgumentHandler {
             
             try context.save()
         } catch {
-            print("Failed to seed test homes: \(error)")
+            DawnLoopLogger.persistence.error("Failed to seed test homes: \(error.localizedDescription)")
+        }
+    }
+
+    private static func seedRepairNeededAlarm(using environment: AppEnvironment) {
+        let context = ModelContext(environment.modelContainer)
+
+        do {
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+
+            let homeID = "test-home-uuid-001"
+            let alarmID = UUID(uuidString: "11111111-2222-3333-4444-555555555555") ?? UUID()
+
+            var homeDescriptor = FetchDescriptor<HomeReference>()
+            homeDescriptor.predicate = #Predicate { $0.homeKitIdentifier == homeID }
+            let home = try context.fetch(homeDescriptor).first ?? {
+                let home = HomeReference(
+                    homeKitIdentifier: homeID,
+                    name: "Test Home",
+                    isActive: true,
+                    roomCount: 4,
+                    accessoryCount: 8
+                )
+                context.insert(home)
+                return home
+            }()
+            home.isActive = true
+
+            var accessoryDescriptor = FetchDescriptor<AccessoryReference>()
+            accessoryDescriptor.predicate = #Predicate { $0.homeKitIdentifier == "test-accessory-living-room-001" }
+            let accessory = try context.fetch(accessoryDescriptor).first ?? {
+                let accessory = AccessoryReference(
+                    homeKitIdentifier: "test-accessory-living-room-001",
+                    name: "Living Room Light",
+                    homeIdentifier: homeID,
+                    roomName: "Living Room",
+                    capability: .fullColor,
+                    isSelected: true
+                )
+                context.insert(accessory)
+                return accessory
+            }()
+            accessory.isSelected = true
+
+            var alarmDescriptor = FetchDescriptor<WakeAlarm>()
+            alarmDescriptor.predicate = #Predicate { $0.id == alarmID }
+            let alarm = try context.fetch(alarmDescriptor).first ?? {
+                let alarm = WakeAlarm(
+                    id: alarmID,
+                    name: "Repair Test Alarm",
+                    wakeTimeSeconds: 7 * 3600,
+                    durationMinutes: 30,
+                    gradientCurve: .easeInOut,
+                    colorMode: .brightnessOnly,
+                    startBrightness: 0,
+                    targetBrightness: 100,
+                    isEnabled: true,
+                    selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
+                    homeIdentifier: homeID
+                )
+                context.insert(alarm)
+                return alarm
+            }()
+
+            let alarmIdentifier = alarm.id
+
+            var scheduleDescriptor = FetchDescriptor<WakeAlarmSchedule>()
+            scheduleDescriptor.predicate = #Predicate { $0.alarmId == alarmIdentifier }
+            let schedule = try context.fetch(scheduleDescriptor).first ?? {
+                let schedule = WakeAlarmSchedule(alarmId: alarmIdentifier, weekdaySchedule: .weekdays)
+                context.insert(schedule)
+                return schedule
+            }()
+            schedule.update(weekdaySchedule: .weekdays)
+            alarm.scheduleRecordId = schedule.id
+
+            var validationDescriptor = FetchDescriptor<ValidationStateRecord>()
+            validationDescriptor.predicate = #Predicate { $0.alarmId == alarmIdentifier }
+            let validation = try context.fetch(validationDescriptor).first ?? {
+                let validation = ValidationStateRecord(
+                    alarmId: alarmIdentifier,
+                    state: .outOfSync,
+                    message: "HomeKit automation is missing pieces and needs repair.",
+                    requiresUserAction: true
+                )
+                context.insert(validation)
+                return validation
+            }()
+            validation.updateState(
+                .outOfSync,
+                message: "HomeKit automation is missing pieces and needs repair.",
+                requiresUserAction: true
+            )
+            alarm.validationStateRecordId = validation.id
+
+            let bindingDescriptor = FetchDescriptor<AutomationBinding>()
+            let existingBindings = try context.fetch(bindingDescriptor).filter { $0.alarmId == alarmIdentifier }
+            existingBindings.forEach(context.delete)
+
+            context.insert(
+                AutomationBinding(
+                    alarmId: alarmIdentifier,
+                    stepNumber: 0,
+                    weekday: 2,
+                    actionSetIdentifier: "missing-action-set",
+                    triggerIdentifier: "missing-trigger",
+                    scheduledTime: Date().addingTimeInterval(3600),
+                    brightness: 10
+                )
+            )
+
+            try context.save()
+        } catch {
+            DawnLoopLogger.persistence.error("Failed to seed repair-needed alarm: \(error.localizedDescription)")
         }
     }
 }

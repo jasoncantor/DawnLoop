@@ -65,7 +65,7 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
             )
             return try context.fetch(descriptor)
         } catch {
-            print("Failed to fetch alarms: \(error)")
+            DawnLoopLogger.persistence.error("Failed to fetch alarms: \(error.localizedDescription)")
             return []
         }
     }
@@ -80,7 +80,7 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
 
             return try context.fetch(descriptor).first
         } catch {
-            print("Failed to fetch alarm \(id): \(error)")
+            DawnLoopLogger.persistence.error("Failed to fetch alarm \(id.uuidString): \(error.localizedDescription)")
             return nil
         }
     }
@@ -96,7 +96,7 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
 
             return try context.fetch(descriptor)
         } catch {
-            print("Failed to fetch enabled alarms: \(error)")
+            DawnLoopLogger.persistence.error("Failed to fetch enabled alarms: \(error.localizedDescription)")
             return []
         }
     }
@@ -112,7 +112,7 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
 
             return try context.fetch(descriptor)
         } catch {
-            print("Failed to fetch alarms for home \(homeId): \(error)")
+            DawnLoopLogger.persistence.error("Failed to fetch alarms for home \(homeId): \(error.localizedDescription)")
             return []
         }
     }
@@ -170,7 +170,6 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
         // Save the alarm first
         try await saveAlarm(alarm)
 
-        // Handle schedule persistence if provided
         if let schedule = schedule {
             let alarmId = alarm.id
             var descriptor = FetchDescriptor<WakeAlarmSchedule>()
@@ -190,6 +189,8 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
             }
 
             try context.save()
+        } else {
+            try await deleteSchedule(for: alarm.id)
         }
     }
 
@@ -312,6 +313,8 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
             throw WakeAlarmRepositoryError.alarmNotFound(id: alarm.id)
         }
 
+        try deleteRelatedRecords(for: alarm.id, in: context)
+
         context.delete(alarmInContext)
 
         do {
@@ -331,6 +334,8 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
         guard let alarm = try context.fetch(descriptor).first else {
             throw WakeAlarmRepositoryError.alarmNotFound(id: id)
         }
+
+        try deleteRelatedRecords(for: id, in: context)
 
         context.delete(alarm)
 
@@ -445,7 +450,7 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
             descriptor.predicate = #Predicate { $0.alarmId == alarmId }
             return try context.fetch(descriptor).first
         } catch {
-            print("Failed to fetch schedule for alarm \(alarmId): \(error)")
+            DawnLoopLogger.persistence.error("Failed to fetch schedule for alarm \(alarmId.uuidString): \(error.localizedDescription)")
             return nil
         }
     }
@@ -494,7 +499,7 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
             descriptor.predicate = #Predicate { $0.alarmId == alarmId }
             return try context.fetch(descriptor).first
         } catch {
-            print("Failed to fetch validation state for alarm \(alarmId): \(error)")
+            DawnLoopLogger.persistence.error("Failed to fetch validation state for alarm \(alarmId.uuidString): \(error.localizedDescription)")
             return nil
         }
     }
@@ -546,6 +551,20 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
         } catch {
             throw WakeAlarmRepositoryError.saveFailed(underlying: error)
         }
+    }
+
+    private func deleteRelatedRecords(for alarmId: UUID, in context: ModelContext) throws {
+        var scheduleDescriptor = FetchDescriptor<WakeAlarmSchedule>()
+        scheduleDescriptor.predicate = #Predicate { $0.alarmId == alarmId }
+        try context.fetch(scheduleDescriptor).forEach(context.delete)
+
+        var validationDescriptor = FetchDescriptor<ValidationStateRecord>()
+        validationDescriptor.predicate = #Predicate { $0.alarmId == alarmId }
+        try context.fetch(validationDescriptor).forEach(context.delete)
+
+        var bindingDescriptor = FetchDescriptor<AutomationBinding>()
+        bindingDescriptor.predicate = #Predicate { $0.alarmId == alarmId }
+        try context.fetch(bindingDescriptor).forEach(context.delete)
     }
 }
 

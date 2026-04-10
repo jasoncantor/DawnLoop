@@ -10,10 +10,7 @@ struct AlarmEditorView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Theme.Colors.background.ignoresSafeArea()
-
-                Form {
+            Form {
                     // MARK: - Name Section
                     Section {
                         TextField("Alarm Name", text: $state.alarmName)
@@ -57,6 +54,49 @@ struct AlarmEditorView: View {
                         }
                     } header: {
                         Text("Schedule")
+                            .font(Theme.Typography.footnote)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+
+                    Section {
+                        Picker("Repeat", selection: Binding(
+                            get: { repeatPreset(for: state.repeatSchedule) },
+                            set: { preset in
+                                switch preset {
+                                case .once:
+                                    state.repeatSchedule = .never
+                                case .weekdays:
+                                    state.repeatSchedule = .weekdays
+                                case .everyDay:
+                                    state.repeatSchedule = .everyDay
+                                case .custom:
+                                    break
+                                }
+                            }
+                        )) {
+                            ForEach(RepeatPreset.allCases, id: \.self) { preset in
+                                Text(preset.title).tag(preset)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: Theme.Spacing.small) {
+                            ForEach(WeekdayDescriptor.allCases, id: \.self) { day in
+                                Button(day.shortTitle) {
+                                    toggle(day, in: state)
+                                }
+                                .font(Theme.Typography.footnote)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, Theme.Spacing.small)
+                                .background(
+                                    Capsule()
+                                        .fill(day.isEnabled(in: state.repeatSchedule) ? Theme.Colors.sunriseOrange : Theme.Colors.surface)
+                                )
+                                .foregroundStyle(day.isEnabled(in: state.repeatSchedule) ? Color.white : Theme.Colors.textSecondary)
+                            }
+                        }
+                    } header: {
+                        Text("Repeat")
                             .font(Theme.Typography.footnote)
                             .foregroundStyle(Theme.Colors.textSecondary)
                     }
@@ -154,7 +194,7 @@ struct AlarmEditorView: View {
                                     if state.previewSteps.contains(where: { $0.hasColorTemperature }) {
                                         HStack(spacing: Theme.Spacing.xSmall) {
                                             Circle()
-                                                .fill(Theme.Colors.sunriseGold)
+                                                .fill(Theme.Colors.morningGold)
                                                 .frame(width: 8, height: 8)
                                             Text("Warmth")
                                                 .font(Theme.Typography.caption)
@@ -362,9 +402,7 @@ struct AlarmEditorView: View {
                             .foregroundStyle(Theme.Colors.textSecondary)
                     }
                 }
-                .scrollContentBackground(.hidden)
                 .formStyle(.grouped)
-            }
             .navigationTitle(state.isEditing ? "Edit Alarm" : "New Alarm")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -389,6 +427,76 @@ struct AlarmEditorView: View {
             }
             .tint(Theme.Colors.sunriseOrange)
         }
+    }
+}
+
+private enum RepeatPreset: CaseIterable {
+    case once
+    case weekdays
+    case everyDay
+    case custom
+
+    var title: String {
+        switch self {
+        case .once: return "Once"
+        case .weekdays: return "Weekdays"
+        case .everyDay: return "Daily"
+        case .custom: return "Custom"
+        }
+    }
+}
+
+private enum WeekdayDescriptor: CaseIterable {
+    case sun, mon, tue, wed, thu, fri, sat
+
+    var shortTitle: String {
+        switch self {
+        case .sun: return "S"
+        case .mon: return "M"
+        case .tue: return "T"
+        case .wed: return "W"
+        case .thu: return "T"
+        case .fri: return "F"
+        case .sat: return "S"
+        }
+    }
+
+    func isEnabled(in schedule: WeekdaySchedule) -> Bool {
+        switch self {
+        case .sun: return schedule.sunday
+        case .mon: return schedule.monday
+        case .tue: return schedule.tuesday
+        case .wed: return schedule.wednesday
+        case .thu: return schedule.thursday
+        case .fri: return schedule.friday
+        case .sat: return schedule.saturday
+        }
+    }
+}
+
+private func repeatPreset(for schedule: WeekdaySchedule) -> RepeatPreset {
+    if schedule == .never {
+        return .once
+    }
+    if schedule == .weekdays {
+        return .weekdays
+    }
+    if schedule == .everyDay {
+        return .everyDay
+    }
+    return .custom
+}
+
+@MainActor
+private func toggle(_ day: WeekdayDescriptor, in state: AlarmEditorState) {
+    switch day {
+    case .sun: state.repeatSchedule.sunday.toggle()
+    case .mon: state.repeatSchedule.monday.toggle()
+    case .tue: state.repeatSchedule.tuesday.toggle()
+    case .wed: state.repeatSchedule.wednesday.toggle()
+    case .thu: state.repeatSchedule.thursday.toggle()
+    case .fri: state.repeatSchedule.friday.toggle()
+    case .sat: state.repeatSchedule.saturday.toggle()
     }
 }
 
@@ -467,9 +575,9 @@ struct AlarmPreviewChart: View {
 
     private func stepMarkerColor(for step: WakeAlarmStep) -> Color {
         if step.hasFullColor {
-            return Theme.Colors.sunriseGold
+            return Theme.Colors.morningGold
         } else if step.hasColorTemperature {
-            return Theme.Colors.sunriseGold
+            return Theme.Colors.morningGold
         } else {
             return Theme.Colors.sunriseOrange
         }

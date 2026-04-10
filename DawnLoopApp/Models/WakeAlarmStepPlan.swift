@@ -193,7 +193,8 @@ struct WakeAlarmStepPlanner {
 
         // Determine which accessories can use which features
         let canUseColorTemp = capabilities.contains { $0.supportsColorTemperature }
-        let canUseFullColor = capabilities.contains { $0.supportsHueSaturation }
+        let allSupportColorTemp = !capabilities.isEmpty && capabilities.allSatisfy { $0.supportsColorTemperature }
+        let allSupportFullColor = !capabilities.isEmpty && capabilities.allSatisfy { $0.supportsHueSaturation }
 
         // Adjust plan based on color mode and capabilities
         let adjustedSteps: [WakeAlarmStep]
@@ -213,7 +214,7 @@ struct WakeAlarmStepPlanner {
             degradation = .none
 
         case .colorTemperature:
-            if canUseColorTemp {
+            if allSupportColorTemp {
                 adjustedSteps = fullPlan
                 degradation = .none
             } else {
@@ -231,7 +232,7 @@ struct WakeAlarmStepPlanner {
             }
 
         case .fullColor:
-            if canUseFullColor {
+            if allSupportFullColor {
                 adjustedSteps = fullPlan
                 degradation = .none
             } else if canUseColorTemp {

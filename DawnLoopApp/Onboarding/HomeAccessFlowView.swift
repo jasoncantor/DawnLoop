@@ -1,5 +1,4 @@
 import SwiftUI
-import HomeKit
 
 /// Flow view that handles onboarding completion and Home access orchestration
 struct HomeAccessFlowView: View {
@@ -33,8 +32,7 @@ struct HomeAccessCheckView: View {
     var body: some View {
         Group {
             switch environment.homeAccessState.readiness {
-            case .unknown, .checkingPermission:
-                // Show loading during initial check
+            case .unknown:
                 ProgressView()
                     .scaleEffect(1.5)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -57,8 +55,7 @@ struct HomeAccessCheckView: View {
             case .noCompatibleAccessories:
                 HomeAccessBlockerView(blockerState: .noCompatibleAccessories)
                 
-            case .ready, .readyTesting:
-                // Home is ready - show transition and move to selection
+            case .ready:
                 ReadyTransitionView()
                     .onAppear {
                         if !hasTransitioned {

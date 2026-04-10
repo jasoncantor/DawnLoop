@@ -38,19 +38,32 @@
 		D028 /* WakeAlarmRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F028 /* WakeAlarmRepository.swift */; };
 		D029 /* WakeAlarmRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F029 /* WakeAlarmRepositoryTests.swift */; };
 		D030 /* ValidationStateRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = F030 /* ValidationStateRecord.swift */; };
+		D031 /* AlarmEditorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F031 /* AlarmEditorState.swift */; };
+		D032 /* AlarmEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F032 /* AlarmEditorView.swift */; };
+		D033 /* AlarmEditorValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F033 /* AlarmEditorValidationTests.swift */; };
+		D034 /* WakeAlarmPlannerPreviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F034 /* WakeAlarmPlannerPreviewTests.swift */; };
+		D035 /* AlarmEditorValidationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F035 /* AlarmEditorValidationUITests.swift */; };
+		D036 /* AlarmPreviewFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F036 /* AlarmPreviewFlowTests.swift */; };
+		D037 /* AlarmListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F037 /* AlarmListView.swift */; };
+		D038 /* HomeKitController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F038 /* HomeKitController.swift */; };
+		D039 /* DawnLoopLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F039 /* DawnLoopLogger.swift */; };
+		D040 /* AutomationGenerationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F040 /* AutomationGenerationService.swift */; };
+		D041 /* AutomationRepairService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F041 /* AutomationRepairService.swift */; };
+		D042 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F042 /* Assets.xcassets */; };
+		D043 /* AutomationServicesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F044 /* AutomationServicesTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		P001 = {
+		6C8E9F172F89A43A003B694D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = P000;
+			containerPortal = P000 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = B001;
 			remoteInfo = DawnLoop;
 		};
-		P002 = {
+		6C8E9F182F89A43A003B694D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = P000;
+			containerPortal = P000 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = B001;
 			remoteInfo = DawnLoop;
@@ -58,60 +71,77 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		F000 = {isa = PBXFileReference; explicitFileType = "wrapper.application"; includeInIndex = 0; path = DawnLoop.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DawnLoopApp.swift; sourceTree = "<group>"; };
-		F002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
-		F003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
-		F004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
-		F005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
-		F006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
-		F007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModels.swift; sourceTree = "<group>"; };
-		F008 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowView.swift; sourceTree = "<group>"; };
-		F009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStateTests.swift; sourceTree = "<group>"; };
-		F010 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowTests.swift; sourceTree = "<group>"; };
-		F011 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DawnLoopUITestsLaunchTests.swift; sourceTree = "<group>"; };
-		F012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessService.swift; sourceTree = "<group>"; };
-		F013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessFlowView.swift; sourceTree = "<group>"; };
-		F014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessBlockerView.swift; sourceTree = "<group>"; };
-		F015 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessStateTests.swift; sourceTree = "<group>"; };
-		F015B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSelectionServiceTests.swift; sourceTree = "<group>"; };
-		F016 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeReference.swift; sourceTree = "<group>"; };
-		F017 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryReference.swift; sourceTree = "<group>"; };
-		F018 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryDiscoveryService.swift; sourceTree = "<group>"; };
-		F019 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSelectionService.swift; sourceTree = "<group>"; };
-		F020 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSelectionView.swift; sourceTree = "<group>"; };
-		F021 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryDiscoveryView.swift; sourceTree = "<group>"; };
-		F022 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryDiscoveryServiceTests.swift; sourceTree = "<group>"; };
-		F023 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDiscoveryFlowTests.swift; sourceTree = "<group>"; };
-		F024 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarm.swift; sourceTree = "<group>"; };
-		F025 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmSchedule.swift; sourceTree = "<group>"; };
-		F026 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmStepPlan.swift; sourceTree = "<group>"; };
-		F027 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationBinding.swift; sourceTree = "<group>"; };
-		F028 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmRepository.swift; sourceTree = "<group>"; };
-		F029 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmRepositoryTests.swift; sourceTree = "<group>"; };
-		F030 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValidationStateRecord.swift; sourceTree = "<group>"; };
-		F100 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		T001 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		T002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F000 /* DawnLoop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DawnLoop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F001 /* DawnLoopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DawnLoopApp.swift; sourceTree = "<group>"; };
+		F002 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		F003 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		F004 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		F005 /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
+		F006 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		F007 /* OnboardingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModels.swift; sourceTree = "<group>"; };
+		F008 /* MainFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowView.swift; sourceTree = "<group>"; };
+		F009 /* OnboardingStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStateTests.swift; sourceTree = "<group>"; };
+		F010 /* OnboardingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowTests.swift; sourceTree = "<group>"; };
+		F011 /* DawnLoopUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DawnLoopUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		F012 /* HomeAccessService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessService.swift; sourceTree = "<group>"; };
+		F013 /* HomeAccessFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessFlowView.swift; sourceTree = "<group>"; };
+		F014 /* HomeAccessBlockerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessBlockerView.swift; sourceTree = "<group>"; };
+		F015 /* HomeAccessStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAccessStateTests.swift; sourceTree = "<group>"; };
+		F015B /* HomeSelectionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSelectionServiceTests.swift; sourceTree = "<group>"; };
+		F016 /* HomeReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeReference.swift; sourceTree = "<group>"; };
+		F017 /* AccessoryReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryReference.swift; sourceTree = "<group>"; };
+		F018 /* AccessoryDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryDiscoveryService.swift; sourceTree = "<group>"; };
+		F019 /* HomeSelectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSelectionService.swift; sourceTree = "<group>"; };
+		F020 /* HomeSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSelectionView.swift; sourceTree = "<group>"; };
+		F021 /* AccessoryDiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryDiscoveryView.swift; sourceTree = "<group>"; };
+		F022 /* AccessoryDiscoveryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryDiscoveryServiceTests.swift; sourceTree = "<group>"; };
+		F023 /* HomeDiscoveryFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDiscoveryFlowTests.swift; sourceTree = "<group>"; };
+		F024 /* WakeAlarm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarm.swift; sourceTree = "<group>"; };
+		F025 /* WakeAlarmSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmSchedule.swift; sourceTree = "<group>"; };
+		F026 /* WakeAlarmStepPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmStepPlan.swift; sourceTree = "<group>"; };
+		F027 /* AutomationBinding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationBinding.swift; sourceTree = "<group>"; };
+		F028 /* WakeAlarmRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmRepository.swift; sourceTree = "<group>"; };
+		F029 /* WakeAlarmRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmRepositoryTests.swift; sourceTree = "<group>"; };
+		F030 /* ValidationStateRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValidationStateRecord.swift; sourceTree = "<group>"; };
+		F031 /* AlarmEditorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorState.swift; sourceTree = "<group>"; };
+		F032 /* AlarmEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorView.swift; sourceTree = "<group>"; };
+		F033 /* AlarmEditorValidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorValidationTests.swift; sourceTree = "<group>"; };
+		F034 /* WakeAlarmPlannerPreviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmPlannerPreviewTests.swift; sourceTree = "<group>"; };
+		F035 /* AlarmEditorValidationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorValidationUITests.swift; sourceTree = "<group>"; };
+		F036 /* AlarmPreviewFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPreviewFlowTests.swift; sourceTree = "<group>"; };
+		F037 /* AlarmListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmListView.swift; sourceTree = "<group>"; };
+		F038 /* HomeKitController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeKitController.swift; sourceTree = "<group>"; };
+		F039 /* DawnLoopLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DawnLoopLogger.swift; sourceTree = "<group>"; };
+		F040 /* AutomationGenerationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationGenerationService.swift; sourceTree = "<group>"; };
+		F041 /* AutomationRepairService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationRepairService.swift; sourceTree = "<group>"; };
+		F042 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F043 /* DawnLoop.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DawnLoop.entitlements; sourceTree = "<group>"; };
+		F044 /* AutomationServicesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationServicesTests.swift; sourceTree = "<group>"; };
+		F100 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		T001 /* DawnLoopTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		T002 /* DawnLoopUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		FB001 = {
+		FB001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
-			files = ( );
+			files = (
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		FT001 = {
+		FT001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
-			files = ( );
+			files = (
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		FT002 = {
+		FT002 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
-			files = ( );
+			files = (
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -119,241 +149,407 @@
 /* Begin PBXGroup section */
 		G000 = {
 			isa = PBXGroup;
-			children = ( G001, G002, G003, G004 );
+			children = (
+				G001 /* DawnLoopApp */,
+				G002 /* DawnLoopTests */,
+				G003 /* DawnLoopUITests */,
+				G004 /* Products */,
+			);
 			sourceTree = "<group>";
 		};
-		G001 = {
+		G001 /* DawnLoopApp */ = {
 			isa = PBXGroup;
-			children = ( G005, G006, G007, G008, G009, G010, F100 );
+			children = (
+				G005 /* App */,
+				G006 /* Theme */,
+				G007 /* Models */,
+				G008 /* Onboarding */,
+				G011 /* Alarms */,
+				G009 /* MainFlow */,
+				G010 /* Services */,
+				F042 /* Assets.xcassets */,
+				F043 /* DawnLoop.entitlements */,
+				F100 /* Info.plist */,
+			);
 			path = DawnLoopApp;
 			sourceTree = "<group>";
 		};
-		G002 = {
+		G002 /* DawnLoopTests */ = {
 			isa = PBXGroup;
-			children = ( F009, F015, F015B, F022, F029 );
+			children = (
+				F009 /* OnboardingStateTests.swift */,
+				F015 /* HomeAccessStateTests.swift */,
+				F015B /* HomeSelectionServiceTests.swift */,
+				F022 /* AccessoryDiscoveryServiceTests.swift */,
+				F029 /* WakeAlarmRepositoryTests.swift */,
+				F033 /* AlarmEditorValidationTests.swift */,
+				F034 /* WakeAlarmPlannerPreviewTests.swift */,
+				F044 /* AutomationServicesTests.swift */,
+			);
 			path = DawnLoopTests;
 			sourceTree = "<group>";
 		};
-		G003 = {
+		G003 /* DawnLoopUITests */ = {
 			isa = PBXGroup;
-			children = ( F010, F011, F023 );
+			children = (
+				F010 /* OnboardingFlowTests.swift */,
+				F011 /* DawnLoopUITestsLaunchTests.swift */,
+				F023 /* HomeDiscoveryFlowTests.swift */,
+				F035 /* AlarmEditorValidationUITests.swift */,
+				F036 /* AlarmPreviewFlowTests.swift */,
+			);
 			path = DawnLoopUITests;
 			sourceTree = "<group>";
 		};
-		G004 = {
+		G004 /* Products */ = {
 			isa = PBXGroup;
-			children = ( F000, T001, T002 );
+			children = (
+				F000 /* DawnLoop.app */,
+				T001 /* DawnLoopTests.xctest */,
+				T002 /* DawnLoopUITests.xctest */,
+			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		G005 = {
+		G005 /* App */ = {
 			isa = PBXGroup;
-			children = ( F001, F002, F003 );
+			children = (
+				F001 /* DawnLoopApp.swift */,
+				F002 /* AppEnvironment.swift */,
+				F003 /* RootView.swift */,
+			);
 			path = App;
 			sourceTree = "<group>";
 		};
-		G006 = {
+		G006 /* Theme */ = {
 			isa = PBXGroup;
-			children = ( F004 );
+			children = (
+				F004 /* Theme.swift */,
+			);
 			path = Theme;
 			sourceTree = "<group>";
 		};
-		G007 = {
+		G007 /* Models */ = {
 			isa = PBXGroup;
-			children = ( F007, F016, F017, F024, F025, F026, F027, F030 );
+			children = (
+				F007 /* OnboardingModels.swift */,
+				F016 /* HomeReference.swift */,
+				F017 /* AccessoryReference.swift */,
+				F024 /* WakeAlarm.swift */,
+				F025 /* WakeAlarmSchedule.swift */,
+				F026 /* WakeAlarmStepPlan.swift */,
+				F027 /* AutomationBinding.swift */,
+				F030 /* ValidationStateRecord.swift */,
+			);
 			path = Models;
 			sourceTree = "<group>";
 		};
-		G008 = {
+		G008 /* Onboarding */ = {
 			isa = PBXGroup;
-			children = ( F005, F006, F012, F013, F014, F020, F021 );
+			children = (
+				F005 /* OnboardingState.swift */,
+				F006 /* OnboardingView.swift */,
+				F012 /* HomeAccessService.swift */,
+				F013 /* HomeAccessFlowView.swift */,
+				F014 /* HomeAccessBlockerView.swift */,
+				F020 /* HomeSelectionView.swift */,
+				F021 /* AccessoryDiscoveryView.swift */,
+			);
 			path = Onboarding;
 			sourceTree = "<group>";
 		};
-		G010 = {
+		G009 /* MainFlow */ = {
 			isa = PBXGroup;
-			children = ( F018, F019, F028 );
+			children = (
+				F008 /* MainFlowView.swift */,
+				F037 /* AlarmListView.swift */,
+			);
+			path = MainFlow;
+			sourceTree = "<group>";
+		};
+		G010 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F018 /* AccessoryDiscoveryService.swift */,
+				F019 /* HomeSelectionService.swift */,
+				F028 /* WakeAlarmRepository.swift */,
+				F038 /* HomeKitController.swift */,
+				F039 /* DawnLoopLogger.swift */,
+				F040 /* AutomationGenerationService.swift */,
+				F041 /* AutomationRepairService.swift */,
+			);
 			path = Services;
 			sourceTree = "<group>";
 		};
-		G009 = {
+		G011 /* Alarms */ = {
 			isa = PBXGroup;
-			children = ( F008 );
-			path = MainFlow;
+			children = (
+				F031 /* AlarmEditorState.swift */,
+				F032 /* AlarmEditorView.swift */,
+			);
+			path = Alarms;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		B001 = {
+		B001 /* DawnLoop */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = CL001;
-			buildPhases = ( S001, FB001, R001 );
-			buildRules = ( );
-			dependencies = ( );
+			buildConfigurationList = CL001 /* Build configuration list for PBXNativeTarget "DawnLoop" */;
+			buildPhases = (
+				S001 /* Sources */,
+				FB001 /* Frameworks */,
+				R001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
 			name = DawnLoop;
 			productName = DawnLoop;
-			productReference = F000;
+			productReference = F000 /* DawnLoop.app */;
 			productType = "com.apple.product-type.application";
 		};
-		BT001 = {
+		BT001 /* DawnLoopTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = CL002;
-			buildPhases = ( ST001, FT001 );
-			buildRules = ( );
-			dependencies = ( P001 );
+			buildConfigurationList = CL002 /* Build configuration list for PBXNativeTarget "DawnLoopTests" */;
+			buildPhases = (
+				ST001 /* Sources */,
+				FT001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				P001 /* PBXTargetDependency */,
+			);
 			name = DawnLoopTests;
 			productName = DawnLoopTests;
-			productReference = T001;
+			productReference = T001 /* DawnLoopTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		BT002 = {
+		BT002 /* DawnLoopUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = CL003;
-			buildPhases = ( ST002, FT002 );
-			buildRules = ( );
-			dependencies = ( P002 );
+			buildConfigurationList = CL003 /* Build configuration list for PBXNativeTarget "DawnLoopUITests" */;
+			buildPhases = (
+				ST002 /* Sources */,
+				FT002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				P002 /* PBXTargetDependency */,
+			);
 			name = DawnLoopUITests;
 			productName = DawnLoopUITests;
-			productReference = T002;
+			productReference = T002 /* DawnLoopUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		P000 = {
+		P000 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1530;
 				LastUpgradeCheck = 1530;
 				TargetAttributes = {
-					B001 = { CreatedOnToolsVersion = 15.3; };
-					BT001 = { CreatedOnToolsVersion = 15.3; TestTargetID = B001; };
-					BT002 = { CreatedOnToolsVersion = 15.3; TestTargetID = B001; };
+					B001 = {
+						CreatedOnToolsVersion = 15.3;
+					};
+					BT001 = {
+						CreatedOnToolsVersion = 15.3;
+						TestTargetID = B001;
+					};
+					BT002 = {
+						CreatedOnToolsVersion = 15.3;
+						TestTargetID = B001;
+					};
 				};
 			};
-			buildConfigurationList = CL000;
+			buildConfigurationList = CL000 /* Build configuration list for PBXProject "DawnLoop" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
-			knownRegions = ( en, Base );
+			knownRegions = (
+				en,
+				Base,
+			);
 			mainGroup = G000;
-			productRefGroup = G004;
+			productRefGroup = G004 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = ( B001, BT001, BT002 );
+			targets = (
+				B001 /* DawnLoop */,
+				BT001 /* DawnLoopTests */,
+				BT002 /* DawnLoopUITests */,
+			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		R001 = {
+		R001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ( );
+			files = (
+				D042 /* Assets.xcassets in Resources */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		S001 = {
+		S001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D001, D002, D003, D004, D005, D006, D007, D008, D012, D013, D014,
-				D016, D017, D018, D019, D020, D021, D024, D025, D026, D027, D028, D030,
+				D001 /* DawnLoopApp.swift in Sources */,
+				D002 /* AppEnvironment.swift in Sources */,
+				D003 /* RootView.swift in Sources */,
+				D004 /* Theme.swift in Sources */,
+				D005 /* OnboardingState.swift in Sources */,
+				D006 /* OnboardingView.swift in Sources */,
+				D007 /* OnboardingModels.swift in Sources */,
+				D008 /* MainFlowView.swift in Sources */,
+				D012 /* HomeAccessService.swift in Sources */,
+				D013 /* HomeAccessFlowView.swift in Sources */,
+				D014 /* HomeAccessBlockerView.swift in Sources */,
+				D016 /* HomeReference.swift in Sources */,
+				D017 /* AccessoryReference.swift in Sources */,
+				D018 /* AccessoryDiscoveryService.swift in Sources */,
+				D019 /* HomeSelectionService.swift in Sources */,
+				D020 /* HomeSelectionView.swift in Sources */,
+				D021 /* AccessoryDiscoveryView.swift in Sources */,
+				D024 /* WakeAlarm.swift in Sources */,
+				D025 /* WakeAlarmSchedule.swift in Sources */,
+				D026 /* WakeAlarmStepPlan.swift in Sources */,
+				D027 /* AutomationBinding.swift in Sources */,
+				D028 /* WakeAlarmRepository.swift in Sources */,
+				D030 /* ValidationStateRecord.swift in Sources */,
+				D031 /* AlarmEditorState.swift in Sources */,
+				D032 /* AlarmEditorView.swift in Sources */,
+				D037 /* AlarmListView.swift in Sources */,
+				D038 /* HomeKitController.swift in Sources */,
+				D039 /* DawnLoopLogger.swift in Sources */,
+				D040 /* AutomationGenerationService.swift in Sources */,
+				D041 /* AutomationRepairService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		ST001 = {
+		ST001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ( D009, D015, D015B, D022, D029 );
+			files = (
+				D009 /* OnboardingStateTests.swift in Sources */,
+				D015 /* HomeAccessStateTests.swift in Sources */,
+				D015B /* HomeSelectionServiceTests.swift in Sources */,
+				D022 /* AccessoryDiscoveryServiceTests.swift in Sources */,
+				D029 /* WakeAlarmRepositoryTests.swift in Sources */,
+				D033 /* AlarmEditorValidationTests.swift in Sources */,
+				D034 /* WakeAlarmPlannerPreviewTests.swift in Sources */,
+				D043 /* AutomationServicesTests.swift in Sources */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		ST002 = {
+		ST002 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ( D010, D011, D023 );
+			files = (
+				D010 /* OnboardingFlowTests.swift in Sources */,
+				D011 /* DawnLoopUITestsLaunchTests.swift in Sources */,
+				D023 /* HomeDiscoveryFlowTests.swift in Sources */,
+				D035 /* AlarmEditorValidationUITests.swift in Sources */,
+				D036 /* AlarmPreviewFlowTests.swift in Sources */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		P001 = {
+		P001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = B001;
+			target = B001 /* DawnLoop */;
+			targetProxy = 6C8E9F172F89A43A003B694D /* PBXContainerItemProxy */;
 		};
-		P002 = {
+		P002 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = B001;
+			target = B001 /* DawnLoop */;
+			targetProxy = 6C8E9F182F89A43A003B694D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		C001 = {
+		C001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = DawnLoopApp/DawnLoop.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 46QSP33EUF;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DawnLoopApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DawnLoop;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@executable_path/Frameworks" );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dawnloop.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
-		C002 = {
+		C002 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = DawnLoopApp/DawnLoop.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 46QSP33EUF;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DawnLoopApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DawnLoop;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@executable_path/Frameworks" );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dawnloop.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
-		C003 = {
+		C003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
@@ -363,7 +559,11 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@loader_path/Frameworks", "@loader_path/../Frameworks" );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@loader_path/Frameworks",
+					"@loader_path/../Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dawnloop.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -375,7 +575,7 @@
 			};
 			name = Debug;
 		};
-		C004 = {
+		C004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
@@ -385,7 +585,10 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@loader_path/Frameworks" );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@loader_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dawnloop.app.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -397,7 +600,7 @@
 			};
 			name = Release;
 		};
-		C005 = {
+		C005 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
@@ -406,7 +609,10 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@loader_path/Frameworks" );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@loader_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dawnloop.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -418,7 +624,7 @@
 			};
 			name = Debug;
 		};
-		C006 = {
+		C006 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
@@ -427,7 +633,10 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = ( "$(inherited)", "@loader_path/Frameworks" );
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@loader_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dawnloop.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -439,7 +648,7 @@
 			};
 			name = Release;
 		};
-		C007 = {
+		C007 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -480,7 +689,10 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = ( "DEBUG=1", "$(inherited)" );
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -498,7 +710,7 @@
 			};
 			name = Debug;
 		};
-		C008 = {
+		C008 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -555,31 +767,43 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		CL000 = {
+		CL000 /* Build configuration list for PBXProject "DawnLoop" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = ( C007, C008 );
+			buildConfigurations = (
+				C007 /* Debug */,
+				C008 /* Release */,
+			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		CL001 = {
+		CL001 /* Build configuration list for PBXNativeTarget "DawnLoop" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = ( C001, C002 );
+			buildConfigurations = (
+				C001 /* Debug */,
+				C002 /* Release */,
+			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		CL002 = {
+		CL002 /* Build configuration list for PBXNativeTarget "DawnLoopTests" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = ( C003, C004 );
+			buildConfigurations = (
+				C003 /* Debug */,
+				C004 /* Release */,
+			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		CL003 = {
+		CL003 /* Build configuration list for PBXNativeTarget "DawnLoopUITests" */ = {
 			isa = XCConfigurationList;
-			buildConfigurations = ( C005, C006 );
+			buildConfigurations = (
+				C005 /* Debug */,
+				C006 /* Release */,
+			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = P000;
+	rootObject = P000 /* Project object */;
 }

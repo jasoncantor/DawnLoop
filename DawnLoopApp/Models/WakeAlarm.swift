@@ -271,7 +271,11 @@ struct AlarmViewModel: Identifiable, Equatable, Sendable {
         self.nextRunDate = nextRunDate
     }
 
-    init(from alarm: WakeAlarm) {
+    init(
+        from alarm: WakeAlarm,
+        schedule: WakeAlarmSchedule? = nil,
+        validationSummary: ValidationStateSummary? = nil
+    ) {
         self.id = alarm.id
         self.name = alarm.name
 
@@ -295,8 +299,10 @@ struct AlarmViewModel: Identifiable, Equatable, Sendable {
 
         self.isEnabled = alarm.isEnabled
         self.accessoryCount = alarm.selectedAccessoryIdentifiers.count
-        self.validationState = alarm.validationState
-        self.nextRunDate = alarm.isEnabled ? alarm.wakeTimeDate() : nil
+        self.validationState = validationSummary?.state ?? .unknown
+        self.nextRunDate = alarm.isEnabled
+            ? schedule?.nextOccurrence(wakeTimeSeconds: alarm.wakeTimeSeconds) ?? alarm.wakeTimeDate()
+            : nil
     }
 
     var statusText: String {

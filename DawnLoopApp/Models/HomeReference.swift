@@ -40,6 +40,13 @@ final class HomeReference {
         self.accessoryCount = home.accessories.count
         self.updatedAt = Date()
     }
+
+    func update(from home: HomeSnapshot) {
+        self.name = home.name
+        self.roomCount = home.roomCount
+        self.accessoryCount = home.accessoryCount
+        self.updatedAt = Date()
+    }
 }
 
 /// Domain model for home selection UI

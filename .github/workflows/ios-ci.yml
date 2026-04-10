@@ -1,0 +1,37 @@
+name: iOS CI
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -scheme DawnLoop \
+            -project DawnLoop.xcodeproj \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath .derivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build-for-testing
+
+      - name: Test
+        run: |
+          xcodebuild \
+            -scheme DawnLoop \
+            -project DawnLoop.xcodeproj \
+            -destination 'platform=iOS Simulator,OS=26.4,name=iPhone 17' \
+            -derivedDataPath .derivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            test-without-building

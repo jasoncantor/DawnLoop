@@ -10,6 +10,9 @@ final class AppEnvironment {
     let accessoryDiscoveryService: AccessoryDiscoveryService
     let alarmRepository: WakeAlarmRepository
     let automationBindingService: AutomationBindingService
+    let automationGenerationService: AutomationGenerationService
+    let automationRepairService: AutomationRepairService
+    let homeKitController: HomeKitControllerProtocol
     let modelContainer: ModelContainer
 
     init() {
@@ -38,16 +41,35 @@ final class AppEnvironment {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
 
-        // Use mock adapter for testing when --seed-test-home is set
-        // This allows the seeded test homes to be returned via the adapter
-        let homeKitAdapter: (any HomeKitAdapterProtocol)? = TestEnvironment.isSeedingTestHome
-            ? MockHomeKitAdapter()
-            : nil
+        if TestEnvironment.isSeedingTestHome {
+            self.homeKitController = MockHomeKitController.seededTestHome()
+        } else {
+            self.homeKitController = HomeKitController()
+        }
 
-        self.homeAccessState = HomeAccessState(adapter: homeKitAdapter, modelContainer: modelContainer)
-        self.homeSelectionService = HomeSelectionService(modelContainer: modelContainer)
-        self.accessoryDiscoveryService = AccessoryDiscoveryService(modelContainer: modelContainer)
+        let homeKitAdapter = LiveHomeKitAdapter(controller: homeKitController)
+
+        self.homeAccessState = HomeAccessState(adapter: homeKitAdapter)
+        self.homeSelectionService = HomeSelectionService(
+            adapter: homeKitAdapter,
+            modelContainer: modelContainer
+        )
+        self.accessoryDiscoveryService = AccessoryDiscoveryService(
+            adapter: homeKitAdapter,
+            modelContainer: modelContainer
+        )
         self.alarmRepository = WakeAlarmRepository(modelContainer: modelContainer)
         self.automationBindingService = AutomationBindingService(modelContainer: modelContainer)
+        self.automationGenerationService = AutomationGenerationService(
+            homeKitController: homeKitController,
+            modelContainer: modelContainer,
+            alarmRepository: alarmRepository
+        )
+        self.automationRepairService = AutomationRepairService(
+            homeKitController: homeKitController,
+            modelContainer: modelContainer,
+            alarmRepository: alarmRepository,
+            generationService: automationGenerationService
+        )
     }
 }

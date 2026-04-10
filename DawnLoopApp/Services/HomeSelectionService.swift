@@ -1,9 +1,8 @@
 import Foundation
-import HomeKit
 import SwiftData
 
 /// Protocol for home selection operations - enables mocking in tests
-protocol HomeSelectionServiceProtocol: Sendable {
+protocol HomeSelectionServiceProtocol {
     func availableHomes() async -> [HomeViewModel]
     func activeHome() async -> ActiveHomeResult
     func selectHome(_ homeId: String) async -> Bool
@@ -18,7 +17,7 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
     private let modelContainer: ModelContainer
     
     init(
-        adapter: any HomeKitAdapterProtocol = LiveHomeKitAdapter(),
+        adapter: any HomeKitAdapterProtocol,
         modelContainer: ModelContainer
     ) {
         self.adapter = adapter
@@ -26,47 +25,23 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
     }
     
     /// Returns all available homes with active status indicated
-    /// When --seed-test-home is active, returns test homes from SwiftData instead of HomeKit
     func availableHomes() async -> [HomeViewModel] {
-        // Check for test-seeded homes first when in test mode
-        if TestEnvironment.isSeedingTestHome {
-            let testHomes = await fetchTestHomesFromPersistence()
-            if !testHomes.isEmpty {
-                return testHomes
-            }
-        }
-        
         do {
             let homes = try await adapter.fetchHomes()
             let activeId = await fetchActiveHomeIdentifier()
             
             return homes.map { home in
-                HomeViewModel(from: home, isActive: home.uniqueIdentifier.uuidString == activeId)
-            }
-        } catch {
-            return []
-        }
-    }
-    
-    /// Fetches test homes that were seeded via --seed-test-home launch argument
-    private func fetchTestHomesFromPersistence() async -> [HomeViewModel] {
-        let context = ModelContext(modelContainer)
-        
-        do {
-            let descriptor = FetchDescriptor<HomeReference>()
-            let homes = try context.fetch(descriptor)
-            
-            return homes.map { home in
                 HomeViewModel(
-                    id: home.homeKitIdentifier,
-                    homeKitIdentifier: home.homeKitIdentifier,
+                    id: home.id,
+                    homeKitIdentifier: home.id,
                     name: home.name,
-                    isActive: home.isActive,
+                    isActive: home.id == activeId,
                     roomCount: home.roomCount,
                     accessoryCount: home.accessoryCount
                 )
             }
         } catch {
+            DawnLoopLogger.homeKit.error("Failed to fetch homes: \(error.localizedDescription)")
             return []
         }
     }
@@ -90,7 +65,7 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
         do {
             let homes = try await adapter.fetchHomes()
             
-            guard let home = homes.first(where: { $0.uniqueIdentifier.uuidString == activeId }) else {
+            guard let home = homes.first(where: { $0.id == activeId }) else {
                 // Home no longer exists - clear the selection (VAL-HOME-002)
                 await clearActiveHome()
                 return .notFound(identifier: activeId)
@@ -109,7 +84,7 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
         do {
             let homes = try await adapter.fetchHomes()
             
-            guard let home = homes.first(where: { $0.uniqueIdentifier.uuidString == homeId }) else {
+            guard let home = homes.first(where: { $0.id == homeId }) else {
                 return false
             }
             
@@ -117,6 +92,7 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
             return true
             
         } catch {
+            DawnLoopLogger.homeKit.error("Failed to select home \(homeId): \(error.localizedDescription)")
             return false
         }
     }
@@ -135,7 +111,7 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
                 try context.save()
             }
         } catch {
-            print("Warning: Could not clear active home: \(error)")
+            DawnLoopLogger.persistence.error("Could not clear active home: \(error.localizedDescription)")
         }
     }
     
@@ -158,7 +134,7 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
         }
     }
     
-    private func persistHomeSelection(_ home: HMHome) async {
+    private func persistHomeSelection(_ home: HomeSnapshot) async {
         let context = ModelContext(modelContainer)
         
         do {
@@ -172,7 +148,7 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
             }
             
             // Find or create reference for the new home
-            let homeId = home.uniqueIdentifier.uuidString
+            let homeId = home.id
             var homeDescriptor = FetchDescriptor<HomeReference>()
             homeDescriptor.predicate = #Predicate { $0.homeKitIdentifier == homeId }
             
@@ -185,7 +161,9 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
                 reference = HomeReference(
                     homeKitIdentifier: homeId,
                     name: home.name,
-                    isActive: true
+                    isActive: true,
+                    roomCount: home.roomCount,
+                    accessoryCount: home.accessoryCount
                 )
                 context.insert(reference)
             }
@@ -193,13 +171,13 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
             try context.save()
             
         } catch {
-            print("Warning: Could not persist home selection: \(error)")
+            DawnLoopLogger.persistence.error("Could not persist home selection: \(error.localizedDescription)")
         }
     }
 }
 
 /// Actor-based mock implementation for testing
-actor MockHomeSelectionService: HomeSelectionServiceProtocol {
+final class MockHomeSelectionService: HomeSelectionServiceProtocol {
     var mockHomes: [HomeViewModel] = []
     var mockActiveHome: ActiveHomeResult = .noSelection
     var lastSelectedHomeId: String?
@@ -214,11 +192,11 @@ actor MockHomeSelectionService: HomeSelectionServiceProtocol {
     }
     
     func availableHomes() async -> [HomeViewModel] {
-        return mockHomes
+        mockHomes
     }
     
     func activeHome() async -> ActiveHomeResult {
-        return mockActiveHome
+        mockActiveHome
     }
     
     func selectHome(_ homeId: String) async -> Bool {

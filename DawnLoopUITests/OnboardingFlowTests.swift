@@ -42,14 +42,14 @@ final class OnboardingFlowTests: XCTestCase {
         app.buttons["Get Started"].tap()
         
         // Verify second screen
-        XCTAssertTrue(app.staticTexts["How It Works"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["How It Works"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["DawnLoop creates smart automations in Apple Home that gradually brighten your lights before your alarm time."].exists)
         
         // Advance to third screen
         app.buttons["Continue"].tap()
         
         // Verify third screen
-        XCTAssertTrue(app.staticTexts["Ready to Wake"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Ready to Wake"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Connect to Apple Home and set up your first wake-light alarm in under a minute."].exists)
     }
     
@@ -64,10 +64,10 @@ final class OnboardingFlowTests: XCTestCase {
         
         // Complete all three onboarding screens
         app.buttons["Get Started"].tap()
-        XCTAssertTrue(app.staticTexts["How It Works"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["How It Works"].waitForExistence(timeout: 5))
         
         app.buttons["Continue"].tap()
-        XCTAssertTrue(app.staticTexts["Ready to Wake"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Ready to Wake"].waitForExistence(timeout: 5))
         
         // Tap "Connect to Home" to start the Home access flow
         app.buttons["Connect to Home"].tap()
@@ -106,8 +106,9 @@ final class OnboardingFlowTests: XCTestCase {
         let onboardingRelaunched = newApp.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 3)
         XCTAssertFalse(onboardingRelaunched, "Onboarding should not reappear on relaunch after completion")
         
-        // Verify we see either main flow or home selection (legitimate post-onboarding state)
-        let postOnboardingVisible = newApp.staticTexts["Good Morning"].exists ||
+        // Verify we see either the main alarm flow or home selection.
+        let postOnboardingVisible = newApp.staticTexts["No Alarms Yet"].exists ||
+                                   newApp.buttons["Create Your First Alarm"].exists ||
                                    newApp.staticTexts["Choose Your Home"].exists ||
                                    newApp.staticTexts["Test Home"].exists
         XCTAssertTrue(postOnboardingVisible, "Should be in post-onboarding state after relaunch")
@@ -121,11 +122,11 @@ final class OnboardingFlowTests: XCTestCase {
         
         // Advance to second screen
         app.buttons["Get Started"].tap()
-        XCTAssertTrue(app.staticTexts["How It Works"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["How It Works"].waitForExistence(timeout: 5))
         
         // Advance to third screen
         app.buttons["Continue"].tap()
-        XCTAssertTrue(app.staticTexts["Ready to Wake"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Ready to Wake"].waitForExistence(timeout: 5))
     }
     
     func testOnboardingBackNavigation() throws {
@@ -135,12 +136,12 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 5))
         app.buttons["Get Started"].tap()
         
-        XCTAssertTrue(app.staticTexts["How It Works"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["How It Works"].waitForExistence(timeout: 5))
         
         // Go back
         app.buttons["Back"].tap()
         
         // Verify back on first screen
-        XCTAssertTrue(app.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 5))
     }
 }

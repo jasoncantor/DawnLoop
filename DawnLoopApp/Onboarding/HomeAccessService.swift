@@ -3,112 +3,54 @@ import HomeKit
 import SwiftData
 
 /// Protocol for HomeKit platform adapter - enables mocking in tests
-@preconcurrency
-protocol HomeKitAdapterProtocol: Sendable {
-    /// Current authorization status - prefer checkAuthorizationStatus() for test control
-    var authorizationStatus: HMHomeManagerAuthorizationStatus { get }
-
+@MainActor
+protocol HomeKitAdapterProtocol {
     /// Checks current authorization status - tests can control this via mock adapter
     func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus
 
-    /// Requests authorization from the user
-    func requestAuthorization() async -> HMHomeManagerAuthorizationStatus
-
     /// Fetches available homes
-    func fetchHomes() async throws -> [HMHome]
+    func fetchHomes() async throws -> [HomeSnapshot]
 
     /// Fetches compatible accessories from a home
-    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory]
-}
-
-/// Mock HomeKit adapter for UI testing - provides controllable test fixtures
-/// for testing the Home access flow with deterministic data.
-/// Supports --seed-test-home for legitimate visible flow testing with realistic data.
-@preconcurrency
-actor MockHomeKitAdapter: HomeKitAdapterProtocol {
-    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
-        [.determined, .authorized]
-    }
-
-    nonisolated func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
-        [.determined, .authorized]
-    }
-
-    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
-        [.determined, .authorized]
-    }
-
-    func fetchHomes() async throws -> [HMHome] {
-        // Mock adapter returns empty homes - UI tests verify the flow structure
-        // including "No Homes Available" state and home selection UI.
-        // When --seed-test-home is active, the HomeSelectionService reads
-        // test homes directly from SwiftData instead of using this adapter.
-        return []
-    }
-
-    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
-        // Mock adapter returns empty accessories - UI tests verify the flow structure
-        // including empty states and discovery UI, not specific accessory data.
-        return []
-    }
+    func fetchCompatibleAccessories(in homeIdentifier: String) async -> [AccessorySnapshot]
 }
 
 /// Live HomeKit adapter implementation
-@preconcurrency
-actor LiveHomeKitAdapter: HomeKitAdapterProtocol {
-    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
-        HMHomeManager().authorizationStatus
+final class LiveHomeKitAdapter: HomeKitAdapterProtocol {
+    private let controller: HomeKitControllerProtocol
+
+    init(controller: HomeKitControllerProtocol) {
+        self.controller = controller
     }
 
-    nonisolated func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
-        return HMHomeManager().authorizationStatus
-    }
-
-    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
-        // HomeKit authorization is triggered by first access to HMHomeManager
-        // The status will update via notification center, but we return current
-        return HMHomeManager().authorizationStatus
-    }
-
-    func fetchHomes() async throws -> [HMHome] {
-        let homeManager = HMHomeManager()
-        // Wait for homes to be available
-        if homeManager.homes.isEmpty {
-            // Brief delay to allow HomeKit to populate
-            try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+    func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
+        await controller.ensureLoaded()
+        return await MainActor.run {
+            controller.authorizationStatus()
         }
-        return homeManager.homes
     }
 
-    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
-        return home.accessories.filter { accessory in
-            // Check for brightness control capability
-            let hasBrightness = accessory.services.contains { service in
-                service.characteristics.contains { characteristic in
-                    characteristic.characteristicType == HMCharacteristicTypeBrightness
-                }
-            }
-            return hasBrightness
-        }
+    func fetchHomes() async throws -> [HomeSnapshot] {
+        await controller.homes()
+    }
+
+    func fetchCompatibleAccessories(in homeIdentifier: String) async -> [AccessorySnapshot] {
+        await controller.accessories(in: homeIdentifier).filter { $0.capability.supportsBrightness }
     }
 }
 
 /// Represents the current state of Home access readiness
 enum HomeAccessReadiness: Equatable, Sendable {
     case unknown
-    case checkingPermission
     case permissionDenied
     case noHomeConfigured
     case noHomeHub
     case noCompatibleAccessories
-    case ready(home: HMHome, accessories: [HMAccessory])
-    /// Test mode ready state - used when --seed-test-home provides homes via SwiftData
-    /// This allows UI tests to verify the flow without requiring real HMHome objects
-    case readyTesting
-    
+    case ready(home: HomeSnapshot, accessories: [AccessorySnapshot])
+
     var isReady: Bool {
         switch self {
-        case .ready, .readyTesting:
+        case .ready:
             return true
         default:
             return false
@@ -130,25 +72,13 @@ enum HomeAccessReadiness: Equatable, Sendable {
 @MainActor
 final class HomeAccessState {
     private let adapter: any HomeKitAdapterProtocol
-    private let modelContainer: ModelContainer?
     
     var readiness: HomeAccessReadiness = .unknown
     var isLoading = false
     var lastError: Error?
     
-    init(adapter: (any HomeKitAdapterProtocol)? = nil, modelContainer: ModelContainer? = nil) {
-        // Use provided adapter, or create appropriate adapter based on test environment
-        if let providedAdapter = adapter {
-            self.adapter = providedAdapter
-        } else if TestEnvironment.isSeedingTestHome {
-            // When seeding test homes, use the mock adapter which will return
-            // the seeded homes from SwiftData via TestHomeFixtures
-            self.adapter = MockHomeKitAdapter()
-        } else {
-            self.adapter = LiveHomeKitAdapter()
-        }
-        
-        self.modelContainer = modelContainer
+    init(adapter: any HomeKitAdapterProtocol) {
+        self.adapter = adapter
     }
     
     /// Initiates the Home access flow from onboarding
@@ -161,53 +91,26 @@ final class HomeAccessState {
     
     /// Checks current Home access readiness state
     func checkReadiness() async {
-        // Use checkAuthorizationStatus() for test-controllable authorization checks
         let status = await adapter.checkAuthorizationStatus()
-        
-        // Handle permission states
-        if status.contains(.determined) {
-            // When determined, check if authorized - if not authorized, it's denied
-            if status.contains(.restricted) || !status.contains(.authorized) {
-                readiness = .permissionDenied
-                return
-            }
-        } else {
-            // Not determined - request authorization
-            readiness = .checkingPermission
-            let newStatus = await adapter.requestAuthorization()
-            
-            // Re-check after request
-            if newStatus.contains(.restricted) || !newStatus.contains(.authorized) {
-                readiness = .permissionDenied
-                return
-            }
+
+        guard status.contains(.authorized) else {
+            readiness = .permissionDenied
+            return
         }
         
-        // Check for homes
         do {
             let homes = try await adapter.fetchHomes()
-            
-            // If no homes from HomeKit but --seed-test-home is active, proceed to ready state.
-            // The test homes will be read from SwiftData by HomeSelectionService.
-            // This allows UI tests to verify the full visible flow without real HomeKit.
-            if homes.isEmpty && TestEnvironment.isSeedingTestHome {
-                readiness = .readyTesting
-                return
-            }
-            
             guard let primaryHome = homes.first else {
                 readiness = .noHomeConfigured
                 return
             }
             
-            // Check for home hub
             if !hasHomeHub(homes: homes) {
                 readiness = .noHomeHub
                 return
             }
             
-            // Check for compatible accessories
-            let accessories = await adapter.fetchCompatibleAccessories(in: primaryHome)
+            let accessories = await adapter.fetchCompatibleAccessories(in: primaryHome.id)
             
             guard !accessories.isEmpty else {
                 readiness = .noCompatibleAccessories
@@ -224,43 +127,18 @@ final class HomeAccessState {
         }
     }
     
-    /// Checks for test homes seeded via --seed-test-home in SwiftData
-    /// Returns true if test homes exist in SwiftData
-    private func checkForSeededTestHomes() async -> Bool {
-        guard let container = modelContainer else { return false }
-        
-        let context = ModelContext(container)
-        
-        do {
-            let descriptor = FetchDescriptor<HomeReference>()
-            let homes = try context.fetch(descriptor)
-            return !homes.isEmpty
-        } catch {
-            return false
-        }
-    }
-    
     /// Retries the readiness check (for use after user fixes an issue)
     func retry() async {
         await checkReadiness()
     }
-
-
-
-    private func hasHomeHub(homes: [HMHome]) -> Bool {
-        // Check if any home has a home hub configured
-        // This is a simplified check - in production, you'd verify actual hub connectivity
-        return homes.contains { home in
-            // Home hub presence can be inferred from various states
-            // For now, we assume if the home exists and has accessories, hub might exist
-            !home.accessories.isEmpty || home.isPrimary
-        }
+    private func hasHomeHub(homes: [HomeSnapshot]) -> Bool {
+        homes.contains { $0.homeHubState == .connected }
     }
 }
 
 /// Result type for active home lookup
 enum ActiveHomeResult {
-    case success(home: HMHome)
+    case success(home: HomeSnapshot)
     case notFound(identifier: String)
     case noSelection
     case error(HomeSelectionError)

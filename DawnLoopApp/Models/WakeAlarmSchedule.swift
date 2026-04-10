@@ -97,6 +97,31 @@ struct WeekdaySchedule: Codable, Sendable, Equatable {
         }
     }
 
+    var weekdayNumbers: [Int] {
+        var numbers: [Int] = []
+        if sunday { numbers.append(1) }
+        if monday { numbers.append(2) }
+        if tuesday { numbers.append(3) }
+        if wednesday { numbers.append(4) }
+        if thursday { numbers.append(5) }
+        if friday { numbers.append(6) }
+        if saturday { numbers.append(7) }
+        return numbers
+    }
+
+    func isEnabled(on weekday: Int) -> Bool {
+        switch weekday {
+        case 1: return sunday
+        case 2: return monday
+        case 3: return tuesday
+        case 4: return wednesday
+        case 5: return thursday
+        case 6: return friday
+        case 7: return saturday
+        default: return false
+        }
+    }
+
     /// Check if the alarm should fire on a given date
     func shouldFire(on date: Date) -> Bool {
         let calendar = Calendar.current
@@ -158,6 +183,14 @@ final class WakeAlarmSchedule: @unchecked Sendable {
 
     /// Calculate the next occurrence after a given date
     func nextOccurrence(after date: Date = Date(), wakeTimeSeconds: Int) -> Date? {
+        nextOccurrence(after: date, wakeTimeSeconds: wakeTimeSeconds, restrictedToWeekday: nil)
+    }
+
+    func nextOccurrence(
+        after date: Date = Date(),
+        wakeTimeSeconds: Int,
+        restrictedToWeekday weekday: Int?
+    ) -> Date? {
         guard weekdaySchedule.isRepeating else {
             // For one-time alarms, return the wake time for today or tomorrow
             let calendar = Calendar.current
@@ -182,6 +215,11 @@ final class WakeAlarmSchedule: @unchecked Sendable {
         // Check each day for the next 14 days
         for dayOffset in 0..<14 {
             guard let checkDate = calendar.date(byAdding: .day, value: dayOffset, to: date) else { continue }
+
+            let checkWeekday = calendar.component(.weekday, from: checkDate)
+            if let weekday, checkWeekday != weekday {
+                continue
+            }
 
             if weekdaySchedule.shouldFire(on: checkDate) {
                 var components = calendar.dateComponents([.year, .month, .day], from: checkDate)

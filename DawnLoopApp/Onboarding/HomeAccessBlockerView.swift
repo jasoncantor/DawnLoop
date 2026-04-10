@@ -3,7 +3,6 @@ import SwiftUI
 /// Dedicated view for Home access blocker/recovery states
 struct HomeAccessBlockerView: View {
     @Environment(AppEnvironment.self) private var environment
-    @State private var homeAccessState = HomeAccessState()
     
     let blockerState: HomeAccessReadiness
     
@@ -47,13 +46,13 @@ struct HomeAccessBlockerView: View {
                 
                 Button(blockerCopy.secondaryAction) {
                     Task {
-                        await homeAccessState.retry()
+                        await environment.homeAccessState.retry()
                         updateReadiness()
                     }
                 }
                 .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.Colors.textSecondary)
-                .disabled(homeAccessState.isLoading)
+                .disabled(environment.homeAccessState.isLoading)
             }
             .padding(.horizontal, Theme.Spacing.large)
             .padding(.bottom, Theme.Spacing.xxLarge)
@@ -61,14 +60,14 @@ struct HomeAccessBlockerView: View {
         }
         .background(Theme.Colors.background.ignoresSafeArea())
         .overlay {
-            if homeAccessState.isLoading {
+            if environment.homeAccessState.isLoading {
                 ProgressView()
                     .scaleEffect(1.5)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Theme.Colors.background.opacity(0.8))
             }
         }
-        .onChange(of: homeAccessState.readiness) { _, newReadiness in
+        .onChange(of: environment.homeAccessState.readiness) { _, newReadiness in
             handleReadinessChange(newReadiness)
         }
     }
