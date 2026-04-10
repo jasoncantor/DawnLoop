@@ -388,9 +388,58 @@ final class AlarmEditorState {
     var currentPreview: CapabilityAwarePlan?
 
     /// Whether the editor is in a valid state for preview generation
+    /// Preview is blocked from all invalid editor states including:
+    /// - Invalid brightness relationships (start >= target)
+    /// - Invalid duration or color values
+    /// - Invalidated accessories (VAL-ALARM-004)
     var canGeneratePreview: Bool {
-        // Preview requires valid form state and at least one selected accessory
-        !selectedAccessoryIds.isEmpty && !alarmName.isEmpty
+        // Basic requirements: name and accessories
+        guard !selectedAccessoryIds.isEmpty && !alarmName.isEmpty else {
+            return false
+        }
+
+        // Must pass all validation checks
+        // Block preview if any validation errors exist
+        if !validation.isValid {
+            return false
+        }
+
+        // Additional explicit validation for preview safety
+        // Validate brightness relationship
+        if startBrightness >= targetBrightness {
+            return false
+        }
+
+        // Validate duration bounds
+        if durationMinutes < 1 || durationMinutes > 120 {
+            return false
+        }
+
+        // Validate color mode requirements
+        switch colorMode {
+        case .colorTemperature:
+            if let temp = targetColorTemperature {
+                if temp < 153 || temp > 454 {
+                    return false
+                }
+            } else {
+                return false
+            }
+        case .fullColor:
+            if targetHue == nil || targetSaturation == nil {
+                return false
+            }
+            if let hue = targetHue, hue < 0 || hue > 360 {
+                return false
+            }
+            if let sat = targetSaturation, sat < 0 || sat > 100 {
+                return false
+            }
+        case .brightnessOnly:
+            break
+        }
+
+        return true
     }
 
     /// The preview steps to display (empty if invalid state)

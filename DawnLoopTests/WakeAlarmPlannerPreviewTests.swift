@@ -26,13 +26,14 @@ final class WakeAlarmPlannerPreviewTests: XCTestCase {
         capability: AccessoryCapability,
         roomName: String = "Test Room"
     ) -> AccessoryViewModel {
+        // Preserve requested capability to properly test mixed-capability behavior (VAL-ALARM-004)
         return AccessoryViewModel(
             from: AccessoryReference(
                 homeKitIdentifier: id,
                 name: name,
-                roomName: roomName,
                 homeIdentifier: "test-home",
-                isCompatible: capability != .unsupported
+                roomName: roomName,
+                capability: capability
             )
         )
     }

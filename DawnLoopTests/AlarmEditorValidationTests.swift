@@ -26,13 +26,14 @@ final class AlarmEditorValidationTests: XCTestCase {
         capability: AccessoryCapability,
         roomName: String = "Test Room"
     ) -> AccessoryViewModel {
+        // Preserve requested capability for proper mixed-capability testing (VAL-ALARM-002)
         return AccessoryViewModel(
             from: AccessoryReference(
                 homeKitIdentifier: id,
                 name: name,
-                roomName: roomName,
                 homeIdentifier: "test-home",
-                isCompatible: capability != .unsupported
+                roomName: roomName,
+                capability: capability
             )
         )
     }
@@ -462,6 +463,184 @@ final class AlarmEditorValidationTests: XCTestCase {
 
         // Assert - Error is cleared
         XCTAssertNil(editorState.validation.invalidatedAccessoryError)
+    }
+
+    // MARK: - VAL-ALARM-004: Preview blocked from invalid editor states
+
+    func testCanGeneratePreview_InvalidBrightnessRelationship_ReturnsFalse() {
+        // Arrange - Invalid brightness relationship (start >= target)
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.startBrightness = 80
+        editorState.targetBrightness = 50
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .brightnessOnly)
+        ]
+
+        // Act & Assert
+        XCTAssertFalse(editorState.canGeneratePreview,
+                      "Preview should be blocked when start brightness >= target brightness")
+    }
+
+    func testCanGeneratePreview_InvalidDuration_ReturnsFalse() {
+        // Arrange
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.durationMinutes = 0 // Invalid
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .brightnessOnly)
+        ]
+
+        // Act & Assert
+        XCTAssertFalse(editorState.canGeneratePreview,
+                      "Preview should be blocked when duration is invalid")
+    }
+
+    func testCanGeneratePreview_ExcessiveDuration_ReturnsFalse() {
+        // Arrange
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.durationMinutes = 200 // Exceeds max
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .brightnessOnly)
+        ]
+
+        // Act & Assert
+        XCTAssertFalse(editorState.canGeneratePreview,
+                      "Preview should be blocked when duration exceeds maximum")
+    }
+
+    func testCanGeneratePreview_InvalidatedAccessory_ReturnsFalse() {
+        // Arrange - Load alarm with invalidated accessory
+        let alarm = WakeAlarm(
+            name: "Test Alarm",
+            wakeTimeSeconds: 7 * 3600,
+            selectedAccessoryIdentifiers: ["old-acc"],
+            homeIdentifier: "test-home"
+        )
+        let newAccessory = createAccessory(id: "new-acc", name: "New Light", capability: .brightnessOnly)
+        editorState.load(alarm: alarm, availableAccessories: [newAccessory])
+
+        // Act & Assert
+        XCTAssertFalse(editorState.canGeneratePreview,
+                      "Preview should be blocked when accessories are invalidated")
+    }
+
+    func testCanGeneratePreview_InvalidColorTemperature_ReturnsFalse() {
+        // Arrange - Color temperature mode with invalid value
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.colorMode = .colorTemperature
+        editorState.targetColorTemperature = 500 // Out of valid range (153-454)
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .tunableWhite)
+        ]
+
+        // Act & Assert
+        XCTAssertFalse(editorState.canGeneratePreview,
+                      "Preview should be blocked when color temperature is out of range")
+    }
+
+    func testCanGeneratePreview_MissingColorTemperature_ReturnsFalse() {
+        // Arrange - Color temperature mode with nil value
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.colorMode = .colorTemperature
+        editorState.targetColorTemperature = nil
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .tunableWhite)
+        ]
+
+        // Act & Assert
+        XCTAssertFalse(editorState.canGeneratePreview,
+                      "Preview should be blocked when color temperature is required but missing")
+    }
+
+    func testCanGeneratePreview_InvalidHue_ReturnsFalse() {
+        // Arrange - Full color mode with invalid hue
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.colorMode = .fullColor
+        editorState.targetHue = 400 // Out of range (0-360)
+        editorState.targetSaturation = 50
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .fullColor)
+        ]
+
+        // Act & Assert
+        XCTAssertFalse(editorState.canGeneratePreview,
+                      "Preview should be blocked when hue is out of range")
+    }
+
+    func testCanGeneratePreview_MissingFullColorValues_ReturnsFalse() {
+        // Arrange - Full color mode with missing values
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.colorMode = .fullColor
+        editorState.targetHue = nil
+        editorState.targetSaturation = nil
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .fullColor)
+        ]
+
+        // Act & Assert
+        XCTAssertFalse(editorState.canGeneratePreview,
+                      "Preview should be blocked when full color values are missing")
+    }
+
+    func testCanGeneratePreview_ValidState_ReturnsTrue() {
+        // Arrange - Fully valid state
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.startBrightness = 0
+        editorState.targetBrightness = 100
+        editorState.durationMinutes = 30
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .brightnessOnly)
+        ]
+
+        // Act & Assert
+        XCTAssertTrue(editorState.canGeneratePreview,
+                     "Preview should be allowed from fully valid state")
+    }
+
+    func testCanGeneratePreview_ValidFullColorState_ReturnsTrue() {
+        // Arrange - Valid full color state
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.startBrightness = 0
+        editorState.targetBrightness = 100
+        editorState.durationMinutes = 30
+        editorState.colorMode = .fullColor
+        editorState.targetHue = 30
+        editorState.targetSaturation = 80
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .fullColor)
+        ]
+
+        // Act & Assert
+        XCTAssertTrue(editorState.canGeneratePreview,
+                     "Preview should be allowed from valid full color state")
+    }
+
+    func testRegeneratePreview_InvalidState_ClearsPreview() {
+        // Arrange - Start with valid state and generated preview
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .brightnessOnly)
+        ]
+        editorState.regeneratePreview()
+        XCTAssertNotNil(editorState.currentPreview)
+
+        // Act - Make state invalid and regenerate
+        editorState.startBrightness = 80
+        editorState.targetBrightness = 50 // Invalid: start > target
+        editorState.regeneratePreview()
+
+        // Assert
+        XCTAssertNil(editorState.currentPreview,
+                    "Preview should be cleared when state becomes invalid")
     }
 
     // MARK: - Validation State Tests
