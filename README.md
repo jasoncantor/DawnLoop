@@ -1,6 +1,15 @@
 # DawnLoop
 
-DawnLoop is an iPhone app for iOS 17+ that creates stepped sunrise alarms in Apple Home using selected lights.
+DawnLoop is an iPhone app for iOS 17+ that creates stepped Light Alarms in Apple Home using selected lights.
+
+## License
+
+This repository is source-available under [LICENSE](/Users/jasoncantor/Downloads/DawnLoop/LICENSE).
+It is intentionally not released under an OSI-approved open-source license.
+People may build and install DawnLoop for themselves, but public App Store and
+TestFlight redistribution of this app or its branded forks is reserved. Brand
+rules are in [TRADEMARKS.md](/Users/jasoncantor/Downloads/DawnLoop/TRADEMARKS.md).
+A plain-language summary is in [LEGAL.md](/Users/jasoncantor/Downloads/DawnLoop/LEGAL.md).
 
 ## What v1 ships
 
@@ -32,4 +41,5 @@ DawnLoop is an iPhone app for iOS 17+ that creates stepped sunrise alarms in App
 ## TestFlight readiness notes
 
 - CI is defined in [.github/workflows/ios-ci.yml](/Users/jasoncantor/Downloads/DawnLoop/.github/workflows/ios-ci.yml).
-- The remaining manual work is signing, real-home validation, screenshots, privacy disclosures, and App Store Connect metadata.
+- App submission assets and copy are in [AppStoreSubmission/README.md](/Users/jasoncantor/Downloads/DawnLoop/AppStoreSubmission/README.md) and [APP_STORE_METADATA.md](/Users/jasoncantor/Downloads/DawnLoop/APP_STORE_METADATA.md).
+- The remaining manual work is signing, real-home validation, hosted policy/support URLs, privacy disclosures, and App Store Connect submission.

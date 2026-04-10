@@ -44,6 +44,7 @@
 		D034 /* WakeAlarmPlannerPreviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F034 /* WakeAlarmPlannerPreviewTests.swift */; };
 		D035 /* AlarmEditorValidationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F035 /* AlarmEditorValidationUITests.swift */; };
 		D036 /* AlarmPreviewFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F036 /* AlarmPreviewFlowTests.swift */; };
+		D045 /* AppStoreScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F045 /* AppStoreScreenshotTests.swift */; };
 		D037 /* AlarmListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F037 /* AlarmListView.swift */; };
 		D038 /* HomeKitController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F038 /* HomeKitController.swift */; };
 		D039 /* DawnLoopLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F039 /* DawnLoopLogger.swift */; };
@@ -109,6 +110,7 @@
 		F034 /* WakeAlarmPlannerPreviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmPlannerPreviewTests.swift; sourceTree = "<group>"; };
 		F035 /* AlarmEditorValidationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmEditorValidationUITests.swift; sourceTree = "<group>"; };
 		F036 /* AlarmPreviewFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmPreviewFlowTests.swift; sourceTree = "<group>"; };
+		F045 /* AppStoreScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreScreenshotTests.swift; sourceTree = "<group>"; };
 		F037 /* AlarmListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmListView.swift; sourceTree = "<group>"; };
 		F038 /* HomeKitController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeKitController.swift; sourceTree = "<group>"; };
 		F039 /* DawnLoopLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DawnLoopLogger.swift; sourceTree = "<group>"; };
@@ -197,6 +199,7 @@
 				F023 /* HomeDiscoveryFlowTests.swift */,
 				F035 /* AlarmEditorValidationUITests.swift */,
 				F036 /* AlarmPreviewFlowTests.swift */,
+				F045 /* AppStoreScreenshotTests.swift */,
 			);
 			path = DawnLoopUITests;
 			sourceTree = "<group>";
@@ -460,6 +463,7 @@
 				D023 /* HomeDiscoveryFlowTests.swift in Sources */,
 				D035 /* AlarmEditorValidationUITests.swift in Sources */,
 				D036 /* AlarmPreviewFlowTests.swift in Sources */,
+				D045 /* AppStoreScreenshotTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

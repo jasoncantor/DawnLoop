@@ -25,7 +25,8 @@
 
 ## App Store submission prep
 
-- Capture required screenshots.
+- Upload the prepared screenshots from [AppStoreSubmission/Screenshots/iPhone-6.9](/Users/jasoncantor/Downloads/DawnLoop/AppStoreSubmission/Screenshots/iPhone-6.9).
 - Finalize privacy disclosures in App Store Connect.
 - Review metadata in [APP_STORE_METADATA.md](/Users/jasoncantor/Downloads/DawnLoop/APP_STORE_METADATA.md).
+- Review screenshot order and regeneration notes in [AppStoreSubmission/README.md](/Users/jasoncantor/Downloads/DawnLoop/AppStoreSubmission/README.md).
 - Archive, validate, and upload the build.
