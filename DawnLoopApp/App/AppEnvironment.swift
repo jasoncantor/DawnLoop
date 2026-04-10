@@ -8,21 +8,26 @@ final class AppEnvironment {
     let homeAccessState: HomeAccessState
     let homeSelectionService: HomeSelectionService
     let accessoryDiscoveryService: AccessoryDiscoveryService
+    let alarmRepository: WakeAlarmRepository
+    let automationBindingService: AutomationBindingService
     let modelContainer: ModelContainer
-    
+
     init() {
         self.onboardingState = OnboardingState()
-        
+
         let schema = Schema([
             OnboardingCompletion.self,
             HomeReference.self,
             AccessoryReference.self,
+            WakeAlarm.self,
+            WakeAlarmSchedule.self,
+            AutomationBinding.self,
         ])
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false
         )
-        
+
         do {
             self.modelContainer = try ModelContainer(
                 for: schema,
@@ -31,15 +36,17 @@ final class AppEnvironment {
         } catch {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
-        
+
         // Use mock adapter for testing when --seed-test-home is set
         // This allows the seeded test homes to be returned via the adapter
         let homeKitAdapter: (any HomeKitAdapterProtocol)? = TestEnvironment.isSeedingTestHome
             ? MockHomeKitAdapter()
             : nil
-        
+
         self.homeAccessState = HomeAccessState(adapter: homeKitAdapter, modelContainer: modelContainer)
         self.homeSelectionService = HomeSelectionService(modelContainer: modelContainer)
         self.accessoryDiscoveryService = AccessoryDiscoveryService(modelContainer: modelContainer)
+        self.alarmRepository = WakeAlarmRepository(modelContainer: modelContainer)
+        self.automationBindingService = AutomationBindingService(modelContainer: modelContainer)
     }
 }
