@@ -16,6 +16,56 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
+      - name: Resolve Simulator
+        run: |
+          python3 <<'PY' >> "$GITHUB_ENV"
+          import json
+          import re
+          import subprocess
+          import sys
+
+          devices = json.loads(
+              subprocess.check_output(
+                  ["xcrun", "simctl", "list", "--json", "devices", "available"],
+                  text=True,
+              )
+          )["devices"]
+
+          candidates = []
+          for runtime, entries in devices.items():
+              if "iOS" not in runtime:
+                  continue
+
+              match = re.search(r"iOS-(\d+)-(\d+)", runtime)
+              version = (
+                  int(match.group(1)),
+                  int(match.group(2)),
+              ) if match else (0, 0)
+
+              for entry in entries:
+                  if not entry.get("isAvailable"):
+                      continue
+                  name = entry.get("name", "")
+                  if not name.startswith("iPhone"):
+                      continue
+                  candidates.append((version, name, entry["udid"], runtime))
+
+          if not candidates:
+              sys.exit("No available iPhone simulators found on the runner.")
+
+          candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
+          _, name, udid, runtime = candidates[0]
+          print(f"SIMULATOR_NAME={name}")
+          print(f"SIMULATOR_UDID={udid}")
+          print(f"SIMULATOR_RUNTIME={runtime}")
+          PY
+
+      - name: Show Simulator Selection
+        run: |
+          echo "Using simulator: $SIMULATOR_NAME"
+          echo "Runtime: $SIMULATOR_RUNTIME"
+          echo "UDID: $SIMULATOR_UDID"
+
       - name: Build
         run: |
           xcodebuild \
@@ -31,7 +81,7 @@ jobs:
           xcodebuild \
             -scheme DawnLoop \
             -project DawnLoop.xcodeproj \
-            -destination 'platform=iOS Simulator,OS=26.4,name=iPhone 17' \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
             -derivedDataPath .derivedData \
             CODE_SIGNING_ALLOWED=NO \
             test-without-building

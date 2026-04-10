@@ -1,8 +1,12 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Dedicated view for Home access blocker/recovery states
 struct HomeAccessBlockerView: View {
     @Environment(AppEnvironment.self) private var environment
+    @Environment(\.openURL) private var openURL
     
     let blockerState: HomeAccessReadiness
     
@@ -181,32 +185,35 @@ struct HomeAccessBlockerView: View {
     }
     
     private func openSettings() {
-        if let url = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(url)
+        if let url = settingsURL {
+            openURL(url)
         }
     }
     
     private func openHomeApp() {
-        // Try to open the Home app
         if let url = URL(string: "com.apple.home://") {
-            UIApplication.shared.open(url)
+            openURL(url)
         }
     }
     
     private func showHubInfo() {
-        // In a real implementation, this would show an educational sheet
-        // For now, we'll open Apple's support page
         if let url = URL(string: "https://support.apple.com/en-us/HT207057") {
-            UIApplication.shared.open(url)
+            openURL(url)
         }
     }
     
     private func showCompatibleLightsInfo() {
-        // In a real implementation, this would show compatible devices
-        // For now, we'll open Apple's Home accessories page
         if let url = URL(string: "https://www.apple.com/ios/home/accessories/") {
-            UIApplication.shared.open(url)
+            openURL(url)
         }
+    }
+
+    private var settingsURL: URL? {
+#if canImport(UIKit)
+        URL(string: UIApplication.openSettingsURLString)
+#else
+        nil
+#endif
     }
     
     private func updateReadiness() {
