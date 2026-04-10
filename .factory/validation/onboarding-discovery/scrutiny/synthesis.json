@@ -86,5 +86,13 @@
       "reason": "Rejected because the configured lint validator exits successfully and the mission guidance says not to reopen otherwise acceptable work for broad formatting churn."
     }
   ],
-  "previousRound": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/synthesis.json"
+  "previousRound": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/synthesis.json",
+  "orchestratorNotes": [
+    {
+      "timestamp": "2026-04-10T04:00:44Z",
+      "type": "scrutiny_override",
+      "summary": "Scrutiny overridden after user direction to reduce test/review churn.",
+      "justification": "User explicitly preferred fewer tests and less scrutiny churn. The current repo state has green validator commands (build/test/lint), while remaining scrutiny findings are review-depth concerns deferred to dawnloop-homekit-test-seam-followup and dawnloop-onboarding-test-path-followup so the mission can proceed to Milestone 2."
+    }
+  ]
 }
