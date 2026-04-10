@@ -129,6 +129,16 @@ final class WakeAlarmPlannerPreviewTests: XCTestCase {
         }
     }
 
+    func testPreview_CustomStepCount_ProducesRequestedNumberOfSteps() {
+        setupValidEditorState()
+        editorState.durationMinutes = 24
+        editorState.stepCount = 24
+
+        editorState.regeneratePreview()
+
+        XCTAssertEqual(editorState.previewSteps.count, 24)
+    }
+
     // MARK: - VAL-ALARM-004: Preview only runs from valid editor state
 
     func testPreview_InvalidState_NoName_NoPreviewGenerated() {

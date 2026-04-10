@@ -79,6 +79,9 @@ final class WakeAlarm: @unchecked Sendable {
     /// Duration of the sunrise ramp in minutes
     var durationMinutes: Int
 
+    /// Number of discrete automation steps used for the ramp
+    var stepCount: Int
+
     /// Gradient curve for the transition
     var gradientCurveRaw: String
 
@@ -191,6 +194,7 @@ final class WakeAlarm: @unchecked Sendable {
         timeReference: AlarmTimeReference = .clock,
         timeOffsetMinutes: Int = 0,
         durationMinutes: Int = 30,
+        stepCount: Int = WakeAlarmStepPlanner.defaultStepCount,
         gradientCurve: GradientCurve = .easeInOut,
         colorMode: AlarmColorMode = .brightnessOnly,
         startBrightness: Int = 0,
@@ -210,6 +214,7 @@ final class WakeAlarm: @unchecked Sendable {
         self.timeReferenceRaw = timeReference.rawValue
         self.timeOffsetMinutes = timeReference == .clock ? 0 : timeOffsetMinutes
         self.durationMinutes = durationMinutes
+        self.stepCount = max(1, min(stepCount, WakeAlarmStepPlanner.maxStepCount(forDurationMinutes: durationMinutes)))
         self.gradientCurveRaw = gradientCurve.rawValue
         self.colorModeRaw = colorMode.rawValue
         self.startBrightness = startBrightness
@@ -235,6 +240,7 @@ final class WakeAlarm: @unchecked Sendable {
         timeReference: AlarmTimeReference? = nil,
         timeOffsetMinutes: Int? = nil,
         durationMinutes: Int? = nil,
+        stepCount: Int? = nil,
         gradientCurve: GradientCurve? = nil,
         colorMode: AlarmColorMode? = nil,
         startBrightness: Int? = nil,
@@ -253,6 +259,11 @@ final class WakeAlarm: @unchecked Sendable {
             self.timeOffsetMinutes = 0
         }
         if let durationMinutes = durationMinutes { self.durationMinutes = durationMinutes }
+        if let stepCount = stepCount {
+            self.stepCount = max(1, min(stepCount, WakeAlarmStepPlanner.maxStepCount(forDurationMinutes: self.durationMinutes)))
+        } else {
+            self.stepCount = max(1, min(self.stepCount, WakeAlarmStepPlanner.maxStepCount(forDurationMinutes: self.durationMinutes)))
+        }
         if let gradientCurve = gradientCurve { self.gradientCurveRaw = gradientCurve.rawValue }
         if let colorMode = colorMode { self.colorModeRaw = colorMode.rawValue }
         if let startBrightness = startBrightness { self.startBrightness = startBrightness }

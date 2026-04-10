@@ -69,7 +69,17 @@ final class AlarmEditorState {
     }
 
     var durationMinutes: Int = 30 {
-        didSet { clearValidationError(for: \.durationMinutes) }
+        didSet {
+            clampStepCount()
+            clearValidationError(for: \.durationMinutes)
+        }
+    }
+
+    var stepCount: Int = WakeAlarmStepPlanner.defaultStepCount {
+        didSet {
+            clampStepCount()
+            clearValidationError(for: \.stepCount)
+        }
     }
 
     var gradientCurve: GradientCurve = .easeInOut {
@@ -107,6 +117,18 @@ final class AlarmEditorState {
     var repeatSchedule: WeekdaySchedule = .never
 
     var isEnabled: Bool = true
+
+    var maxStepCount: Int {
+        WakeAlarmStepPlanner.maxStepCount(forDurationMinutes: durationMinutes)
+    }
+
+    var stepDensityDescription: String {
+        let minutesPerStep = Double(durationMinutes) / Double(max(stepCount, 1))
+        if minutesPerStep <= 1.05 {
+            return "About 1 step per minute"
+        }
+        return String(format: "About 1 step every %.1f minutes", minutesPerStep)
+    }
 
     // MARK: - Validation State
 
@@ -276,12 +298,21 @@ final class AlarmEditorState {
             if validation.durationError != nil {
                 validation.durationError = nil
             }
+        case \.stepCount:
+            break
         case \.colorMode, \.targetColorTemperature, \.targetHue, \.targetSaturation:
             if validation.colorError != nil {
                 validation.colorError = nil
             }
         default:
             break
+        }
+    }
+
+    private func clampStepCount() {
+        let clamped = min(max(stepCount, 1), maxStepCount)
+        if stepCount != clamped {
+            stepCount = clamped
         }
     }
 
@@ -321,6 +352,7 @@ final class AlarmEditorState {
         self.availableAccessories = availableAccessories
         self.timeReference = alarm.timeReference
         self.timeOffsetMinutes = alarm.timeOffsetMinutes
+        self.stepCount = alarm.stepCount
 
         // Set wake time
         let calendar = Calendar.current
@@ -362,6 +394,7 @@ final class AlarmEditorState {
             timeReference: timeReference,
             timeOffsetMinutes: timeOffsetMinutes,
             durationMinutes: durationMinutes,
+            stepCount: stepCount,
             gradientCurve: gradientCurve,
             colorMode: colorMode,
             startBrightness: startBrightness,
@@ -382,6 +415,7 @@ final class AlarmEditorState {
         self.durationMinutes = 30
         self.timeReference = .clock
         self.timeOffsetMinutes = 0
+        self.stepCount = WakeAlarmStepPlanner.defaultStepCount
         self.gradientCurve = .easeInOut
         self.colorMode = .brightnessOnly
         self.startBrightness = 0
@@ -513,6 +547,7 @@ final class AlarmEditorState {
             timeReference: timeReference,
             timeOffsetMinutes: timeOffsetMinutes,
             durationMinutes: durationMinutes,
+            stepCount: stepCount,
             gradientCurve: gradientCurve,
             colorMode: colorMode,
             startBrightness: startBrightness,
@@ -529,7 +564,7 @@ final class AlarmEditorState {
         currentPreview = WakeAlarmStepPlanner.planSteps(
             for: tempAlarm,
             capabilities: capabilities,
-            stepCount: WakeAlarmStepPlanner.defaultStepCount
+            stepCount: stepCount
         )
     }
 

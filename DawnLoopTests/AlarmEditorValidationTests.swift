@@ -213,6 +213,7 @@ final class AlarmEditorValidationTests: XCTestCase {
         editorState.timeReference = .sunrise
         editorState.timeOffsetMinutes = -25
         editorState.durationMinutes = 30
+        editorState.stepCount = 18
         editorState.startBrightness = 5
         editorState.targetBrightness = 90
         editorState.selectedAccessoryIds = ["acc-1"]
@@ -221,7 +222,18 @@ final class AlarmEditorValidationTests: XCTestCase {
 
         XCTAssertEqual(alarm?.timeReference, .sunrise)
         XCTAssertEqual(alarm?.timeOffsetMinutes, -25)
+        XCTAssertEqual(alarm?.stepCount, 18)
         XCTAssertTrue(alarm?.isSolarBased ?? false)
+    }
+
+    func testDurationReduction_ClampsStepCountToDurationBasedMaximum() {
+        editorState.durationMinutes = 30
+        editorState.stepCount = 30
+
+        editorState.durationMinutes = 12
+
+        XCTAssertEqual(editorState.stepCount, 12)
+        XCTAssertEqual(editorState.maxStepCount, 12)
     }
 
     // MARK: - VAL-ALARM-002: Capability-aware controls appear only when supported

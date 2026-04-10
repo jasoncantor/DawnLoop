@@ -69,6 +69,11 @@ enum GradientFunction {
 struct WakeAlarmStepPlanner {
     /// Default number of steps for the sunrise transition
     static let defaultStepCount = 10
+    static let maxConfigurableStepCount = 30
+
+    static func maxStepCount(forDurationMinutes durationMinutes: Int) -> Int {
+        max(1, min(durationMinutes, maxConfigurableStepCount))
+    }
 
     /// Plan steps for an alarm configuration
     /// - Parameters:
@@ -114,7 +119,11 @@ struct WakeAlarmStepPlanner {
 
         for stepIndex in 0..<stepCount {
             // Normalized position in the transition (0.0 to 1.0)
-            let t = Double(stepIndex) / Double(stepCount - 1)
+            let t = if stepCount == 1 {
+                1.0
+            } else {
+                Double(stepIndex) / Double(stepCount - 1)
+            }
 
             // Apply the gradient curve
             let curvedT = curveFunction.apply(t)

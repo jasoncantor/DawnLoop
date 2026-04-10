@@ -201,4 +201,26 @@ final class AutomationServicesTests: XCTestCase {
         XCTAssertFalse(bindings.isEmpty)
         XCTAssertTrue(bindings.allSatisfy { $0.scheduledTime == nil })
     }
+
+    func testSyncAlarm_CustomStepCount_UsesExactNumberOfScenesAndTriggers() async throws {
+        let alarm = WakeAlarm(
+            name: "Dense Light Alarm",
+            wakeTimeSeconds: 7 * 3600,
+            durationMinutes: 20,
+            stepCount: 20,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        try await repository.saveAlarm(alarm, schedule: .weekdays, validationState: .needsSync)
+
+        try await generationService.syncAlarm(alarm, schedule: .weekdays)
+
+        XCTAssertEqual(controller.upsertActionSetCallCount, 20)
+        XCTAssertEqual(controller.upsertScheduledTriggerCallCount, 20 * WeekdaySchedule.weekdays.activeDaysCount)
+    }
 }

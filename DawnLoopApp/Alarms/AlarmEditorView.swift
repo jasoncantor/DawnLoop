@@ -86,6 +86,24 @@ struct AlarmEditorView: View {
                         if let error = state.validation.durationError {
                             ValidationErrorMessage(message: error)
                         }
+
+                        Stepper(
+                            value: $state.stepCount,
+                            in: 1...state.maxStepCount
+                        ) {
+                            HStack {
+                                Text("Steps")
+                                    .font(Theme.Typography.body)
+                                Spacer()
+                                Text("\(state.stepCount)")
+                                    .font(Theme.Typography.body)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                            }
+                        }
+
+                        Text("\(state.stepDensityDescription). Maximum density is 1 step per minute, capped at 30 steps.")
+                            .font(Theme.Typography.footnote)
+                            .foregroundStyle(Theme.Colors.textSecondary)
                     } header: {
                         Text("Schedule")
                             .font(Theme.Typography.footnote)
@@ -520,6 +538,7 @@ private struct PreviewRefreshState: Equatable {
     let timeReference: AlarmTimeReference
     let timeOffsetMinutes: Int
     let durationMinutes: Int
+    let stepCount: Int
     let startBrightness: Int
     let targetBrightness: Int
     let colorMode: AlarmColorMode
@@ -535,6 +554,7 @@ private struct PreviewRefreshState: Equatable {
         timeReference = state.timeReference
         timeOffsetMinutes = state.timeOffsetMinutes
         durationMinutes = state.durationMinutes
+        stepCount = state.stepCount
         startBrightness = state.startBrightness
         targetBrightness = state.targetBrightness
         colorMode = state.colorMode

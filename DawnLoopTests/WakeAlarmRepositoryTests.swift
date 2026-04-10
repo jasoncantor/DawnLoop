@@ -86,6 +86,7 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         XCTAssertEqual(fetched?.isEnabled, true)
         XCTAssertEqual(fetched?.selectedAccessoryIdentifiers, ["test-accessory-1"])
         XCTAssertEqual(fetched?.homeIdentifier, "test-home")
+        XCTAssertEqual(fetched?.stepCount, WakeAlarmStepPlanner.defaultStepCount)
     }
 
     func testSaveAlarm_PersistsSolarReferenceFields() async throws {
@@ -95,6 +96,7 @@ final class WakeAlarmRepositoryTests: XCTestCase {
             timeReference: .sunset,
             timeOffsetMinutes: -30,
             durationMinutes: 25,
+            stepCount: 20,
             gradientCurve: .easeInOut,
             colorMode: .brightnessOnly,
             startBrightness: 0,
@@ -109,6 +111,7 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         let fetched = await repository.fetchAlarm(byId: alarm.id)
         XCTAssertEqual(fetched?.timeReference, .sunset)
         XCTAssertEqual(fetched?.timeOffsetMinutes, -30)
+        XCTAssertEqual(fetched?.stepCount, 20)
         XCTAssertEqual(fetched?.timeDisplayText, "Sunset - 30m")
     }
 
@@ -294,6 +297,7 @@ final class WakeAlarmRepositoryTests: XCTestCase {
             isEnabled: true
         )
         original.targetBrightness = 85
+        original.stepCount = 16
         original.colorMode = .fullColor
         try await repository.saveAlarm(original)
 
@@ -307,6 +311,7 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         XCTAssertEqual(copy.name, "Original Copy")
         XCTAssertEqual(copy.wakeTimeSeconds, 7 * 3600)
         XCTAssertEqual(copy.targetBrightness, 85)
+        XCTAssertEqual(copy.stepCount, 16)
         XCTAssertEqual(copy.colorMode, .fullColor)
         XCTAssertEqual(copy.selectedAccessoryIdentifiers, original.selectedAccessoryIdentifiers)
 
@@ -321,6 +326,7 @@ final class WakeAlarmRepositoryTests: XCTestCase {
             timeReference: .sunrise,
             timeOffsetMinutes: 15,
             durationMinutes: 35,
+            stepCount: 22,
             gradientCurve: .easeInOut,
             colorMode: .brightnessOnly,
             startBrightness: 0,
@@ -335,6 +341,7 @@ final class WakeAlarmRepositoryTests: XCTestCase {
 
         XCTAssertEqual(copy.timeReference, .sunrise)
         XCTAssertEqual(copy.timeOffsetMinutes, 15)
+        XCTAssertEqual(copy.stepCount, 22)
     }
 
     func testUpdateAlarm_ClockReferenceClearsSolarOffset() async throws {
@@ -344,6 +351,7 @@ final class WakeAlarmRepositoryTests: XCTestCase {
             timeReference: .sunrise,
             timeOffsetMinutes: -20,
             durationMinutes: 30,
+            stepCount: 30,
             gradientCurve: .easeInOut,
             colorMode: .brightnessOnly,
             startBrightness: 0,
@@ -357,11 +365,13 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         let updated = try await repository.updateAlarm(
             alarm,
             timeReference: .clock,
-            timeOffsetMinutes: 45
+            timeOffsetMinutes: 45,
+            durationMinutes: 12
         )
 
         XCTAssertEqual(updated.timeReference, .clock)
         XCTAssertEqual(updated.timeOffsetMinutes, 0)
+        XCTAssertEqual(updated.stepCount, 12)
     }
 
     // MARK: - Delete Operations

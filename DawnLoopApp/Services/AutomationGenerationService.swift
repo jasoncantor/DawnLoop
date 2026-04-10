@@ -311,7 +311,7 @@ final class AutomationGenerationService {
         let degradedPlan = WakeAlarmStepPlanner.planSteps(
             for: alarm,
             capabilities: capabilities,
-            stepCount: WakeAlarmStepPlanner.defaultStepCount
+            stepCount: alarm.stepCount
         )
         let planningWakeDate = alarm.wakeTimeDate()
         var bindings: [ExpectedAutomationBinding] = []
@@ -340,7 +340,7 @@ final class AutomationGenerationService {
                 targetColorTemperature: alarm.targetColorTemperature,
                 targetHue: alarm.targetHue,
                 targetSaturation: alarm.targetSaturation,
-                stepCount: WakeAlarmStepPlanner.defaultStepCount
+                stepCount: alarm.stepCount
             )
 
             for (stepNumber, step) in planned.enumerated() {
@@ -381,7 +381,7 @@ final class AutomationGenerationService {
         let degradedPlan = WakeAlarmStepPlanner.planSteps(
             for: alarm,
             capabilities: capabilities,
-            stepCount: WakeAlarmStepPlanner.defaultStepCount
+            stepCount: alarm.stepCount
         )
 
         return degradedPlan.steps.enumerated().map { stepNumber, step in
