@@ -254,20 +254,27 @@ final class AlarmEditorState {
             }
 
         case .fullColor:
+            var hueError: String?
             if let hue = targetHue {
                 if hue < 0 || hue > 360 {
-                    newValidation.colorError = "Hue must be between 0 and 360"
+                    hueError = "Hue must be between 0 and 360"
                 }
             } else {
-                newValidation.colorError = "Hue is required for full color mode"
+                hueError = "Hue is required for full color mode"
             }
 
+            var saturationError: String?
             if let sat = targetSaturation {
                 if sat < 0 || sat > 100 {
-                    newValidation.colorError = "Saturation must be between 0 and 100"
+                    saturationError = "Saturation must be between 0 and 100"
                 }
             } else {
-                newValidation.colorError = "Saturation is required for full color mode"
+                saturationError = "Saturation is required for full color mode"
+            }
+
+            let colorMessages = [hueError, saturationError].compactMap(\.self)
+            if !colorMessages.isEmpty {
+                newValidation.colorError = colorMessages.joined(separator: "; ")
             }
 
         case .brightnessOnly:
