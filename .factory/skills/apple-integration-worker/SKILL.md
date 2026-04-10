@@ -27,17 +27,16 @@ None.
 1. Read the assigned feature, `mission.md`, `AGENTS.md`, `.factory/library/architecture.md`, `.factory/library/automation-strategy.md`, `.factory/library/environment.md`, and `.factory/library/user-testing.md`.
 2. Read the feature’s `fulfills` IDs and translate them into observable outcomes before implementing.
 3. Put platform seams behind protocols first if they are missing. Do not wire HomeKit, WidgetKit, App Intents, StoreKit, time, or UUID access directly into views.
-4. Write failing tests first:
-   - pure planner tests for ordered steps and capability degradation
-   - mocked adapter/repository tests for HomeKit binding, diff, rollback, cleanup, and repair behavior
-   - intent/widget tests for canonical state mutation and blocked-state handling where supported
+4. For the current DawnLoop mission phase, keep testing lean:
+   - add or adjust tests when they protect risky integration logic, cover a known regression, or are directly needed to unblock validators
    - when testing readiness or discovery logic, drive the real decision path through controlled adapter outputs; do not bypass the logic by manually assigning end-state values
+   - avoid broad new test depth whose main purpose is satisfying scrutiny churn
 5. Implement the feature with reliability-first behavior:
    - avoid foreground timers for alarm execution
    - namescape app-created HomeKit objects
    - persist durable app-to-HomeKit bindings
    - roll back or surface repair-needed state on partial failure
-6. Run targeted tests, then run the shared `build` and `test` commands from `.factory/services.yaml`.
+6. Run the lightest credible validation for the changed integration path, then use the shared `build` and `test` commands at milestone confidence points or when the feature explicitly requires them.
 7. Manually verify the changed surface:
    - simulator for planner/UI/platform-independent state
    - real iPhone + Apple Home when the feature genuinely requires live HomeKit, widget interaction, or App Intent validation

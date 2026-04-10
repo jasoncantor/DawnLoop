@@ -27,13 +27,13 @@ None.
 
 1. Read the assigned feature, `mission.md`, `AGENTS.md`, `.factory/library/architecture.md`, and any relevant library topic files before touching code.
 2. Identify the validation-contract IDs listed in the feature’s `fulfills` array and make sure the implementation will make those assertions testable.
-3. Write failing tests first:
-   - unit tests for pure state, view models, repositories, and formatting rules
-   - UI tests or snapshot-style coverage for visible screen states when the feature changes UI
+3. For the current DawnLoop mission phase, keep testing lean:
+   - add or adjust tests only when they protect risky changed logic, cover a known regression, or are directly required to unblock validators
+   - avoid broad new test scaffolding purely to satisfy scrutiny depth
 4. Implement the feature using SwiftUI + Swift Concurrency while keeping business logic out of views.
 5. Use protocols and dependency injection for anything that could later need HomeKit, WidgetKit, App Intents, StoreKit, time, UUID, or persistence seams.
-6. Run the narrowest targeted tests first, then run the project validation commands from `.factory/services.yaml`.
-7. Manually verify the changed UX on iPhone Simulator when the feature affects visible UI. Capture the exact flow in `verification.interactiveChecks`.
+6. Run the lightest validation that credibly proves the changed behavior, then use the shared project validators at milestone confidence points or when the feature explicitly requires them.
+7. When the feature affects visible UI, do brief simulator verification for the changed path and capture it in `verification.interactiveChecks` when practical.
 8. Before handing off success, verify that the committed revision matches your validation claim:
    - re-run the final validator commands after your last code edit
    - ensure the results come from the code you are actually committing

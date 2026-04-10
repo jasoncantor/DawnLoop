@@ -75,8 +75,10 @@ Expected evidence:
 ## Special Guidance
 
 - Treat HomeKit execution through Apple Home as the reliability contract; do not validate wake execution via foreground timers.
+- Current user preference for this mission phase: keep active feature work light on testing. Use minimal manual checks during implementation and reserve heavier validation for milestone confidence checks or clearly risky changes.
 - For widget quick controls, validate both shipped states:
   - interactive controls enabled and working safely, or
   - widget intentionally shipped as read-only
 - For App Intents, validate both happy paths and blocked/out-of-sync alarm responses.
 - If a validator cannot access a real Home or unlocked device when required, it must return to the orchestrator instead of silently downgrading to mocks.
+- If validators are green and only scrutiny depth concerns remain, the orchestrator may intentionally override scrutiny and defer extra test-depth work.
