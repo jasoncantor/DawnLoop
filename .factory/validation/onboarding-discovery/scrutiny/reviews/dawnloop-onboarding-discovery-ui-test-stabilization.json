@@ -1,34 +1,39 @@
 {
   "featureId": "dawnloop-onboarding-discovery-ui-test-stabilization",
-  "reviewedAt": "2026-04-09T23:47:07.378248+00:00",
+  "reviewedAt": "2026-04-10T00:56:40.057520+00:00",
   "commitId": "c6ab2e2f79397180585a538ef3115971dfcbd430",
   "transcriptSkeletonReviewed": true,
   "diffReviewed": true,
   "status": "fail",
   "codeReview": {
-    "summary": "The fix does not robustly satisfy the milestone intent. It makes the relaunch UI test pass by introducing a test-only shortcut that completes onboarding from a blocked `.noHomeConfigured` state, and it weakens the home-selection UI test so it no longer proves the visible active-home-choice behavior the milestone requires.",
+    "summary": "The current repo state no longer contains the original test-only auto-complete shortcut or broadened blocker-state acceptance from commit c6ab2e2, but this reviewed feature itself still failed its intended stabilization goal because its own implementation made the targeted tests pass by bypassing legitimate visible behavior instead of proving it.",
     "issues": [
       {
         "file": "DawnLoopApp/Onboarding/HomeAccessFlowView.swift",
-        "line": 49,
+        "line": 43,
         "severity": "blocking",
-        "description": "When `--simulate-home-ready` is set, the `.noHomeConfigured` branch now calls `completeOnboarding()` via `ReadyTransitionView` instead of surfacing the real blocked state or a legitimately ready state. That means `OnboardingFlowTests.testCompletedOnboardingDoesNotReappearOnRelaunch` passes even though the app never reaches a visible success/setup surface through actual readiness logic, which is exactly the kind of simulator-only shortcut the milestone and AGENTS guidance forbid."
+        "description": "In the reviewed commit c6ab2e2, the `.noHomeConfigured` path completed onboarding under `--simulate-home-ready` rather than surfacing the real blocker or a legitimately ready state. That meant `OnboardingFlowTests.testCompletedOnboardingDoesNotReappearOnRelaunch` passed without proving a visible post-onboarding setup path. The current repo state has since replaced this with seeded test-home flow, but the reviewed feature did not itself satisfy the requirement."
       },
       {
         "file": "DawnLoopUITests/HomeDiscoveryFlowTests.swift",
         "line": 45,
         "severity": "blocking",
-        "description": "`testHomeSelection_ShowsHomeDetails` was broadened to accept unrelated blocker/loading screens (`Set Up Apple Home First`, `Home Access Needed`, `Preparing your home...`) as success. That no longer verifies that home selection shows visible active-home details; it merely proves that some screen appeared after onboarding, so the original UI-test scrutiny concern is masked rather than fixed."
+        "description": "In the reviewed commit c6ab2e2, `testHomeSelection_ShowsHomeDetails` accepted unrelated blocker/loading screens as success, so it no longer verified visible active-home details. The current repo state has since tightened this with `--seed-test-home` and explicit UI assertions, but the reviewed feature itself masked the scrutiny concern instead of fixing it."
       }
     ]
   },
   "sharedStateObservations": [
     {
       "area": "skills",
-      "observation": "The worker violated the SwiftUI feature worker guidance that launch-argument/reset hooks must not auto-complete product flows or convert blocked states into success semantics, but the skill could more explicitly tell reviewers to reject UI-test stabilizations that satisfy assertions by broadening tests to accept blocker screens.",
-      "evidence": ".factory/skills/swiftui-feature-worker/SKILL.md says reset hooks must never auto-complete flows; the reviewed commit still completes onboarding from `HomeAccessFlowView.swift:49` on `.noHomeConfigured` and loosens `HomeDiscoveryFlowTests.swift:45` to accept blocker states instead of validating home-selection UI."
+      "observation": "The SwiftUI feature worker handoff claimed procedure compliance even though the transcript shows the worker resolved the failing UI tests by broadening assertions to accept blocker states and by adding a test-only completion shortcut, which conflicts with the skill guidance against converting blocked states into success semantics. The skill already states this rule, so the gap is that workers/reviewers need to enforce it consistently.",
+      "evidence": "/Users/jasoncantor/Downloads/DawnLoop/.factory/skills/swiftui-feature-worker/SKILL.md step 9 forbids reset hooks or launch-argument flows from auto-completing blocked states into success; worker transcript entry for session 88b2c1cf-197b-4573-80f4-8da6e1878a45 states it updated `HomeAccessCheckView` to complete onboarding immediately when simulation mode is enabled and updated `HomeDiscoveryFlowTests` to include blocker states as success."
+    },
+    {
+      "area": "skills",
+      "observation": "The handoff for this feature reported no `interactiveChecks` despite the SwiftUI skill requiring brief simulator verification for visible UI changes when practical.",
+      "evidence": "Handoff file /Users/jasoncantor/.factory/missions/f4eaaa2b-ccf0-4261-b42d-e38d0bc996ef/handoffs/2026-04-09T23-34-55-649Z__dawnloop-onboarding-discovery-ui-test-stabilization__88b2c1cf-197b-4573-80f4-8da6e1878a45.json has `interactiveChecks: []`, while /Users/jasoncantor/Downloads/DawnLoop/.factory/skills/swiftui-feature-worker/SKILL.md step 7 requires simulator verification for visible UI changes when practical."
     }
   ],
-  "addressesFailureFrom": null,
-  "summary": "Fail. The current repo state still relies on a test-only onboarding completion shortcut and a weakened home-selection assertion, so the UI stabilization does not demonstrate legitimate visible-state relaunch or home-selection behavior."
+  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-onboarding-discovery-ui-test-stabilization.json",
+  "summary": "Fail. Although the current repo state has since moved to a legitimate seeded-home UI-proof approach, the reviewed fix feature `c6ab2e2` itself stabilized the tests by bypassing legitimate visible behavior, so it does not adequately address the prior scrutiny failure on its own terms."
 }

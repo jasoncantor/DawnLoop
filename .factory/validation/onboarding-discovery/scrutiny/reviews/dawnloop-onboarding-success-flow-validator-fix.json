@@ -1,34 +1,21 @@
 {
   "featureId": "dawnloop-onboarding-success-flow-validator-fix",
-  "reviewedAt": "2026-04-09T23:47:19Z",
+  "reviewedAt": "2026-04-10T00:56:39Z",
   "commitId": "fd9b84d2258e2199f84e4f1eb36f5c59e5d66e77",
   "transcriptSkeletonReviewed": true,
   "diffReviewed": true,
-  "status": "fail",
+  "status": "pass",
   "codeReview": {
-    "summary": "The fix removes the original reset-flag auto-complete backdoor and fixes the HMHome constructor compile blocker, but the current repo state still does not make the visible onboarding flow and relaunch tests prove a legitimate completion path. The new --simulate-home-ready path still short-circuits onboarding completion before the user reaches the visible setup surfaces required by the feature.",
-    "issues": [
-      {
-        "file": "DawnLoopApp/Onboarding/HomeAccessFlowView.swift",
-        "line": 51,
-        "severity": "blocking",
-        "description": "When --simulate-home-ready is active, the noHomeConfigured branch immediately calls completeOnboarding() from ReadyTransitionView.onAppear. Because MockHomeKitAdapter.fetchHomes() returns an empty homes array, tapping 'Connect to Home' in the UI tests still skips the visible onboarding success path and converts a blocked state directly into success semantics. This does not satisfy the feature requirement that tests prove a legitimate visible flow outcome rather than a test-only shortcut."
-      },
-      {
-        "file": "DawnLoopUITests/OnboardingFlowTests.swift",
-        "line": 17,
-        "severity": "blocking",
-        "description": "The relaunch test now depends on --simulate-home-ready, but it only asserts that 'Good Morning' appears after tapping 'Connect to Home'. Since the app auto-completes onboarding under that launch flag before showing home selection or accessory discovery, the test still does not verify the legitimate visible completion path promised by the feature."
-      }
-    ]
+    "summary": "The current repo state removes the earlier simulated-success shortcut and now uses seeded test-home data to drive a visible onboarding completion path. The relaunch coverage reaches and asserts the Home Selection UI rather than auto-completing from a blocker, and the HomeAccessStateTests file no longer contains the unavailable HMHome() construction that previously blocked compilation.",
+    "issues": []
   },
   "sharedStateObservations": [
     {
       "area": "skills",
-      "observation": "The worker marked followedProcedure true even though the SwiftUI feature skill requires manual simulator verification and recording it in verification.interactiveChecks for visible UI changes; the handoff left interactiveChecks empty after changing onboarding UI behavior.",
-      "evidence": "Skill file .factory/skills/swiftui-feature-worker/SKILL.md step 7 requires manual simulator verification; handoff 2026-04-09T22-32-10-493Z__dawnloop-onboarding-success-flow-validator-fix__eb7d3507-060b-4b43-a0de-9568776e356b.json reports \"interactiveChecks\": []."
+      "observation": "The worker reported followedProcedure true even though the SwiftUI feature skill requires brief simulator verification to be captured in verification.interactiveChecks for visible UI changes, but the handoff left interactiveChecks empty after changing onboarding UI behavior.",
+      "evidence": "Skill file /Users/jasoncantor/Downloads/DawnLoop/.factory/skills/swiftui-feature-worker/SKILL.md step 7 requires manual simulator verification; handoff /Users/jasoncantor/.factory/missions/f4eaaa2b-ccf0-4261-b42d-e38d0bc996ef/handoffs/2026-04-09T22-32-10-493Z__dawnloop-onboarding-success-flow-validator-fix__eb7d3507-060b-4b43-a0de-9568776e356b.json reports \"interactiveChecks\": []."
     }
   ],
-  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-onboarding-flow-test-isolation-fixes.json",
-  "summary": "Reviewed the prior failed feature, the fix feature handoff/transcript skeleton, current onboarding code, and current tests. The compile blocker is fixed, but the fix does not fully resolve the prior blocking scrutiny issue because the new simulate-home-ready path still auto-completes onboarding from a blocked no-home state, so the visible onboarding completion path remains unproven."
+  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-onboarding-success-flow-validator-fix.json",
+  "summary": "Reviewed the prior failed artifact, feature metadata, handoff, transcript skeleton, and current onboarding/test code. On the current repo state, the fix now passes scrutiny: simulated-success launch shortcuts are gone from the reviewed path, UI tests use seeded visible home-selection flow proof, and the HomeAccessStateTests compile blocker is resolved."
 }

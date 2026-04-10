@@ -1,12 +1,12 @@
 {
   "milestone": "onboarding-discovery",
-  "round": 3,
+  "round": 4,
   "status": "fail",
   "validatorsRun": {
     "test": {
-      "passed": true,
+      "passed": false,
       "command": "xcodebuild -project /Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3",
-      "exitCode": 0
+      "exitCode": 65
     },
     "typecheck": {
       "passed": true,
@@ -20,25 +20,20 @@
     }
   },
   "reviewsSummary": {
-    "total": 3,
-    "passed": 0,
+    "total": 4,
+    "passed": 1,
     "failed": 3,
     "failedFeatures": [
-      "dawnloop-onboarding-success-flow-validator-fix",
       "dawnloop-homekit-test-seam-refactor",
-      "dawnloop-onboarding-discovery-ui-test-stabilization"
+      "dawnloop-onboarding-discovery-ui-test-stabilization",
+      "dawnloop-onboarding-home-selection-ui-proof-fix"
     ]
   },
   "blockingIssues": [
     {
-      "featureId": "dawnloop-onboarding-success-flow-validator-fix",
+      "featureId": "validator:test",
       "severity": "blocking",
-      "description": "When --simulate-home-ready is active, the noHomeConfigured branch immediately calls completeOnboarding() from ReadyTransitionView.onAppear. Because MockHomeKitAdapter.fetchHomes() returns an empty homes array, tapping 'Connect to Home' in the UI tests still skips the visible onboarding success path and converts a blocked state directly into success semantics. This does not satisfy the feature requirement that tests prove a legitimate visible flow outcome rather than a test-only shortcut."
-    },
-    {
-      "featureId": "dawnloop-onboarding-success-flow-validator-fix",
-      "severity": "blocking",
-      "description": "The relaunch test now depends on --simulate-home-ready, but it only asserts that 'Good Morning' appears after tapping 'Connect to Home'. Since the app auto-completes onboarding under that launch flag before showing home selection or accessory discovery, the test still does not verify the legitimate visible completion path promised by the feature."
+      "description": "The full `xcodebuild test` validator is no longer green on the current repo state. `OnboardingFlowTests.testCompletedOnboardingDoesNotReappearOnRelaunch` and `HomeDiscoveryFlowTests.testHomeSelection_ShowsHomeDetails` both failed, and xcodebuild also reported an `FBSOpenApplicationServiceErrorDomain` launch denial while trying to start the UI test runner."
     },
     {
       "featureId": "dawnloop-homekit-test-seam-refactor",
@@ -63,12 +58,17 @@
     {
       "featureId": "dawnloop-onboarding-discovery-ui-test-stabilization",
       "severity": "blocking",
-      "description": "When `--simulate-home-ready` is set, the `.noHomeConfigured` branch now calls `completeOnboarding()` via `ReadyTransitionView` instead of surfacing the real blocked state or a legitimately ready state. That means `OnboardingFlowTests.testCompletedOnboardingDoesNotReappearOnRelaunch` passes even though the app never reaches a visible success/setup surface through actual readiness logic, which is exactly the kind of simulator-only shortcut the milestone and AGENTS guidance forbid."
+      "description": "The reviewed fix feature itself stabilized the targeted UI tests by bypassing legitimate visible behavior: in commit `c6ab2e2` the `.noHomeConfigured` branch completed onboarding under `--simulate-home-ready` rather than surfacing a real blocked or ready state. The current repo has moved past that implementation, but the reviewed feature did not satisfy its own intended stabilization goal."
     },
     {
       "featureId": "dawnloop-onboarding-discovery-ui-test-stabilization",
       "severity": "blocking",
-      "description": "`testHomeSelection_ShowsHomeDetails` was broadened to accept unrelated blocker/loading screens (`Set Up Apple Home First`, `Home Access Needed`, `Preparing your home...`) as success. That no longer verifies that home selection shows visible active-home details; it merely proves that some screen appeared after onboarding, so the original UI-test scrutiny concern is masked rather than fixed."
+      "description": "In the reviewed commit `c6ab2e2`, `testHomeSelection_ShowsHomeDetails` was broadened to accept unrelated blocker/loading screens as success, so the feature masked the original scrutiny concern instead of fixing it."
+    },
+    {
+      "featureId": "dawnloop-onboarding-home-selection-ui-proof-fix",
+      "severity": "blocking",
+      "description": "The latest UI-proof fix removes `--simulate-home-ready`, but the replacement `--seed-test-home` path still seeds only SwiftData while `HomeAccessState.checkReadiness()` continues to derive readiness solely from `adapter.fetchHomes()`, which remains empty in the mock adapter. The current tests therefore still do not prove a legitimate ready-path UI flow through the real readiness logic."
     }
   ],
   "appliedUpdates": [],
@@ -90,12 +90,22 @@
       "suggestion": "The worker violated the SwiftUI feature worker guidance that launch-argument/reset hooks must not auto-complete product flows or convert blocked states into success semantics, but the skill could more explicitly tell reviewers to reject UI-test stabilizations that satisfy assertions by broadening tests to accept blocker screens.",
       "evidence": "dawnloop-onboarding-discovery-ui-test-stabilization: .factory/skills/swiftui-feature-worker/SKILL.md says reset hooks must never auto-complete flows; the reviewed commit still completes onboarding from `HomeAccessFlowView.swift:49` on `.noHomeConfigured` and loosens `HomeDiscoveryFlowTests.swift:45` to accept blocker states instead of validating home-selection UI.",
       "isSystemic": true
+    },
+    {
+      "target": "library",
+      "suggestion": "Document that `--seed-test-home` currently seeds only SwiftData-backed `HomeReference` and `AccessoryReference` records, while `HomeAccessState` readiness still comes exclusively from the HomeKit adapter. This split test path can mislead workers reviewing onboarding UI proof.",
+      "evidence": "dawnloop-onboarding-home-selection-ui-proof-fix review: `DawnLoopApp.swift:47-135` seeds SwiftData; `HomeSelectionService.swift:31-63` reads seeded records only when `TestEnvironment.isSeedingTestHome`; `HomeAccessService.swift:151-184` still computes readiness solely from adapter homes/accessories.",
+      "isSystemic": false
     }
   ],
   "rejectedObservations": [
     {
       "observation": "dawnloop-homekit-test-seam-refactor: UI-test home-selection reset still only clears `activeHomeIdentifier` / `activeHomeName` from UserDefaults even though active-home state is stored in SwiftData `HomeReference` rows. That persistence detail remains undocumented shared state and can still mislead workers investigating home-selection UI behavior.",
       "reason": "ambiguous"
+    },
+    {
+      "observation": "dawnloop-onboarding-home-selection-ui-proof-fix: the relaunch test still accepts `Good Morning` as success even though it is only the generic main shell.",
+      "reason": "captured-as-non-blocking-review-depth-concern"
     }
   ],
   "previousRound": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/synthesis.json"
