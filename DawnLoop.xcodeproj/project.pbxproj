@@ -37,6 +37,7 @@
 		D027 /* AutomationBinding.swift in Sources */ = {isa = PBXBuildFile; fileRef = F027 /* AutomationBinding.swift */; };
 		D028 /* WakeAlarmRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F028 /* WakeAlarmRepository.swift */; };
 		D029 /* WakeAlarmRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F029 /* WakeAlarmRepositoryTests.swift */; };
+		D030 /* ValidationStateRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = F030 /* ValidationStateRecord.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -88,6 +89,7 @@
 		F027 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationBinding.swift; sourceTree = "<group>"; };
 		F028 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmRepository.swift; sourceTree = "<group>"; };
 		F029 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeAlarmRepositoryTests.swift; sourceTree = "<group>"; };
+		F030 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValidationStateRecord.swift; sourceTree = "<group>"; };
 		F100 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		T001 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		T002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -158,7 +160,7 @@
 		};
 		G007 = {
 			isa = PBXGroup;
-			children = ( F007, F016, F017, F024, F025, F026, F027 );
+			children = ( F007, F016, F017, F024, F025, F026, F027, F030 );
 			path = Models;
 			sourceTree = "<group>";
 		};
@@ -259,7 +261,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D001, D002, D003, D004, D005, D006, D007, D008, D012, D013, D014,
-				D016, D017, D018, D019, D020, D021, D024, D025, D026, D027, D028,
+				D016, D017, D018, D019, D020, D021, D024, D025, D026, D027, D028, D030,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

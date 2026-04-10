@@ -21,6 +21,7 @@ final class AppEnvironment {
             AccessoryReference.self,
             WakeAlarm.self,
             WakeAlarmSchedule.self,
+            ValidationStateRecord.self,
             AutomationBinding.self,
         ])
         let modelConfiguration = ModelConfiguration(

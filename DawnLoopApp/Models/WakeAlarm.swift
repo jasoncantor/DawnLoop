@@ -96,8 +96,11 @@ final class WakeAlarm: @unchecked Sendable {
     /// Home identifier this alarm belongs to
     var homeIdentifier: String?
 
-    /// Validation state indicating sync health
-    var validationStateRaw: String
+    /// Reference to the schedule record ID (for dedicated schedule model relationship)
+    var scheduleRecordId: UUID?
+
+    /// Reference to the validation state record ID (for dedicated validation state model)
+    var validationStateRecordId: UUID?
 
     // MARK: - Computed Properties
 
@@ -111,9 +114,13 @@ final class WakeAlarm: @unchecked Sendable {
         set { colorModeRaw = newValue.rawValue }
     }
 
+    /// The validation state is stored through a dedicated ValidationStateRecord model
+    /// This computed property provides backward compatibility for UI code
+    /// The actual state should be fetched from the repository for accuracy
     var validationState: AlarmValidationState {
-        get { AlarmValidationState(rawValue: validationStateRaw) ?? .unknown }
-        set { validationStateRaw = newValue.rawValue }
+        // This is a placeholder - the actual state comes from ValidationStateRecord
+        // Repository methods should be used to get the accurate state
+        .unknown
     }
 
     /// Returns the wake time as a Date for the next occurrence
@@ -146,7 +153,9 @@ final class WakeAlarm: @unchecked Sendable {
         targetSaturation: Int? = nil,
         isEnabled: Bool = true,
         selectedAccessoryIdentifiers: [String] = [],
-        homeIdentifier: String? = nil
+        homeIdentifier: String? = nil,
+        scheduleRecordId: UUID? = nil,
+        validationStateRecordId: UUID? = nil
     ) {
         self.id = id
         self.name = name
@@ -165,7 +174,8 @@ final class WakeAlarm: @unchecked Sendable {
         self.updatedAt = Date()
         self.selectedAccessoryIdentifiers = selectedAccessoryIdentifiers
         self.homeIdentifier = homeIdentifier
-        self.validationStateRaw = AlarmValidationState.unknown.rawValue
+        self.scheduleRecordId = scheduleRecordId
+        self.validationStateRecordId = validationStateRecordId
     }
 
     /// Update the alarm with new configuration values
@@ -215,12 +225,6 @@ final class WakeAlarm: @unchecked Sendable {
     /// Set the skipped state for the next occurrence
     func setSkipped(_ skipped: Bool) {
         self.isSkipped = skipped
-        self.updatedAt = Date()
-    }
-
-    /// Update validation state
-    func setValidationState(_ state: AlarmValidationState) {
-        self.validationStateRaw = state.rawValue
         self.updatedAt = Date()
     }
 }

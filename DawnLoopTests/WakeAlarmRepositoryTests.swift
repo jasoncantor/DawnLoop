@@ -16,6 +16,7 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         let schema = Schema([
             WakeAlarm.self,
             WakeAlarmSchedule.self,
+            ValidationStateRecord.self,
             AutomationBinding.self,
             OnboardingCompletion.self,
             HomeReference.self,
@@ -390,11 +391,18 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         let alarm = createTestAlarm(name: "Validation Test")
         try await repository.saveAlarm(alarm)
 
-        // Update validation state
-        try await repository.updateValidationState(alarm, state: .outOfSync)
+        // Update validation state using the new dedicated model API
+        try await repository.updateValidationState(
+            for: alarm.id,
+            state: .outOfSync,
+            message: nil,
+            requiresUserAction: nil
+        )
 
-        let fetched = await repository.fetchAlarm(byId: alarm.id)
-        XCTAssertEqual(fetched?.validationState, .outOfSync)
+        // Fetch validation state through dedicated model
+        let fetchedState = await repository.fetchValidationState(for: alarm.id)
+        XCTAssertNotNil(fetchedState)
+        XCTAssertEqual(fetchedState?.state, .outOfSync)
     }
 
     // MARK: - Home-Specific Fetch Tests
@@ -435,10 +443,8 @@ final class WakeAlarmRepositoryTests: XCTestCase {
             homeIdentifier: "my-home-id"
         )
 
-        original.setValidationState(.valid)
-
-        // Save
-        try await repository.saveAlarm(original)
+        // Save with validation state through dedicated model
+        try await repository.saveAlarm(original, schedule: nil, validationState: .valid)
 
         // Fetch and verify everything round-tripped correctly
         let fetched = await repository.fetchAlarm(byId: original.id)
@@ -458,7 +464,10 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         XCTAssertEqual(fetched?.isEnabled, true)
         XCTAssertEqual(fetched?.selectedAccessoryIdentifiers, ["light-1", "light-2", "light-3"])
         XCTAssertEqual(fetched?.homeIdentifier, "my-home-id")
-        XCTAssertEqual(fetched?.validationState, .valid)
+
+        // Verify validation state through dedicated model
+        let fetchedValidation = await repository.fetchValidationState(for: original.id)
+        XCTAssertEqual(fetchedValidation?.state, .valid)
     }
 
     func testRoundTrip_EnableStateAfterEdit() async throws {
@@ -481,5 +490,173 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         let fetched = await repository.fetchAlarm(byId: alarm.id)
         XCTAssertEqual(fetched?.isEnabled, false)
         XCTAssertEqual(fetched?.name, "Edited Name")
+    }
+
+    // MARK: - Schedule Round-Tripping Tests (VAL-ALARM contract)
+
+    func testSaveAlarm_WithSchedule_PersistsScheduleThroughDedicatedModel() async throws {
+        let alarm = createTestAlarm(name: "Scheduled Alarm")
+        let schedule = WeekdaySchedule.everyDay
+
+        // Save alarm with schedule
+        try await repository.saveAlarm(alarm, schedule: schedule)
+
+        // Fetch schedule through dedicated model
+        let fetchedSchedule = await repository.fetchSchedule(for: alarm.id)
+        XCTAssertNotNil(fetchedSchedule)
+        XCTAssertEqual(fetchedSchedule?.weekdaySchedule, schedule)
+        XCTAssertEqual(fetchedSchedule?.alarmId, alarm.id)
+    }
+
+    func testRoundTrip_AlarmWithSchedule_RoundTripsAllFields() async throws {
+        // Create alarm with schedule
+        let alarm = createTestAlarm(name: "Weekly Alarm")
+        let schedule = WeekdaySchedule.weekdays
+
+        // Save with schedule
+        try await repository.saveAlarm(alarm, schedule: schedule)
+
+        // Fetch alarm
+        let fetchedAlarm = await repository.fetchAlarm(byId: alarm.id)
+        XCTAssertNotNil(fetchedAlarm)
+
+        // Fetch schedule through dedicated model
+        let fetchedSchedule = await repository.fetchSchedule(for: alarm.id)
+        XCTAssertNotNil(fetchedSchedule)
+        XCTAssertEqual(fetchedSchedule?.weekdaySchedule.monday, true)
+        XCTAssertEqual(fetchedSchedule?.weekdaySchedule.friday, true)
+        XCTAssertEqual(fetchedSchedule?.weekdaySchedule.sunday, false)
+    }
+
+    func testUpdateSchedule_UpdatesExistingScheduleRecord() async throws {
+        let alarm = createTestAlarm(name: "Update Schedule Test")
+        let initialSchedule = WeekdaySchedule.weekdays
+
+        // Save with initial schedule
+        try await repository.saveAlarm(alarm, schedule: initialSchedule)
+
+        // Verify initial schedule
+        let firstFetch = await repository.fetchSchedule(for: alarm.id)
+        XCTAssertEqual(firstFetch?.weekdaySchedule, initialSchedule)
+
+        // Update with new schedule
+        let newSchedule = WeekdaySchedule.weekends
+        try await repository.saveAlarm(alarm, schedule: newSchedule)
+
+        // Verify updated schedule
+        let secondFetch = await repository.fetchSchedule(for: alarm.id)
+        XCTAssertEqual(secondFetch?.weekdaySchedule, newSchedule)
+        XCTAssertEqual(secondFetch?.weekdaySchedule.saturday, true)
+        XCTAssertEqual(secondFetch?.weekdaySchedule.monday, false)
+    }
+
+    func testDeleteAlarm_CleansUpAssociatedSchedule() async throws {
+        let alarm = createTestAlarm(name: "Delete With Schedule")
+        let schedule = WeekdaySchedule.everyDay
+
+        // Save alarm with schedule
+        try await repository.saveAlarm(alarm, schedule: schedule)
+
+        // Verify schedule exists
+        let beforeDelete = await repository.fetchSchedule(for: alarm.id)
+        XCTAssertNotNil(beforeDelete)
+
+        // Delete the schedule
+        try await repository.deleteSchedule(for: alarm.id)
+
+        // Verify schedule is deleted
+        let afterDelete = await repository.fetchSchedule(for: alarm.id)
+        XCTAssertNil(afterDelete)
+    }
+
+    // MARK: - Validation State Round-Tripping Tests (VAL-ALARM contract)
+
+    func testSaveAlarm_WithValidationState_PersistsThroughDedicatedModel() async throws {
+        let alarm = createTestAlarm(name: "Validated Alarm")
+
+        // Save alarm with validation state
+        try await repository.saveAlarm(alarm, schedule: nil, validationState: .valid)
+
+        // Fetch validation state through dedicated model
+        let fetchedState = await repository.fetchValidationState(for: alarm.id)
+        XCTAssertNotNil(fetchedState)
+        XCTAssertEqual(fetchedState?.state, .valid)
+        XCTAssertEqual(fetchedState?.alarmId, alarm.id)
+    }
+
+    func testUpdateValidationState_ThroughDedicatedModel() async throws {
+        let alarm = createTestAlarm(name: "State Change Test")
+
+        // Save with initial state
+        try await repository.saveAlarm(alarm, schedule: nil, validationState: .unknown)
+
+        // Update validation state
+        try await repository.updateValidationState(
+            for: alarm.id,
+            state: .outOfSync,
+            message: "HomeKit binding lost",
+            requiresUserAction: true
+        )
+
+        // Verify updated state
+        let fetchedState = await repository.fetchValidationState(for: alarm.id)
+        XCTAssertEqual(fetchedState?.state, .outOfSync)
+        XCTAssertEqual(fetchedState?.message, "HomeKit binding lost")
+        XCTAssertEqual(fetchedState?.requiresUserAction, true)
+    }
+
+    func testRoundTrip_AlarmWithValidationState_RoundTripsThroughDedicatedModel() async throws {
+        let alarm = createTestAlarm(name: "Full Contract Test")
+        let schedule = WeekdaySchedule.weekdays
+
+        // Save with full contract (alarm + schedule + validation state)
+        try await repository.saveAlarm(alarm, schedule: schedule, validationState: .valid)
+
+        // Fetch all components
+        let fetchedAlarm = await repository.fetchAlarm(byId: alarm.id)
+        let fetchedSchedule = await repository.fetchSchedule(for: alarm.id)
+        let fetchedState = await repository.fetchValidationState(for: alarm.id)
+
+        // Verify complete round-trip
+        XCTAssertNotNil(fetchedAlarm)
+        XCTAssertNotNil(fetchedSchedule)
+        XCTAssertNotNil(fetchedState)
+
+        XCTAssertEqual(fetchedSchedule?.weekdaySchedule, schedule)
+        XCTAssertEqual(fetchedState?.state, .valid)
+    }
+
+    func testDuplicateAlarm_WithSchedule_CopiesScheduleToNewAlarm() async throws {
+        let original = createTestAlarm(name: "Original With Schedule")
+        let schedule = WeekdaySchedule.weekdays
+
+        // Save with schedule
+        try await repository.saveAlarm(original, schedule: schedule)
+
+        // Duplicate
+        let copy = try await repository.duplicateAlarm(original)
+
+        // Verify copied schedule
+        let copiedSchedule = await repository.fetchSchedule(for: copy.id)
+        XCTAssertNotNil(copiedSchedule)
+        XCTAssertEqual(copiedSchedule?.weekdaySchedule, schedule)
+        XCTAssertNotEqual(copiedSchedule?.alarmId, original.id)
+        XCTAssertEqual(copiedSchedule?.alarmId, copy.id)
+    }
+
+    func testFetchSchedule_ReturnsNilForAlarmWithoutSchedule() async {
+        let alarm = createTestAlarm(name: "No Schedule")
+        try? await repository.saveAlarm(alarm)
+
+        let schedule = await repository.fetchSchedule(for: alarm.id)
+        XCTAssertNil(schedule)
+    }
+
+    func testFetchValidationState_ReturnsNilForAlarmWithoutState() async {
+        let alarm = createTestAlarm(name: "No Validation State")
+        try? await repository.saveAlarm(alarm)
+
+        let state = await repository.fetchValidationState(for: alarm.id)
+        XCTAssertNil(state)
     }
 }

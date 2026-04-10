@@ -116,27 +116,44 @@ struct WeekdaySchedule: Codable, Sendable, Equatable {
 }
 
 /// Persistent model for alarm schedule
-/// Stored as a separate model for flexible querying
+/// Stored as a separate model for flexible querying and round-tripping (VAL-ALARM contract)
 @Model
-final class WakeAlarmSchedule {
+final class WakeAlarmSchedule: @unchecked Sendable {
+    /// Unique identifier for this schedule record
+    @Attribute(.unique) var id: UUID
+
     /// Reference to the alarm this schedule belongs to
     @Attribute(.unique) var alarmId: UUID
 
     /// Weekday repeat configuration
     var weekdaySchedule: WeekdaySchedule
 
+    /// When this schedule was created
+    var createdAt: Date
+
     /// When this schedule was last updated
     var updatedAt: Date
 
-    init(alarmId: UUID, weekdaySchedule: WeekdaySchedule = .weekdays) {
+    init(
+        id: UUID = UUID(),
+        alarmId: UUID,
+        weekdaySchedule: WeekdaySchedule = .weekdays
+    ) {
+        self.id = id
         self.alarmId = alarmId
         self.weekdaySchedule = weekdaySchedule
+        self.createdAt = Date()
         self.updatedAt = Date()
     }
 
     func update(weekdaySchedule: WeekdaySchedule) {
         self.weekdaySchedule = weekdaySchedule
         self.updatedAt = Date()
+    }
+
+    /// Get the repeat schedule for display
+    var repeatSchedule: WeekdaySchedule {
+        weekdaySchedule
     }
 
     /// Calculate the next occurrence after a given date

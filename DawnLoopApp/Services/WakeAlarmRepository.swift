@@ -7,6 +7,8 @@ protocol WakeAlarmRepositoryProtocol: Sendable {
     func fetchAlarm(byId id: UUID) async -> WakeAlarm?
     func fetchEnabledAlarms() async -> [WakeAlarm]
     func saveAlarm(_ alarm: WakeAlarm) async throws
+    func saveAlarm(_ alarm: WakeAlarm, schedule: WeekdaySchedule?) async throws
+    func saveAlarm(_ alarm: WakeAlarm, schedule: WeekdaySchedule?, validationState: AlarmValidationState?) async throws
     func deleteAlarm(_ alarm: WakeAlarm) async throws
     func deleteAlarm(byId id: UUID) async throws
     func duplicateAlarm(_ alarm: WakeAlarm) async throws -> WakeAlarm
@@ -26,6 +28,18 @@ protocol WakeAlarmRepositoryProtocol: Sendable {
         selectedAccessoryIdentifiers: [String]?,
         homeIdentifier: String?
     ) async throws -> WakeAlarm
+
+    // MARK: - Schedule Operations
+
+    func fetchSchedule(for alarmId: UUID) async -> WakeAlarmSchedule?
+    func saveSchedule(_ schedule: WakeAlarmSchedule) async throws
+    func deleteSchedule(for alarmId: UUID) async throws
+
+    // MARK: - Validation State Operations
+
+    func fetchValidationState(for alarmId: UUID) async -> ValidationStateRecord?
+    func saveValidationState(_ record: ValidationStateRecord) async throws
+    func updateValidationState(for alarmId: UUID, state: AlarmValidationState, message: String?, requiresUserAction: Bool?) async throws
 }
 
 /// Repository for WakeAlarm persistence operations
@@ -136,7 +150,6 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
             // Preserve enabled state separately (VAL-ALARM-006)
             existing.setEnabled(alarm.isEnabled)
             existing.setSkipped(alarm.isSkipped)
-            existing.setValidationState(alarm.validationState)
         } else {
             // Insert new alarm
             context.insert(alarm)
@@ -146,6 +159,68 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
             try context.save()
         } catch {
             throw WakeAlarmRepositoryError.saveFailed(underlying: error)
+        }
+    }
+
+    /// Save an alarm with its associated schedule
+    /// Round-trips the schedule through the dedicated WakeAlarmSchedule model (VAL-ALARM contract)
+    func saveAlarm(_ alarm: WakeAlarm, schedule: WeekdaySchedule?) async throws {
+        let context = ModelContext(modelContainer)
+
+        // Save the alarm first
+        try await saveAlarm(alarm)
+
+        // Handle schedule persistence if provided
+        if let schedule = schedule {
+            let alarmId = alarm.id
+            var descriptor = FetchDescriptor<WakeAlarmSchedule>()
+            descriptor.predicate = #Predicate { $0.alarmId == alarmId }
+
+            if let existingSchedule = try context.fetch(descriptor).first {
+                // Update existing schedule
+                existingSchedule.update(weekdaySchedule: schedule)
+            } else {
+                // Create new schedule record
+                let newSchedule = WakeAlarmSchedule(
+                    alarmId: alarm.id,
+                    weekdaySchedule: schedule
+                )
+                context.insert(newSchedule)
+                alarm.scheduleRecordId = newSchedule.id
+            }
+
+            try context.save()
+        }
+    }
+
+    /// Save an alarm with both schedule and validation state
+    /// Full persistence contract round-tripping through dedicated models (VAL-ALARM contract)
+    func saveAlarm(_ alarm: WakeAlarm, schedule: WeekdaySchedule?, validationState: AlarmValidationState?) async throws {
+        let context = ModelContext(modelContainer)
+
+        // Save alarm and schedule
+        try await saveAlarm(alarm, schedule: schedule)
+
+        // Handle validation state persistence if provided
+        if let state = validationState {
+            let alarmId = alarm.id
+            var descriptor = FetchDescriptor<ValidationStateRecord>()
+            descriptor.predicate = #Predicate { $0.alarmId == alarmId }
+
+            if let existingRecord = try context.fetch(descriptor).first {
+                // Update existing record
+                existingRecord.updateState(state)
+            } else {
+                // Create new validation state record
+                let newRecord = ValidationStateRecord(
+                    alarmId: alarm.id,
+                    state: state
+                )
+                context.insert(newRecord)
+                alarm.validationStateRecordId = newRecord.id
+            }
+
+            try context.save()
         }
     }
 
@@ -270,7 +345,17 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
 
     /// Duplicate an alarm with a new identity
     /// Creates a copy with a new ID while preserving all configuration
+    /// Also copies schedule and validation state through dedicated models (VAL-ALARM contract)
     func duplicateAlarm(_ alarm: WakeAlarm) async throws -> WakeAlarm {
+        let context = ModelContext(modelContainer)
+
+        // Fetch existing schedule for this alarm
+        let alarmId = alarm.id
+        var scheduleDescriptor = FetchDescriptor<WakeAlarmSchedule>()
+        scheduleDescriptor.predicate = #Predicate { $0.alarmId == alarmId }
+        let existingSchedule = try? context.fetch(scheduleDescriptor).first
+
+        // Create the copy
         let copy = WakeAlarm(
             name: "\(alarm.name) Copy",
             wakeTimeSeconds: alarm.wakeTimeSeconds,
@@ -287,7 +372,19 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
             homeIdentifier: alarm.homeIdentifier
         )
 
-        try await saveAlarm(copy)
+        context.insert(copy)
+
+        // Copy the schedule if it exists
+        if let schedule = existingSchedule {
+            let copiedSchedule = WakeAlarmSchedule(
+                alarmId: copy.id,
+                weekdaySchedule: schedule.weekdaySchedule
+            )
+            context.insert(copiedSchedule)
+            copy.scheduleRecordId = copiedSchedule.id
+        }
+
+        try context.save()
         return copy
     }
 
@@ -336,20 +433,113 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
         }
     }
 
-    /// Update validation state for an alarm
-    func updateValidationState(_ alarm: WakeAlarm, state: AlarmValidationState) async throws {
+    // MARK: - Schedule Operations
+
+    /// Fetch the schedule for a specific alarm
+    /// Round-trips through the dedicated WakeAlarmSchedule model (VAL-ALARM contract)
+    func fetchSchedule(for alarmId: UUID) async -> WakeAlarmSchedule? {
         let context = ModelContext(modelContainer)
 
-        // Fetch the alarm in this context
-        let alarmId = alarm.id
-        var descriptor = FetchDescriptor<WakeAlarm>()
-        descriptor.predicate = #Predicate { alarm in alarm.id == alarmId }
+        do {
+            var descriptor = FetchDescriptor<WakeAlarmSchedule>()
+            descriptor.predicate = #Predicate { $0.alarmId == alarmId }
+            return try context.fetch(descriptor).first
+        } catch {
+            print("Failed to fetch schedule for alarm \(alarmId): \(error)")
+            return nil
+        }
+    }
 
-        guard let alarmInContext = try context.fetch(descriptor).first else {
-            throw WakeAlarmRepositoryError.alarmNotFound(id: alarm.id)
+    /// Save a schedule record
+    func saveSchedule(_ schedule: WakeAlarmSchedule) async throws {
+        let context = ModelContext(modelContainer)
+        context.insert(schedule)
+
+        do {
+            try context.save()
+        } catch {
+            throw WakeAlarmRepositoryError.saveFailed(underlying: error)
+        }
+    }
+
+    /// Delete the schedule for a specific alarm
+    func deleteSchedule(for alarmId: UUID) async throws {
+        let context = ModelContext(modelContainer)
+
+        var descriptor = FetchDescriptor<WakeAlarmSchedule>()
+        descriptor.predicate = #Predicate { $0.alarmId == alarmId }
+
+        guard let schedule = try context.fetch(descriptor).first else {
+            return // No schedule to delete
         }
 
-        alarmInContext.setValidationState(state)
+        context.delete(schedule)
+
+        do {
+            try context.save()
+        } catch {
+            throw WakeAlarmRepositoryError.deleteFailed(underlying: error)
+        }
+    }
+
+    // MARK: - Validation State Operations
+
+    /// Fetch the validation state record for a specific alarm
+    /// Uses the dedicated ValidationStateRecord model (VAL-ALARM contract)
+    func fetchValidationState(for alarmId: UUID) async -> ValidationStateRecord? {
+        let context = ModelContext(modelContainer)
+
+        do {
+            var descriptor = FetchDescriptor<ValidationStateRecord>()
+            descriptor.predicate = #Predicate { $0.alarmId == alarmId }
+            return try context.fetch(descriptor).first
+        } catch {
+            print("Failed to fetch validation state for alarm \(alarmId): \(error)")
+            return nil
+        }
+    }
+
+    /// Save a validation state record
+    func saveValidationState(_ record: ValidationStateRecord) async throws {
+        let context = ModelContext(modelContainer)
+        context.insert(record)
+
+        do {
+            try context.save()
+        } catch {
+            throw WakeAlarmRepositoryError.saveFailed(underlying: error)
+        }
+    }
+
+    /// Update validation state for an alarm using the dedicated model
+    func updateValidationState(
+        for alarmId: UUID,
+        state: AlarmValidationState,
+        message: String? = nil,
+        requiresUserAction: Bool? = nil
+    ) async throws {
+        let context = ModelContext(modelContainer)
+
+        var descriptor = FetchDescriptor<ValidationStateRecord>()
+        descriptor.predicate = #Predicate { $0.alarmId == alarmId }
+
+        if let existingRecord = try context.fetch(descriptor).first {
+            // Update existing record
+            existingRecord.updateState(
+                state,
+                message: message,
+                requiresUserAction: requiresUserAction
+            )
+        } else {
+            // Create new validation state record
+            let newRecord = ValidationStateRecord(
+                alarmId: alarmId,
+                state: state,
+                message: message,
+                requiresUserAction: requiresUserAction ?? false
+            )
+            context.insert(newRecord)
+        }
 
         do {
             try context.save()
@@ -383,6 +573,8 @@ enum WakeAlarmRepositoryError: Error {
 /// Actor-based mock implementation for testing
 actor MockWakeAlarmRepository: WakeAlarmRepositoryProtocol {
     private var alarms: [WakeAlarm] = []
+    private var schedules: [UUID: WakeAlarmSchedule] = [:] // alarmId -> schedule
+    private var validationStates: [UUID: ValidationStateRecord] = [:] // alarmId -> state
     private var nextId: Int = 1
 
     func setMockAlarms(_ alarms: [WakeAlarm]) {
@@ -409,12 +601,40 @@ actor MockWakeAlarmRepository: WakeAlarmRepositoryProtocol {
         }
     }
 
+    func saveAlarm(_ alarm: WakeAlarm, schedule: WeekdaySchedule?) async throws {
+        try await saveAlarm(alarm)
+
+        if let schedule = schedule {
+            let scheduleRecord = WakeAlarmSchedule(
+                alarmId: alarm.id,
+                weekdaySchedule: schedule
+            )
+            schedules[alarm.id] = scheduleRecord
+        }
+    }
+
+    func saveAlarm(_ alarm: WakeAlarm, schedule: WeekdaySchedule?, validationState: AlarmValidationState?) async throws {
+        try await saveAlarm(alarm, schedule: schedule)
+
+        if let state = validationState {
+            let record = ValidationStateRecord(
+                alarmId: alarm.id,
+                state: state
+            )
+            validationStates[alarm.id] = record
+        }
+    }
+
     func deleteAlarm(_ alarm: WakeAlarm) async throws {
         alarms.removeAll { $0.id == alarm.id }
+        schedules.removeValue(forKey: alarm.id)
+        validationStates.removeValue(forKey: alarm.id)
     }
 
     func deleteAlarm(byId id: UUID) async throws {
         alarms.removeAll { $0.id == id }
+        schedules.removeValue(forKey: id)
+        validationStates.removeValue(forKey: id)
     }
 
     func duplicateAlarm(_ alarm: WakeAlarm) async throws -> WakeAlarm {
@@ -434,6 +654,16 @@ actor MockWakeAlarmRepository: WakeAlarmRepositoryProtocol {
             homeIdentifier: alarm.homeIdentifier
         )
         alarms.append(copy)
+
+        // Copy schedule if exists
+        if let schedule = schedules[alarm.id] {
+            let copiedSchedule = WakeAlarmSchedule(
+                alarmId: copy.id,
+                weekdaySchedule: schedule.weekdaySchedule
+            )
+            schedules[copy.id] = copiedSchedule
+        }
+
         return copy
     }
 
@@ -473,5 +703,43 @@ actor MockWakeAlarmRepository: WakeAlarmRepositoryProtocol {
         )
         try await saveAlarm(alarm)
         return alarm
+    }
+
+    // MARK: - Schedule Operations
+
+    func fetchSchedule(for alarmId: UUID) async -> WakeAlarmSchedule? {
+        return schedules[alarmId]
+    }
+
+    func saveSchedule(_ schedule: WakeAlarmSchedule) async throws {
+        schedules[schedule.alarmId] = schedule
+    }
+
+    func deleteSchedule(for alarmId: UUID) async throws {
+        schedules.removeValue(forKey: alarmId)
+    }
+
+    // MARK: - Validation State Operations
+
+    func fetchValidationState(for alarmId: UUID) async -> ValidationStateRecord? {
+        return validationStates[alarmId]
+    }
+
+    func saveValidationState(_ record: ValidationStateRecord) async throws {
+        validationStates[record.alarmId] = record
+    }
+
+    func updateValidationState(
+        for alarmId: UUID,
+        state: AlarmValidationState,
+        message: String?,
+        requiresUserAction: Bool?
+    ) async throws {
+        let record = validationStates[alarmId] ?? ValidationStateRecord(
+            alarmId: alarmId,
+            state: state
+        )
+        record.updateState(state, message: message, requiresUserAction: requiresUserAction)
+        validationStates[alarmId] = record
     }
 }
