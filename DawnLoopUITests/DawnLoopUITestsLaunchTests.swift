@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class DawnLoopUITestsLaunchTests: XCTestCase {
     
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
