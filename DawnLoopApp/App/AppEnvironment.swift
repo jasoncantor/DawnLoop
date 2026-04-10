@@ -87,7 +87,7 @@ protocol CurrentLocationServiceProtocol: AnyObject {
 @MainActor
 final class CurrentLocationService: NSObject, CurrentLocationServiceProtocol {
     private let manager: CLLocationManager
-    private var coordinateContinuation: CheckedContinuation<SolarCoordinate?, Never>?
+    private var coordinateContinuations: [CheckedContinuation<SolarCoordinate?, Never>] = []
 
     override init() {
         self.manager = CLLocationManager()
@@ -119,8 +119,11 @@ final class CurrentLocationService: NSObject, CurrentLocationServiceProtocol {
         }
 
         return await withCheckedContinuation { continuation in
-            coordinateContinuation = continuation
-            manager.requestLocation()
+            let shouldRequest = coordinateContinuations.isEmpty
+            coordinateContinuations.append(continuation)
+            if shouldRequest {
+                manager.requestLocation()
+            }
         }
     }
 }
@@ -130,13 +133,19 @@ extension CurrentLocationService: @preconcurrency CLLocationManagerDelegate {
         let coordinate = locations.last.map {
             SolarCoordinate(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude)
         }
-        coordinateContinuation?.resume(returning: coordinate)
-        coordinateContinuation = nil
+        let waiters = coordinateContinuations
+        coordinateContinuations = []
+        for cont in waiters {
+            cont.resume(returning: coordinate)
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         DawnLoopLogger.homeKit.debug("Location lookup failed: \(error.localizedDescription)")
-        coordinateContinuation?.resume(returning: nil)
-        coordinateContinuation = nil
+        let waiters = coordinateContinuations
+        coordinateContinuations = []
+        for cont in waiters {
+            cont.resume(returning: nil)
+        }
     }
 }
