@@ -86,10 +86,14 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertFalse(app.staticTexts["How It Works"].exists)
         XCTAssertFalse(app.staticTexts["Ready to Wake"].exists)
         
-        // Terminate and relaunch without reset argument
+        // Terminate and relaunch - preserve onboarding completion state
+        // but DO NOT pass --reset-onboarding to verify persistence
         app.terminate()
         
         let newApp = XCUIApplication()
+        // Preserve --seed-test-home for consistent test environment on relaunch
+        // This ensures the app has the same test data available
+        newApp.launchArguments.append("--seed-test-home")
         newApp.launch()
         
         // After relaunch, onboarding should NOT reappear because it was completed.

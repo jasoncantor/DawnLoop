@@ -8,9 +8,15 @@ struct DawnLoopApp: App {
     let container: AppEnvironment
     
     init() {
-        // Check for test launch arguments before initializing environment
+        // Check for test launch arguments and set flags before initializing environment
         LaunchArgumentHandler.handleTestArguments()
+        
+        // Initialize environment (this uses TestEnvironment flags)
         self.container = AppEnvironment()
+        
+        // Execute any pending test actions using the initialized environment
+        // This ensures all SwiftData operations use the same ModelContainer
+        LaunchArgumentHandler.executePendingActions(using: self.container)
     }
     
     var body: some Scene {
@@ -39,43 +45,61 @@ enum TestEnvironment {
     nonisolated(unsafe) static var isSeedingTestHome: Bool = false
 }
 
+/// Pending test actions to be executed after AppEnvironment initialization
+/// This ensures all SwiftData operations use the same ModelContainer
+/// nonisolated(unsafe) because these are set once at app startup and never modified after
+enum PendingTestActions {
+    nonisolated(unsafe) static var shouldResetOnboarding: Bool = false
+    nonisolated(unsafe) static var shouldResetHomeSelection: Bool = false
+    nonisolated(unsafe) static var shouldSeedTestHome: Bool = false
+}
+
 /// Handles launch arguments for testing and debugging
 enum LaunchArgumentHandler {
     static func handleTestArguments() {
         let arguments = ProcessInfo.processInfo.arguments
         
-        // Reset onboarding state for UI tests
-        if arguments.contains("--reset-onboarding") {
-            resetOnboardingState()
-        }
-        
-        // Reset home selection for UI tests
-        if arguments.contains("--reset-home-selection") {
-            resetHomeSelection()
-        }
-        
-        // Seed deterministic test homes and accessories for UI testing.
-        // This allows tests to experience the full visible flow with realistic data
-        // without requiring real HomeKit infrastructure, while still proving the
-        // legitimate completion path through actual UI interaction.
+        // Set test environment flags BEFORE environment initialization
         if arguments.contains("--seed-test-home") {
             TestEnvironment.isSeedingTestHome = true
-            seedTestHomes()
+            PendingTestActions.shouldSeedTestHome = true
+        }
+        
+        // Queue reset actions to be executed after environment initialization
+        if arguments.contains("--reset-onboarding") {
+            PendingTestActions.shouldResetOnboarding = true
+        }
+        
+        if arguments.contains("--reset-home-selection") {
+            PendingTestActions.shouldResetHomeSelection = true
         }
     }
     
-    private static func resetOnboardingState() {
+    /// Execute pending test actions using the initialized AppEnvironment
+    /// This ensures all SwiftData operations use the same ModelContainer
+    static func executePendingActions(using environment: AppEnvironment) {
+        if PendingTestActions.shouldResetOnboarding {
+            resetOnboardingState(using: environment)
+        }
+        
+        if PendingTestActions.shouldResetHomeSelection {
+            resetHomeSelection()
+        }
+        
+        if PendingTestActions.shouldSeedTestHome {
+            seedTestHomes(using: environment)
+        }
+    }
+    
+    private static func resetOnboardingState(using environment: AppEnvironment) {
         // Clear UserDefaults
         UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
         UserDefaults.standard.removeObject(forKey: "hasStartedHomeAccessFlow")
         
-        // Clear SwiftData onboarding records
+        // Clear SwiftData onboarding records using the shared container
+        let context = ModelContext(environment.modelContainer)
+        
         do {
-            let schema = Schema([OnboardingCompletion.self])
-            let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-            let container = try ModelContainer(for: schema, configurations: [config])
-            let context = ModelContext(container)
-            
             let descriptor = FetchDescriptor<OnboardingCompletion>()
             let completions = try context.fetch(descriptor)
             for completion in completions {
@@ -95,14 +119,10 @@ enum LaunchArgumentHandler {
     /// Seeds deterministic test homes into SwiftData for UI testing.
     /// This provides realistic home data so tests can verify the full visible
     /// home selection flow without requiring real HomeKit infrastructure.
-    private static func seedTestHomes() {
-        let schema = Schema([HomeReference.self, AccessoryReference.self, OnboardingCompletion.self])
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    private static func seedTestHomes(using environment: AppEnvironment) {
+        let context = ModelContext(environment.modelContainer)
         
         do {
-            let container = try ModelContainer(for: schema, configurations: [config])
-            let context = ModelContext(container)
-            
             // Check if test homes already exist
             let descriptor = FetchDescriptor<HomeReference>()
             let existingHomes = try context.fetch(descriptor)
