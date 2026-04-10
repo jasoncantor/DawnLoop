@@ -1,0 +1,23 @@
+{
+  "featureId": "dawnloop-alarm-preview-and-gradient-ui",
+  "milestone": "alarm-editor-models",
+  "status": "issues_found",
+  "summary": "Found one high-confidence issue in the preview test coverage: the new helper used by preview tests does not preserve the requested accessory capability, so the mixed-capability and full-color assertions do not actually validate the intended planner paths.",
+  "findings": [
+    {
+      "severity": "medium",
+      "title": "Preview tests discard requested accessory capabilities",
+      "files": [
+        "DawnLoopTests/WakeAlarmPlannerPreviewTests.swift",
+        "DawnLoopApp/Models/AccessoryReference.swift"
+      ],
+      "description": "`WakeAlarmPlannerPreviewTests.createAccessory` accepts a `capability` argument but constructs `AccessoryReference` with the `isCompatible:` convenience initializer. That initializer always maps compatible accessories to `.brightnessOnly`, so test fixtures created with `.tunableWhite` or `.fullColor` are silently downgraded before `AlarmEditorState.selectedCapabilities` and `WakeAlarmStepPlanner.planSteps(for:capabilities:)` run.",
+      "impact": "The added preview tests for mixed-capability degradation and same-capability full-color behavior are not exercising the capability-aware preview logic they claim to cover. This can let regressions in degradation messaging or color-mode planning slip through while the suite still passes.",
+      "recommendation": "Build test fixtures with the `AccessoryReference(..., capability:)` initializer or another path that preserves the requested capability, then keep the mixed-capability/full-color assertions against the real derived capabilities.",
+      "confidence": "high"
+    }
+  ],
+  "sharedStateObservations": [
+    "`AccessoryReference` has two initializers: one that accepts an explicit `capability`, and a testing convenience initializer with `isCompatible` that always stores `.brightnessOnly` for compatible fixtures."
+  ]
+}
