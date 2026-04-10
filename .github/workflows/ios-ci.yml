@@ -71,7 +71,7 @@ jobs:
           xcodebuild \
             -scheme DawnLoop \
             -project DawnLoop.xcodeproj \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
             -derivedDataPath .derivedData \
             CODE_SIGNING_ALLOWED=NO \
             build-for-testing
