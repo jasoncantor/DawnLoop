@@ -2,6 +2,7 @@ import XCTest
 
 /// UI Tests for Alarm Editor validation
 /// Exercises the committed alarm list/editor flow with seeded Home data.
+@MainActor
 final class AlarmEditorValidationUITests: XCTestCase {
 
     override func setUpWithError() throws {

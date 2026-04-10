@@ -1,6 +1,7 @@
 import XCTest
 
 /// UI smoke tests for list actions and repair status.
+@MainActor
 final class AlarmPreviewFlowTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false

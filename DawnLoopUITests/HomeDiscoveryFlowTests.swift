@@ -7,6 +7,7 @@ import XCTest
 /// They do NOT use shortcuts that auto-complete blocked states into success.
 /// On simulator without real HomeKit data, the tests verify the UI structure
 /// and proper handling of empty/blocker states rather than specific home data.
+@MainActor
 final class HomeDiscoveryFlowTests: XCTestCase {
     
     var app: XCUIApplication!

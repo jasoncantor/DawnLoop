@@ -6,6 +6,7 @@ import XCTest
 /// Note: These tests verify the legitimate visible flow of onboarding.
 /// They do NOT use shortcuts that auto-complete blocked states into success.
 /// The tests prove the flow structure and state persistence work correctly.
+@MainActor
 final class OnboardingFlowTests: XCTestCase {
     
     var app: XCUIApplication!
