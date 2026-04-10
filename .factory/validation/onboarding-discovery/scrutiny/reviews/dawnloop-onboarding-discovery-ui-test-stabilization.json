@@ -1,15 +1,34 @@
 {
   "featureId": "dawnloop-onboarding-discovery-ui-test-stabilization",
-  "reviewedAt": "2026-04-10T02:32:50.550707+00:00",
+  "reviewedAt": "2026-04-10T03:57:35.800527+00:00",
   "commitId": "c6ab2e2f79397180585a538ef3115971dfcbd430",
   "transcriptSkeletonReviewed": true,
   "diffReviewed": true,
-  "status": "pass",
+  "status": "fail",
   "codeReview": {
-    "summary": "Pass. The current repo state has moved past the earlier simulated-success shortcut and broadened blocker-state assertions from commit c6ab2e2. The targeted UI tests now use seeded deterministic home data and strict visible UI assertions, so the current implementation no longer relies on shortcuts or broadened assertions to pass.",
-    "issues": []
+    "summary": "The rerun fix commit did not acceptably resolve the UI-proof issues. It stabilized the targeted tests by introducing a simulated-success path and by weakening the home-selection assertion to accept blocker states, so the tests could pass without proving the required visible post-onboarding and active-home behavior.",
+    "issues": [
+      {
+        "file": "DawnLoopApp/Onboarding/HomeAccessFlowView.swift",
+        "line": 49,
+        "severity": "blocking",
+        "description": "When `--simulate-home-ready` is active, the `.noHomeConfigured` blocker path calls `completeOnboarding()` instead of remaining blocked. That converts a failed Home-readiness result into onboarding success, so `OnboardingFlowTests.testCompletedOnboardingDoesNotReappearOnRelaunch` can pass without reaching a legitimate visible setup/home-selection state."
+      },
+      {
+        "file": "DawnLoopUITests/HomeDiscoveryFlowTests.swift",
+        "line": 46,
+        "severity": "blocking",
+        "description": "`testHomeSelection_ShowsHomeDetails` was loosened to pass if blocker screens such as `Set Up Apple Home First` or `Home Access Needed` appear. That no longer proves visible home-selection details or active-home choice as required by the feature; it treats failure/loading states as success."
+      }
+    ]
   },
-  "sharedStateObservations": [],
-  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-onboarding-discovery-ui-test-stabilization.json",
-  "summary": "Pass on current repo state. Earlier scrutiny concerns about `--simulate-home-ready` and blocker/loading-state acceptance applied to commit c6ab2e2, but the repo now uses `--seed-test-home`, keeps blocked states blocked in `HomeAccessFlowView`, and requires visible home-selection details in the targeted UI tests. The feature goal is effectively satisfied in the current revision without the earlier shortcuts."
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The swiftui-feature-worker procedure says reset hooks must never auto-complete blocked flows into success semantics, but this worker introduced exactly that shortcut for `--simulate-home-ready`.",
+      "evidence": "`DawnLoopApp/Onboarding/HomeAccessFlowView.swift` in commit `c6ab2e2f79397180585a538ef3115971dfcbd430` completes onboarding from the `.noHomeConfigured` branch when `TestEnvironment.isSimulatingHomeReady` is true; the worker handoff also states it updated test assertions to handle blocker states."
+    }
+  ],
+  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-homekit-test-seam-refactor.json",
+  "summary": "Reviewed the fix feature handoff, prior failed review, transcript skeleton, skill guidance, and the actual fix commit `c6ab2e2f79397180585a538ef3115971dfcbd430`. Result: fail, because the fix achieved green targeted UI tests by adding a simulated-success backdoor and by accepting blocker states in the strict home-selection test, so it did not genuinely resolve the UI-proof concerns."
 }

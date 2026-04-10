@@ -1,21 +1,39 @@
 {
   "featureId": "dawnloop-onboarding-success-flow-validator-fix",
-  "reviewedAt": "2026-04-10T02:32:46Z",
+  "reviewedAt": "2026-04-10T03:57:37.001497+00:00",
   "commitId": "fd9b84d2258e2199f84e4f1eb36f5c59e5d66e77",
   "transcriptSkeletonReviewed": true,
   "diffReviewed": true,
-  "status": "pass",
+  "status": "fail",
   "codeReview": {
-    "summary": "The current repo state adequately addresses this fix feature's goals. The earlier onboarding success backdoor is gone, onboarding UI tests now assert a visible home-selection path driven by seeded test data rather than blocker auto-completion, and HomeAccessStateTests no longer contain the unavailable HMHome() construction that previously blocked compilation.",
-    "issues": []
+    "summary": "The fix removes the earlier onboarding auto-success backdoor and resolves the immediate HomeAccessStateTests compile blocker, but it still relies on a new test-only readiness shortcut and leaves the previously flagged HomeAccessState test seam deficiency unresolved.",
+    "issues": [
+      {
+        "file": "DawnLoopApp/Onboarding/HomeAccessService.swift",
+        "line": 194,
+        "severity": "blocking",
+        "description": "When `--seed-test-home` is present and the HomeKit adapter returns no homes, `checkReadiness()` sets `.readyTesting` instead of surfacing `.noHomeConfigured`. This is still a test-only success shortcut: the UI tests can reach the post-blocker path without proving a legitimate readiness result from controllable HomeKit inputs, so the fix does not fully satisfy the requirement to remove onboarding success backdoors."
+      },
+      {
+        "file": "DawnLoopTests/HomeAccessStateTests.swift",
+        "line": 49,
+        "severity": "blocking",
+        "description": "`HomeAccessMockAdapter.requestAuthorization()` still ignores the actor-configured `_requestAuthorizationResult` and always returns an authorized status. The prior scrutiny failure specifically called out that denied-after-request behavior could not be driven through the real `checkReadiness()`/`startHomeAccessFlow()` path; this fix only removes an unavailable `HMHome()` constructor and leaves that controllability gap intact."
+      }
+    ]
   },
   "sharedStateObservations": [
     {
       "area": "skills",
-      "observation": "The worker marked followedProcedure true even though the SwiftUI feature skill requires brief simulator verification to be captured in verification.interactiveChecks for visible UI changes, but the handoff left interactiveChecks empty after changing onboarding UI behavior.",
-      "evidence": "Skill file /Users/jasoncantor/Downloads/DawnLoop/.factory/skills/swiftui-feature-worker/SKILL.md step 7 requires manual simulator verification; handoff /Users/jasoncantor/.factory/missions/f4eaaa2b-ccf0-4261-b42d-e38d0bc996ef/handoffs/2026-04-09T22-32-10-493Z__dawnloop-onboarding-success-flow-validator-fix__eb7d3507-060b-4b43-a0de-9568776e356b.json reports \"interactiveChecks\": []."
+      "observation": "The swiftui-feature-worker handoff claims the onboarding tests now prove a legitimate visible completion path after removing the success backdoor, but the code still depends on a seeded-data readiness shortcut (`readyTesting`) rather than real readiness results from the adapter path.",
+      "evidence": "Handoff `2026-04-09T22-32-10-493Z__dawnloop-onboarding-success-flow-validator-fix__eb7d3507-060b-4b43-a0de-9568776e356b.json` says `--simulate-home-ready` was added and the backdoor removed; current `DawnLoopApp/Onboarding/HomeAccessService.swift:188-194` instead uses `--seed-test-home` to force `.readyTesting` when `fetchHomes()` returns empty, and `DawnLoopUITests/OnboardingFlowTests.swift:16-20` depends on that seeded shortcut in every test."
+    },
+    {
+      "area": "library",
+      "observation": "The repo now has an undocumented testing convention where seeded SwiftData homes intentionally bypass the HomeKit readiness blocker by mapping empty adapter homes to `.readyTesting`.",
+      "evidence": "`DawnLoopApp/App/DawnLoopApp.swift:141-194` seeds `HomeReference`/`AccessoryReference` records for `--seed-test-home`, while `DawnLoopApp/Onboarding/HomeAccessService.swift:188-194` converts empty HomeKit homes into `.readyTesting`. AGENTS.md covers reset hooks not auto-completing flows, but it does not describe this seeded-ready exception or how workers should reason about it."
     }
   ],
-  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-onboarding-success-flow-validator-fix.json",
-  "summary": "Reviewed the prior failed artifact, feature metadata, handoff, transcript skeleton, original feature commit, and current onboarding/test code. On the current repo state this fix passes scrutiny: the backdoor success path is no longer present, the UI tests now require visible home-selection proof, and the original HomeAccessStateTests compile blocker is resolved."
+  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-homekit-test-seam-refactor.json",
+  "summary": "Reviewed the fix feature transcript, handoff, current code, prior failed review, and both relevant diffs. The commit fixes the HMHome constructor compile issue and removes the earlier reset-driven auto-completion path, but it still fails scrutiny because onboarding success is now gated by a different test-only readiness shortcut (`readyTesting` on seeded homes) and the previously reported HomeAccessState authorization seam remains unresolved."
 }
