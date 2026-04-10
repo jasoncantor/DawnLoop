@@ -23,7 +23,9 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSHomeKitUsageDescription</key>
-    <string>DawnLoop needs access to Apple Home to create sunrise alarm automations with your lights.</string>
+    <string>DawnLoop needs access to Apple Home to create Light Alarm automations with your lights.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>DawnLoop uses your location to preview sunrise and sunset based Light Alarm times on this device.</string>
     <key>UIApplicationSceneManifest</key>
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>

@@ -1,6 +1,23 @@
 import SwiftData
 import Foundation
 
+enum AlarmTimeReference: String, Codable, Sendable, CaseIterable {
+    case clock = "clock"
+    case sunrise = "sunrise"
+    case sunset = "sunset"
+
+    var displayName: String {
+        switch self {
+        case .clock:
+            return "Clock"
+        case .sunrise:
+            return "Sunrise"
+        case .sunset:
+            return "Sunset"
+        }
+    }
+}
+
 /// Gradient curve type for the sunrise transition
 enum GradientCurve: String, Codable, Sendable, CaseIterable {
     case linear = "linear"
@@ -52,6 +69,12 @@ final class WakeAlarm: @unchecked Sendable {
 
     /// Target wake time (stored as seconds from midnight for consistency)
     var wakeTimeSeconds: Int
+
+    /// Whether this alarm is anchored to a fixed clock time or a solar event
+    var timeReferenceRaw: String
+
+    /// Offset from sunrise or sunset in minutes
+    var timeOffsetMinutes: Int
 
     /// Duration of the sunrise ramp in minutes
     var durationMinutes: Int
@@ -109,6 +132,11 @@ final class WakeAlarm: @unchecked Sendable {
         set { gradientCurveRaw = newValue.rawValue }
     }
 
+    var timeReference: AlarmTimeReference {
+        get { AlarmTimeReference(rawValue: timeReferenceRaw) ?? .clock }
+        set { timeReferenceRaw = newValue.rawValue }
+    }
+
     var colorMode: AlarmColorMode {
         get { AlarmColorMode(rawValue: colorModeRaw) ?? .brightnessOnly }
         set { colorModeRaw = newValue.rawValue }
@@ -126,16 +154,33 @@ final class WakeAlarm: @unchecked Sendable {
     /// Returns the wake time as a Date for the next occurrence
     func wakeTimeDate(baseDate: Date = Date()) -> Date {
         let calendar = Calendar.current
-        let seconds = wakeTimeSeconds
-        let hour = seconds / 3600
-        let minute = (seconds % 3600) / 60
+        switch timeReference {
+        case .clock:
+            let seconds = wakeTimeSeconds
+            let hour = seconds / 3600
+            let minute = (seconds % 3600) / 60
 
-        var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
-        components.hour = hour
-        components.minute = minute
-        components.second = 0
+            var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
+            components.hour = hour
+            components.minute = minute
+            components.second = 0
 
-        return calendar.date(from: components) ?? baseDate
+            return calendar.date(from: components) ?? baseDate
+        case .sunrise:
+            return approximateSolarAnchorDate(
+                baseDate: baseDate,
+                baseHour: 6,
+                minute: 30,
+                calendar: calendar
+            )
+        case .sunset:
+            return approximateSolarAnchorDate(
+                baseDate: baseDate,
+                baseHour: 18,
+                minute: 30,
+                calendar: calendar
+            )
+        }
     }
 
     /// Initialize a new alarm with default values
@@ -143,6 +188,8 @@ final class WakeAlarm: @unchecked Sendable {
         id: UUID = UUID(),
         name: String,
         wakeTimeSeconds: Int,
+        timeReference: AlarmTimeReference = .clock,
+        timeOffsetMinutes: Int = 0,
         durationMinutes: Int = 30,
         gradientCurve: GradientCurve = .easeInOut,
         colorMode: AlarmColorMode = .brightnessOnly,
@@ -160,6 +207,8 @@ final class WakeAlarm: @unchecked Sendable {
         self.id = id
         self.name = name
         self.wakeTimeSeconds = wakeTimeSeconds
+        self.timeReferenceRaw = timeReference.rawValue
+        self.timeOffsetMinutes = timeReference == .clock ? 0 : timeOffsetMinutes
         self.durationMinutes = durationMinutes
         self.gradientCurveRaw = gradientCurve.rawValue
         self.colorModeRaw = colorMode.rawValue
@@ -183,6 +232,8 @@ final class WakeAlarm: @unchecked Sendable {
     func update(
         name: String? = nil,
         wakeTimeSeconds: Int? = nil,
+        timeReference: AlarmTimeReference? = nil,
+        timeOffsetMinutes: Int? = nil,
         durationMinutes: Int? = nil,
         gradientCurve: GradientCurve? = nil,
         colorMode: AlarmColorMode? = nil,
@@ -196,6 +247,11 @@ final class WakeAlarm: @unchecked Sendable {
     ) {
         if let name = name { self.name = name }
         if let wakeTimeSeconds = wakeTimeSeconds { self.wakeTimeSeconds = wakeTimeSeconds }
+        if let timeReference = timeReference { self.timeReferenceRaw = timeReference.rawValue }
+        if let timeOffsetMinutes = timeOffsetMinutes { self.timeOffsetMinutes = timeOffsetMinutes }
+        if self.timeReference == .clock {
+            self.timeOffsetMinutes = 0
+        }
         if let durationMinutes = durationMinutes { self.durationMinutes = durationMinutes }
         if let gradientCurve = gradientCurve { self.gradientCurveRaw = gradientCurve.rawValue }
         if let colorMode = colorMode { self.colorModeRaw = colorMode.rawValue }
@@ -208,6 +264,55 @@ final class WakeAlarm: @unchecked Sendable {
         if let homeIdentifier = homeIdentifier { self.homeIdentifier = homeIdentifier }
 
         self.updatedAt = Date()
+    }
+
+    var isSolarBased: Bool {
+        timeReference != .clock
+    }
+
+    var timeDisplayText: String {
+        switch timeReference {
+        case .clock:
+            let hours = wakeTimeSeconds / 3600
+            let minutes = (wakeTimeSeconds % 3600) / 60
+            return String(format: "%02d:%02d", hours, minutes)
+        case .sunrise, .sunset:
+            return Self.displayText(for: timeReference, offsetMinutes: timeOffsetMinutes)
+        }
+    }
+
+    static func displayText(for reference: AlarmTimeReference, offsetMinutes: Int) -> String {
+        let base = reference.displayName
+        guard reference != .clock, offsetMinutes != 0 else {
+            return base
+        }
+
+        let absoluteMinutes = abs(offsetMinutes)
+        let sign = offsetMinutes > 0 ? "+" : "-"
+        let hours = absoluteMinutes / 60
+        let minutes = absoluteMinutes % 60
+        if hours > 0 && minutes > 0 {
+            return "\(base) \(sign) \(hours)h \(minutes)m"
+        }
+        if hours > 0 {
+            return "\(base) \(sign) \(hours)h"
+        }
+        return "\(base) \(sign) \(minutes)m"
+    }
+
+    private func approximateSolarAnchorDate(
+        baseDate: Date,
+        baseHour: Int,
+        minute: Int,
+        calendar: Calendar
+    ) -> Date {
+        var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
+        components.hour = baseHour
+        components.minute = minute
+        components.second = 0
+
+        let anchor = calendar.date(from: components) ?? baseDate
+        return calendar.date(byAdding: .minute, value: timeOffsetMinutes, to: anchor) ?? anchor
     }
 
     /// Toggle the enabled state without mutating other configuration (VAL-ALARM-006)
@@ -273,16 +378,12 @@ struct AlarmViewModel: Identifiable, Equatable, Sendable {
 
     init(
         from alarm: WakeAlarm,
-        schedule: WakeAlarmSchedule? = nil,
-        validationSummary: ValidationStateSummary? = nil
+        validationSummary: ValidationStateSummary? = nil,
+        nextRunDate: Date? = nil
     ) {
         self.id = alarm.id
         self.name = alarm.name
-
-        // Format wake time
-        let hours = alarm.wakeTimeSeconds / 3600
-        let minutes = (alarm.wakeTimeSeconds % 3600) / 60
-        self.wakeTime = String(format: "%02d:%02d", hours, minutes)
+        self.wakeTime = alarm.timeDisplayText
 
         // Format duration
         if alarm.durationMinutes < 60 {
@@ -300,9 +401,7 @@ struct AlarmViewModel: Identifiable, Equatable, Sendable {
         self.isEnabled = alarm.isEnabled
         self.accessoryCount = alarm.selectedAccessoryIdentifiers.count
         self.validationState = validationSummary?.state ?? .unknown
-        self.nextRunDate = alarm.isEnabled
-            ? schedule?.nextOccurrence(wakeTimeSeconds: alarm.wakeTimeSeconds) ?? alarm.wakeTimeDate()
-            : nil
+        self.nextRunDate = nextRunDate
     }
 
     var statusText: String {

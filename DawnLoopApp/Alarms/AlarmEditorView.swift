@@ -5,10 +5,15 @@ import SwiftData
 /// Implements VAL-ALARM-001 (validation), VAL-ALARM-002 (capability-aware controls), and VAL-ALARM-008 (invalidated accessories)
 struct AlarmEditorView: View {
     @Bindable var state: AlarmEditorState
+    let isSaving: Bool
+    let saveProgress: Double
+    let saveProgressMessage: String
     let onSave: () -> Void
     let onCancel: () -> Void
 
     var body: some View {
+        let previewRefreshState = PreviewRefreshState(state: state)
+
         NavigationStack {
             Form {
                     // MARK: - Name Section
@@ -27,12 +32,41 @@ struct AlarmEditorView: View {
 
                     // MARK: - Time Section
                     Section {
-                        DatePicker(
-                            "Wake Time",
-                            selection: $state.wakeTime,
-                            displayedComponents: .hourAndMinute
-                        )
-                        .font(Theme.Typography.body)
+                        Picker("Based On", selection: $state.timeReference) {
+                            ForEach(AlarmTimeReference.allCases, id: \.self) { reference in
+                                Text(reference.displayName)
+                                    .tag(reference)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        if state.timeReference == .clock {
+                            DatePicker(
+                                "Time",
+                                selection: $state.wakeTime,
+                                displayedComponents: .hourAndMinute
+                            )
+                            .font(Theme.Typography.body)
+                        } else {
+                            Stepper(
+                                value: $state.timeOffsetMinutes,
+                                in: -180...180,
+                                step: 5
+                            ) {
+                                HStack {
+                                    Text("Offset")
+                                        .font(Theme.Typography.body)
+                                    Spacer()
+                                    Text(offsetLabel(for: state.timeReference, minutes: state.timeOffsetMinutes))
+                                        .font(Theme.Typography.body)
+                                        .foregroundStyle(Theme.Colors.textSecondary)
+                                }
+                            }
+
+                            Text("Uses your local \(state.timeReference.displayName.lowercased()) time when available for previews. HomeKit still creates the real solar automation.")
+                                .font(Theme.Typography.footnote)
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                        }
 
                         Stepper(
                             value: $state.durationMinutes,
@@ -403,6 +437,10 @@ struct AlarmEditorView: View {
                     }
                 }
                 .formStyle(.grouped)
+                .disabled(isSaving)
+                .onChange(of: previewRefreshState) { _, _ in
+                    refreshPreview(state)
+                }
             .navigationTitle(state.isEditing ? "Edit Alarm" : "New Alarm")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -411,6 +449,7 @@ struct AlarmEditorView: View {
                         onCancel()
                     }
                     .foregroundStyle(Theme.Colors.textSecondary)
+                    .disabled(isSaving)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -422,10 +461,39 @@ struct AlarmEditorView: View {
                     }
                     .font(Theme.Typography.body.weight(.semibold))
                     .foregroundStyle(state.validation.isValid ? Theme.Colors.sunriseOrange : Theme.Colors.textTertiary)
-                    .disabled(!state.validation.isValid && state.validation.hasErrors)
+                    .disabled(isSaving || (!state.validation.isValid && state.validation.hasErrors))
                 }
             }
             .tint(Theme.Colors.sunriseOrange)
+            .interactiveDismissDisabled(isSaving)
+            .overlay {
+                if isSaving {
+                    ZStack {
+                        Color.black.opacity(0.12)
+                            .ignoresSafeArea()
+
+                        VStack(spacing: Theme.Spacing.medium) {
+                            ProgressView(value: saveProgress, total: 1)
+                                .progressViewStyle(.linear)
+                                .tint(Theme.Colors.sunriseOrange)
+                            Text("\(Int((saveProgress * 100).rounded()))%")
+                                .font(Theme.Typography.bodyBold)
+                                .foregroundStyle(Theme.Colors.textPrimary)
+                            Text(saveProgressMessage)
+                                .font(Theme.Typography.footnote)
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(Theme.Spacing.xLarge)
+                        .background(
+                            RoundedRectangle(cornerRadius: Theme.Radius.large)
+                                .fill(Theme.Colors.surface)
+                        )
+                        .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+                        .padding(.horizontal, Theme.Spacing.xxLarge)
+                    }
+                }
+            }
         }
     }
 }
@@ -443,6 +511,46 @@ private enum RepeatPreset: CaseIterable {
         case .everyDay: return "Daily"
         case .custom: return "Custom"
         }
+    }
+}
+
+private struct PreviewRefreshState: Equatable {
+    let alarmName: String
+    let wakeTime: Date
+    let timeReference: AlarmTimeReference
+    let timeOffsetMinutes: Int
+    let durationMinutes: Int
+    let startBrightness: Int
+    let targetBrightness: Int
+    let colorMode: AlarmColorMode
+    let targetColorTemperature: Int?
+    let targetHue: Int?
+    let targetSaturation: Int?
+    let selectedAccessoryIds: Set<String>
+
+    @MainActor
+    init(state: AlarmEditorState) {
+        alarmName = state.alarmName
+        wakeTime = state.wakeTime
+        timeReference = state.timeReference
+        timeOffsetMinutes = state.timeOffsetMinutes
+        durationMinutes = state.durationMinutes
+        startBrightness = state.startBrightness
+        targetBrightness = state.targetBrightness
+        colorMode = state.colorMode
+        targetColorTemperature = state.targetColorTemperature
+        targetHue = state.targetHue
+        targetSaturation = state.targetSaturation
+        selectedAccessoryIds = state.selectedAccessoryIds
+    }
+}
+
+@MainActor
+private func refreshPreview(_ state: AlarmEditorState) {
+    if state.canGeneratePreview {
+        state.regeneratePreview()
+    } else {
+        state.clearPreview()
     }
 }
 
@@ -485,6 +593,10 @@ private func repeatPreset(for schedule: WeekdaySchedule) -> RepeatPreset {
         return .everyDay
     }
     return .custom
+}
+
+private func offsetLabel(for reference: AlarmTimeReference, minutes: Int) -> String {
+    WakeAlarm.displayText(for: reference, offsetMinutes: minutes)
 }
 
 @MainActor
@@ -655,6 +767,9 @@ struct AccessorySelectionRow: View {
 #Preview("New Alarm") {
     AlarmEditorView(
         state: AlarmEditorState.previewState(),
+        isSaving: false,
+        saveProgress: 0,
+        saveProgressMessage: "Saving alarm...",
         onSave: {},
         onCancel: {}
     )
@@ -665,6 +780,9 @@ struct AccessorySelectionRow: View {
     state.editingAlarmId = UUID()
     return AlarmEditorView(
         state: state,
+        isSaving: false,
+        saveProgress: 0,
+        saveProgressMessage: "Saving alarm...",
         onSave: {},
         onCancel: {}
     )

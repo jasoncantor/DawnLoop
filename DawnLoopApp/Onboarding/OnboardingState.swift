@@ -89,11 +89,11 @@ enum OnboardingScreen: Int, CaseIterable {
     var description: String {
         switch self {
         case .welcome:
-            return "Gentle sunrise alarms that transform your mornings using the lights you already have."
+            return "Gentle light alarms that transform your mornings using the lights you already have."
         case .howItWorks:
             return "DawnLoop creates smart automations in Apple Home that gradually brighten your lights before your alarm time."
         case .ready:
-            return "Connect to Apple Home and set up your first wake-light alarm in under a minute."
+            return "Connect to Apple Home and set up your first Light Alarm in under a minute."
         }
     }
     

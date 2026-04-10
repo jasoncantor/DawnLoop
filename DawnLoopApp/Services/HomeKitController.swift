@@ -46,6 +46,17 @@ struct HomeKitMutationResult: Equatable, Sendable {
     let created: Bool
 }
 
+struct HomeKitNamespaceCleanupResult: Equatable, Sendable {
+    let homesVisited: Int
+    let triggersRemoved: Int
+    let actionSetsRemoved: Int
+}
+
+enum HomeKitTriggerSchedule: Equatable, Sendable {
+    case calendar(fireDate: Date, weekday: Int?)
+    case significant(reference: AlarmTimeReference, offsetMinutes: Int, weekday: Int?)
+}
+
 @MainActor
 protocol HomeKitControllerProtocol: AnyObject {
     func authorizationStatus() -> HMHomeManagerAuthorizationStatus
@@ -60,17 +71,18 @@ protocol HomeKitControllerProtocol: AnyObject {
         name: String,
         requests: [HomeKitActionRequest]
     ) async throws -> HomeKitMutationResult
-    func upsertTimerTrigger(
+    func upsertScheduledTrigger(
         homeIdentifier: String,
         identifier: String?,
         name: String,
-        fireDate: Date,
-        recurrence: DateComponents?,
+        schedule: HomeKitTriggerSchedule,
         actionSetIdentifier: String,
+        requiredOnAccessoryIdentifiers: [String],
         isEnabled: Bool
     ) async throws -> HomeKitMutationResult
     func deleteActionSet(homeIdentifier: String, identifier: String) async throws
-    func deleteTimerTrigger(homeIdentifier: String, identifier: String) async throws
+    func deleteTrigger(homeIdentifier: String, identifier: String) async throws
+    func removeObjects(prefixedBy prefix: String) async -> HomeKitNamespaceCleanupResult
 }
 
 @MainActor
@@ -167,12 +179,7 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
             return false
         }
 
-        return home.triggers.contains {
-            guard let timerTrigger = $0 as? HMTimerTrigger else {
-                return false
-            }
-            return timerTrigger.uniqueIdentifier.uuidString == identifier
-        }
+        return home.triggers.contains { $0.uniqueIdentifier.uuidString == identifier }
     }
 
     func upsertActionSet(
@@ -224,13 +231,13 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
         )
     }
 
-    func upsertTimerTrigger(
+    func upsertScheduledTrigger(
         homeIdentifier: String,
         identifier: String?,
         name: String,
-        fireDate: Date,
-        recurrence: DateComponents?,
+        schedule: HomeKitTriggerSchedule,
         actionSetIdentifier: String,
+        requiredOnAccessoryIdentifiers: [String],
         isEnabled: Bool
     ) async throws -> HomeKitMutationResult {
         await ensureLoaded()
@@ -242,27 +249,54 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
             throw HomeKitControllerError.actionSetNotFound(actionSetIdentifier)
         }
 
-        let normalizedFireDate = fireDate.roundedToMinute()
-        let trigger: HMTimerTrigger
+        let desiredEvent = event(for: schedule)
+        let desiredRecurrences = recurrences(for: schedule)
+        let desiredPredicate = powerStatePredicate(
+            for: requiredOnAccessoryIdentifiers,
+            in: home
+        )
+        let desiredExecuteOnce = !isRepeating(schedule)
+
+        let existingTrigger: HMTrigger? = if let identifier {
+            existingTrigger(with: identifier, in: home)
+        } else {
+            nil
+        }
+        let trigger: HMEventTrigger
         let created: Bool
 
-        if let identifier,
-           let existing = home.triggers.compactMap({ $0 as? HMTimerTrigger }).first(where: { $0.uniqueIdentifier.uuidString == identifier }) {
-            trigger = existing
+        if let existingEventTrigger = existingTrigger as? HMEventTrigger {
+            trigger = existingEventTrigger
             created = false
-            if trigger.name != name {
-                try await trigger.updateName(name)
-            }
-            if trigger.fireDate != normalizedFireDate {
-                try await trigger.updateFireDate(normalizedFireDate)
-            }
-            if trigger.recurrence != recurrence {
-                try await trigger.updateRecurrence(recurrence)
-            }
         } else {
-            trigger = HMTimerTrigger(name: name, fireDate: normalizedFireDate, recurrence: recurrence)
+            if let existingTrigger {
+                try await home.removeTrigger(existingTrigger)
+            }
+            trigger = HMEventTrigger(
+                name: name,
+                events: [desiredEvent],
+                end: nil,
+                recurrences: desiredRecurrences,
+                predicate: desiredPredicate
+            )
             created = true
             try await home.addTrigger(trigger)
+        }
+
+        if trigger.name != name {
+            try await trigger.updateName(name)
+        }
+        if !matchesEvent(trigger.events, desired: desiredEvent) {
+            try await trigger.updateEvents([desiredEvent])
+        }
+        if !matchesRecurrences(trigger.recurrences, desired: desiredRecurrences) {
+            try await trigger.updateRecurrences(desiredRecurrences)
+        }
+        if !matchesPredicate(trigger.predicate, desired: desiredPredicate) {
+            try await trigger.updatePredicate(desiredPredicate)
+        }
+        if trigger.executeOnce != desiredExecuteOnce {
+            try await trigger.updateExecuteOnce(desiredExecuteOnce)
         }
 
         for existingActionSet in trigger.actionSets where existingActionSet.uniqueIdentifier.uuidString != actionSetIdentifier {
@@ -295,21 +329,61 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
         try await home.removeActionSet(actionSet)
     }
 
-    func deleteTimerTrigger(homeIdentifier: String, identifier: String) async throws {
+    func deleteTrigger(homeIdentifier: String, identifier: String) async throws {
         await ensureLoaded()
 
         guard let home = home(with: homeIdentifier) else {
             throw HomeKitControllerError.homeNotFound(homeIdentifier)
         }
-        guard let trigger = home.triggers.compactMap({ $0 as? HMTimerTrigger }).first(where: { $0.uniqueIdentifier.uuidString == identifier }) else {
+        guard let trigger = existingTrigger(with: identifier, in: home) else {
             return
         }
 
         try await home.removeTrigger(trigger)
     }
 
+    func removeObjects(prefixedBy prefix: String) async -> HomeKitNamespaceCleanupResult {
+        await ensureLoaded()
+
+        var removedTriggers = 0
+        var removedActionSets = 0
+
+        for home in homeManager.homes {
+            let triggers = home.triggers.filter { $0.name.hasPrefix(prefix) }
+
+            for trigger in triggers {
+                do {
+                    try await home.removeTrigger(trigger)
+                    removedTriggers += 1
+                } catch {
+                    DawnLoopLogger.homeKit.error("Failed to remove trigger \(trigger.name): \(error.localizedDescription)")
+                }
+            }
+
+            let actionSets = home.actionSets.filter { $0.name.hasPrefix(prefix) }
+            for actionSet in actionSets {
+                do {
+                    try await home.removeActionSet(actionSet)
+                    removedActionSets += 1
+                } catch {
+                    DawnLoopLogger.homeKit.error("Failed to remove action set \(actionSet.name): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        return HomeKitNamespaceCleanupResult(
+            homesVisited: homeManager.homes.count,
+            triggersRemoved: removedTriggers,
+            actionSetsRemoved: removedActionSets
+        )
+    }
+
     private func home(with identifier: String) -> HMHome? {
         homeManager.homes.first { $0.uniqueIdentifier.uuidString == identifier }
+    }
+
+    private func existingTrigger(with identifier: String, in home: HMHome) -> HMTrigger? {
+        home.triggers.first { $0.uniqueIdentifier.uuidString == identifier }
     }
 
     private func writeActions(for requests: [HomeKitActionRequest], in home: HMHome) throws -> [HMAction] {
@@ -336,6 +410,146 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
         }
 
         return actions
+    }
+
+    private func event(for schedule: HomeKitTriggerSchedule) -> HMEvent {
+        switch schedule {
+        case .calendar(let fireDate, let weekday):
+            let normalizedFireDate = fireDate.roundedToMinute()
+            return HMCalendarEvent(
+                fire: calendarEventComponents(
+                    for: normalizedFireDate,
+                    weekday: weekday
+                )
+            )
+        case .significant(let reference, let offsetMinutes, _):
+            return HMSignificantTimeEvent(
+                significantEvent: significantEvent(for: reference),
+                offset: significantOffset(minutes: offsetMinutes)
+            )
+        }
+    }
+
+    private func recurrences(for schedule: HomeKitTriggerSchedule) -> [DateComponents]? {
+        switch schedule {
+        case .calendar(_, let weekday), .significant(_, _, let weekday):
+            return weekday.map { [DateComponents(weekday: $0)] }
+        }
+    }
+
+    private func isRepeating(_ schedule: HomeKitTriggerSchedule) -> Bool {
+        switch schedule {
+        case .calendar(_, let weekday), .significant(_, _, let weekday):
+            return weekday != nil
+        }
+    }
+
+    private func calendarEventComponents(
+        for fireDate: Date,
+        weekday: Int?,
+        calendar: Calendar = .current
+    ) -> DateComponents {
+        if weekday == nil {
+            return calendar.dateComponents([.month, .day, .hour, .minute], from: fireDate)
+        }
+
+        return calendar.dateComponents([.hour, .minute], from: fireDate)
+    }
+
+    private func significantOffset(minutes: Int) -> DateComponents? {
+        guard minutes != 0 else {
+            return nil
+        }
+        return DateComponents(minute: minutes)
+    }
+
+    private func significantEvent(for reference: AlarmTimeReference) -> HMSignificantEvent {
+        switch reference {
+        case .clock:
+            return .sunrise
+        case .sunrise:
+            return .sunrise
+        case .sunset:
+            return .sunset
+        }
+    }
+
+    private func powerStatePredicate(
+        for accessoryIdentifiers: [String],
+        in home: HMHome
+    ) -> NSPredicate? {
+        let accessoryIdentifiers = Array(Set(accessoryIdentifiers)).sorted()
+        let accessoriesByID = Dictionary(uniqueKeysWithValues: home.accessories.map { ($0.uniqueIdentifier.uuidString, $0) })
+        let predicates = accessoryIdentifiers.compactMap { accessoryIdentifier -> NSPredicate? in
+            guard
+                let accessory = accessoriesByID[accessoryIdentifier],
+                let characteristic = powerStateCharacteristic(for: accessory)
+            else {
+                return nil
+            }
+
+            return HMEventTrigger.predicateForEvaluatingTrigger(
+                characteristic,
+                relatedBy: .equalTo,
+                toValue: 1
+            )
+        }
+
+        guard !predicates.isEmpty else {
+            return nil
+        }
+        if predicates.count == 1 {
+            return predicates[0]
+        }
+        return NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+    }
+
+    private func powerStateCharacteristic(for accessory: HMAccessory) -> HMCharacteristic? {
+        accessory.services
+            .flatMap(\.characteristics)
+            .first(where: { $0.characteristicType == HMCharacteristicTypePowerState })
+    }
+
+    private func matchesEvent(_ events: [HMEvent], desired: HMEvent) -> Bool {
+        guard events.count == 1 else {
+            return false
+        }
+        switch (events.first, desired) {
+        case (let existing as HMCalendarEvent, let desired as HMCalendarEvent):
+            return normalizedCalendarEventComponents(existing.fireDateComponents) ==
+                normalizedCalendarEventComponents(desired.fireDateComponents)
+        case (let existing as HMSignificantTimeEvent, let desired as HMSignificantTimeEvent):
+            return existing.significantEvent == desired.significantEvent &&
+                existing.offset == desired.offset
+        default:
+            return false
+        }
+    }
+
+    private func normalizedCalendarEventComponents(_ components: DateComponents) -> DateComponents {
+        var normalized = DateComponents()
+        normalized.month = components.month
+        normalized.day = components.day
+        normalized.hour = components.hour
+        normalized.minute = components.minute
+        return normalized
+    }
+
+    private func matchesRecurrences(_ lhs: [DateComponents]?, desired rhs: [DateComponents]?) -> Bool {
+        let lhsWeekdays = lhs?.compactMap(\.weekday) ?? []
+        let rhsWeekdays = rhs?.compactMap(\.weekday) ?? []
+        return lhsWeekdays == rhsWeekdays
+    }
+
+    private func matchesPredicate(_ lhs: NSPredicate?, desired rhs: NSPredicate?) -> Bool {
+        switch (lhs, rhs) {
+        case (nil, nil):
+            return true
+        case (let lhs?, let rhs?):
+            return lhs.predicateFormat == rhs.predicateFormat
+        default:
+            return false
+        }
     }
 
     private func finishLoading() {
@@ -390,9 +604,10 @@ final class MockHomeKitController: HomeKitControllerProtocol {
     struct StoredTrigger: Equatable, Sendable {
         let identifier: String
         var name: String
-        var fireDate: Date
-        var recurrence: DateComponents?
+        var schedule: HomeKitTriggerSchedule
         var actionSetIdentifier: String
+        var requiredOnAccessoryIdentifiers: [String]
+        var executeOnce: Bool
         var isEnabled: Bool
     }
 
@@ -401,6 +616,8 @@ final class MockHomeKitController: HomeKitControllerProtocol {
     private var storedAccessories: [String: [AccessorySnapshot]]
     private var actionSets: [String: [String: StoredActionSet]]
     private var triggers: [String: [String: StoredTrigger]]
+    private(set) var upsertActionSetCallCount = 0
+    private(set) var upsertScheduledTriggerCallCount = 0
 
     init(
         status: HMHomeManagerAuthorizationStatus = [.determined, .authorized],
@@ -502,6 +719,7 @@ final class MockHomeKitController: HomeKitControllerProtocol {
         name: String,
         requests: [HomeKitActionRequest]
     ) async throws -> HomeKitMutationResult {
+        upsertActionSetCallCount += 1
         var homeActionSets = actionSets[homeIdentifier] ?? [:]
         let identifier = identifier ?? UUID().uuidString
         let created = homeActionSets[identifier] == nil
@@ -514,24 +732,31 @@ final class MockHomeKitController: HomeKitControllerProtocol {
         return HomeKitMutationResult(identifier: identifier, created: created)
     }
 
-    func upsertTimerTrigger(
+    func upsertScheduledTrigger(
         homeIdentifier: String,
         identifier: String?,
         name: String,
-        fireDate: Date,
-        recurrence: DateComponents?,
+        schedule: HomeKitTriggerSchedule,
         actionSetIdentifier: String,
+        requiredOnAccessoryIdentifiers: [String],
         isEnabled: Bool
     ) async throws -> HomeKitMutationResult {
+        upsertScheduledTriggerCallCount += 1
         var homeTriggers = triggers[homeIdentifier] ?? [:]
         let identifier = identifier ?? UUID().uuidString
         let created = homeTriggers[identifier] == nil
         homeTriggers[identifier] = StoredTrigger(
             identifier: identifier,
             name: name,
-            fireDate: fireDate,
-            recurrence: recurrence,
+            schedule: schedule,
             actionSetIdentifier: actionSetIdentifier,
+            requiredOnAccessoryIdentifiers: requiredOnAccessoryIdentifiers.sorted(),
+            executeOnce: {
+                switch schedule {
+                case .calendar(_, let weekday), .significant(_, _, let weekday):
+                    return weekday == nil
+                }
+            }(),
             isEnabled: isEnabled
         )
         triggers[homeIdentifier] = homeTriggers
@@ -542,8 +767,37 @@ final class MockHomeKitController: HomeKitControllerProtocol {
         actionSets[homeIdentifier]?[identifier] = nil
     }
 
-    func deleteTimerTrigger(homeIdentifier: String, identifier: String) async throws {
+    func deleteTrigger(homeIdentifier: String, identifier: String) async throws {
         triggers[homeIdentifier]?[identifier] = nil
+    }
+
+    func removeObjects(prefixedBy prefix: String) async -> HomeKitNamespaceCleanupResult {
+        var homesVisited = 0
+        var removedTriggers = 0
+        var removedActionSets = 0
+
+        for home in storedHomes {
+            homesVisited += 1
+
+            let homeIdentifier = home.id
+            let triggerMatches = storedTriggers(for: homeIdentifier).filter { $0.name.hasPrefix(prefix) }
+            for trigger in triggerMatches {
+                triggers[homeIdentifier]?[trigger.identifier] = nil
+                removedTriggers += 1
+            }
+
+            let actionSetMatches = storedActionSets(for: homeIdentifier).filter { $0.name.hasPrefix(prefix) }
+            for actionSet in actionSetMatches {
+                actionSets[homeIdentifier]?[actionSet.identifier] = nil
+                removedActionSets += 1
+            }
+        }
+
+        return HomeKitNamespaceCleanupResult(
+            homesVisited: homesVisited,
+            triggersRemoved: removedTriggers,
+            actionSetsRemoved: removedActionSets
+        )
     }
 
     func storedActionSets(for homeIdentifier: String) -> [StoredActionSet] {

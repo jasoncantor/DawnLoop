@@ -1,46 +1,15 @@
 {
   "featureId": "dawnloop-alarm-models-and-swiftdata",
-  "reviewedAt": "2026-04-10T16:10:13Z",
-  "commitId": "2807759",
+  "reviewedAt": "2026-04-10T19:05:00Z",
+  "commitId": "aec1349",
   "transcriptSkeletonReviewed": true,
   "diffReviewed": true,
-  "status": "fail",
+  "status": "pass",
   "codeReview": {
-    "summary": "The repository correctly preserves alarm identity and enabled-state toggles for the fields it currently stores, but the feature does not implement persistence for the required schedule and validation-state models described in the feature contract. The shipped tests also miss those gaps, so alarms cannot round-trip repeat schedules and there is no separate ValidationState model/repository mapping as requested.",
-    "issues": [
-      {
-        "file": "DawnLoopApp/Models/WakeAlarm.swift",
-        "line": 94,
-        "severity": "blocking",
-        "description": "WakeAlarm only persists selected accessory IDs and scalar alarm fields; it has no relationship or embedded field for WakeAlarmSchedule/WeekdaySchedule, so repeat schedules are never saved or reopened even though the feature description explicitly requires schedule models and the expected behavior says all supported alarm configuration fields must round-trip."
-      },
-      {
-        "file": "DawnLoopApp/Services/WakeAlarmRepository.swift",
-        "line": 111,
-        "severity": "blocking",
-        "description": "WakeAlarmRepository save/update paths only read and write the WakeAlarm row. They never create, load, or synchronize a WakeAlarmSchedule record, so editing or fetching an alarm cannot preserve repeat-day configuration as required by the feature scope."
-      },
-      {
-        "file": "DawnLoopApp/Models/WakeAlarm.swift",
-        "line": 229,
-        "severity": "blocking",
-        "description": "The implementation replaces the required validation-state model with a raw-string enum stored directly on WakeAlarm. The feature called for separate domain and persistence models for validation state; without a dedicated model/repository mapping, per-alarm validation metadata cannot evolve independently from the alarm record as specified."
-      },
-      {
-        "file": "DawnLoopTests/WakeAlarmRepositoryTests.swift",
-        "line": 65,
-        "severity": "non_blocking",
-        "description": "Repository coverage claims to validate round-trip of all supported configuration fields, but the tests assert only scalar alarm properties and accessory IDs. They never create or verify a persisted WakeAlarmSchedule or a dedicated validation-state model, which allowed the missing feature requirements to slip through."
-      }
-    ]
+    "summary": "Current alarm persistence matches the feature contract: the repository round-trips dedicated schedule and validation-state records alongside the core alarm while preserving stable alarm identity and enabled-state independence.",
+    "issues": []
   },
-  "sharedStateObservations": [
-    {
-      "area": "skills",
-      "observation": "The worker followed the swiftui-feature-worker startup procedure only partially: the transcript read mission docs, AGENTS, services, and features, but failed to read the repo-local architecture document from the correct path before coding.",
-      "evidence": "Transcript skeleton for session 20d934ff-cce3-4ab8-9411-f81f12aa4f48 shows a failed read of /Users/jasoncantor/.factory/library/architecture.md, while the skill requires reading .factory/library/architecture.md in the repo before touching code."
-    }
-  ],
-  "addressesFailureFrom": null,
-  "summary": "Review failed: alarm identity/enabled-state persistence works for the stored fields, but the feature contract is not fully met because repeat schedules and a dedicated validation-state model were not actually persisted or exercised by tests."
+  "sharedStateObservations": [],
+  "addressesFailureFrom": "b6e27196c0569c5167f5b49c4010f2cd3e53414d",
+  "summary": "Review passed: dedicated WakeAlarmSchedule and ValidationStateRecord persistence is implemented and covered by repository tests, so the previously reported contract gaps are no longer present."
 }

@@ -88,6 +88,30 @@ final class WakeAlarmRepositoryTests: XCTestCase {
         XCTAssertEqual(fetched?.homeIdentifier, "test-home")
     }
 
+    func testSaveAlarm_PersistsSolarReferenceFields() async throws {
+        let alarm = WakeAlarm(
+            name: "Sunset Offset Alarm",
+            wakeTimeSeconds: 18 * 3600,
+            timeReference: .sunset,
+            timeOffsetMinutes: -30,
+            durationMinutes: 25,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-1"],
+            homeIdentifier: "test-home"
+        )
+
+        try await repository.saveAlarm(alarm)
+
+        let fetched = await repository.fetchAlarm(byId: alarm.id)
+        XCTAssertEqual(fetched?.timeReference, .sunset)
+        XCTAssertEqual(fetched?.timeOffsetMinutes, -30)
+        XCTAssertEqual(fetched?.timeDisplayText, "Sunset - 30m")
+    }
+
     func testFetchAllAlarms_ReturnsSavedAlarms() async throws {
         let alarm1 = createTestAlarm(name: "Alarm 1")
         let alarm2 = createTestAlarm(name: "Alarm 2")
@@ -288,6 +312,56 @@ final class WakeAlarmRepositoryTests: XCTestCase {
 
         // Duplicated alarm starts disabled
         XCTAssertEqual(copy.isEnabled, false)
+    }
+
+    func testDuplicateAlarm_CopiesSolarReferenceFields() async throws {
+        let original = WakeAlarm(
+            name: "Original Solar",
+            wakeTimeSeconds: 6 * 3600,
+            timeReference: .sunrise,
+            timeOffsetMinutes: 15,
+            durationMinutes: 35,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-1"],
+            homeIdentifier: "test-home"
+        )
+        try await repository.saveAlarm(original)
+
+        let copy = try await repository.duplicateAlarm(original)
+
+        XCTAssertEqual(copy.timeReference, .sunrise)
+        XCTAssertEqual(copy.timeOffsetMinutes, 15)
+    }
+
+    func testUpdateAlarm_ClockReferenceClearsSolarOffset() async throws {
+        let alarm = WakeAlarm(
+            name: "Solar Alarm",
+            wakeTimeSeconds: 6 * 3600,
+            timeReference: .sunrise,
+            timeOffsetMinutes: -20,
+            durationMinutes: 30,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-1"],
+            homeIdentifier: "test-home"
+        )
+        try await repository.saveAlarm(alarm)
+
+        let updated = try await repository.updateAlarm(
+            alarm,
+            timeReference: .clock,
+            timeOffsetMinutes: 45
+        )
+
+        XCTAssertEqual(updated.timeReference, .clock)
+        XCTAssertEqual(updated.timeOffsetMinutes, 0)
     }
 
     // MARK: - Delete Operations
@@ -685,5 +759,40 @@ final class WakeAlarmRepositoryTests: XCTestCase {
 
         let state = await repository.fetchValidationState(for: alarm.id)
         XCTAssertNil(state)
+    }
+
+    func testNextOccurrence_SunriseReference_UsesSolarEventPlusOffset() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Phoenix") ?? .current
+
+        let coordinate = SolarCoordinate(latitude: 33.4484, longitude: -112.0740)
+        let baseDate = calendar.date(from: DateComponents(
+            year: 2026,
+            month: 4,
+            day: 10,
+            hour: 3,
+            minute: 0
+        ))!
+        let alarm = WakeAlarm(
+            name: "Solar Alarm",
+            wakeTimeSeconds: 6 * 3600,
+            timeReference: .sunrise,
+            timeOffsetMinutes: 20,
+            durationMinutes: 30,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-1"],
+            homeIdentifier: "test-home"
+        )
+        let schedule = WakeAlarmSchedule(alarmId: alarm.id, weekdaySchedule: .never)
+
+        let next = schedule.nextOccurrence(after: baseDate, alarm: alarm, coordinate: coordinate)
+        let expected = SolarEventCalculator.sunrise(on: baseDate, coordinate: coordinate, calendar: calendar)
+            .flatMap { calendar.date(byAdding: .minute, value: 20, to: $0) }
+
+        XCTAssertEqual(next, expected)
     }
 }

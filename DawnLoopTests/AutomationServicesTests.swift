@@ -102,12 +102,103 @@ final class AutomationServicesTests: XCTestCase {
 
         let homeID = "test-home-uuid-001"
         let triggerID = try XCTUnwrap(controller.storedTriggers(for: homeID).first?.identifier)
-        try await controller.deleteTimerTrigger(homeIdentifier: homeID, identifier: triggerID)
+        try await controller.deleteTrigger(homeIdentifier: homeID, identifier: triggerID)
 
         let preRepair = await repairService.validateAlarm(alarm, schedule: .weekdays)
         XCTAssertEqual(preRepair.state, .outOfSync)
 
         let repaired = try await repairService.repairAlarm(alarm, schedule: .weekdays)
         XCTAssertEqual(repaired.state, .valid)
+    }
+
+    func testSyncAlarm_ReusesScenesAcrossRepeatingDays() async throws {
+        let alarm = WakeAlarm(
+            name: "Weekday Light Alarm",
+            wakeTimeSeconds: 7 * 3600,
+            durationMinutes: 30,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        try await repository.saveAlarm(alarm, schedule: .weekdays, validationState: .needsSync)
+
+        try await generationService.syncAlarm(alarm, schedule: .weekdays)
+
+        XCTAssertEqual(controller.upsertActionSetCallCount, WakeAlarmStepPlanner.defaultStepCount)
+        XCTAssertEqual(
+            controller.upsertScheduledTriggerCallCount,
+            WakeAlarmStepPlanner.defaultStepCount * WeekdaySchedule.weekdays.activeDaysCount
+        )
+    }
+
+    func testSyncAlarm_StopsFutureStepsWhenSelectedLightsAreTurnedOff() async throws {
+        let alarm = WakeAlarm(
+            name: "Bedroom Light Alarm",
+            wakeTimeSeconds: 7 * 3600,
+            durationMinutes: 30,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: [
+                "test-accessory-living-room-001",
+                "test-accessory-bedroom-001",
+            ],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        try await repository.saveAlarm(alarm, schedule: .weekdays, validationState: .needsSync)
+
+        try await generationService.syncAlarm(alarm, schedule: .weekdays)
+
+        let triggers = controller.storedTriggers(for: "test-home-uuid-001")
+        XCTAssertFalse(triggers.isEmpty)
+        XCTAssertTrue(
+            triggers.allSatisfy {
+                $0.requiredOnAccessoryIdentifiers == [
+                    "test-accessory-bedroom-001",
+                    "test-accessory-living-room-001",
+                ]
+            }
+        )
+    }
+
+    func testSyncAlarm_SunriseAlarm_UsesSignificantTimeTriggersWithOffsets() async throws {
+        let alarm = WakeAlarm(
+            name: "Sunrise Light Alarm",
+            wakeTimeSeconds: 7 * 3600,
+            timeReference: .sunrise,
+            timeOffsetMinutes: -15,
+            durationMinutes: 30,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        try await repository.saveAlarm(alarm, schedule: .weekdays, validationState: .needsSync)
+
+        try await generationService.syncAlarm(alarm, schedule: .weekdays)
+
+        let triggers = controller.storedTriggers(for: "test-home-uuid-001")
+        XCTAssertFalse(triggers.isEmpty)
+        XCTAssertTrue(
+            triggers.allSatisfy {
+                if case .significant(let reference, _, let weekday) = $0.schedule {
+                    return reference == .sunrise && weekday != nil
+                }
+                return false
+            }
+        )
+
+        let bindings = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
+        XCTAssertFalse(bindings.isEmpty)
+        XCTAssertTrue(bindings.allSatisfy { $0.scheduledTime == nil })
     }
 }

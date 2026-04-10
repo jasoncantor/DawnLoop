@@ -1,12 +1,12 @@
 {
   "milestone": "alarm-editor-models",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "validatorsRun": {
     "test": {
-      "passed": false,
+      "passed": true,
       "command": "xcodebuild -project \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj\" -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3",
-      "exitCode": 124
+      "exitCode": 0
     },
     "typecheck": {
       "passed": true,
@@ -15,70 +15,34 @@
     },
     "lint": {
       "passed": true,
-      "command": "cd \"/Users/jasoncantor/Downloads/DawnLoop\" && xcrun swift-format lint -r DawnLoopApp Packages DawnLoopWidgetExtension DawnLoopIntentsExtension DawnLoopTests",
+      "command": "xcrun swift-format lint -r \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp\" \"/Users/jasoncantor/Downloads/DawnLoop/Packages\" \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopWidgetExtension\" \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopIntentsExtension\" \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopTests\"",
       "exitCode": 0
     }
   },
   "reviewsSummary": {
-    "total": 3,
-    "passed": 0,
-    "failed": 3,
+    "total": 5,
+    "passed": 4,
+    "failed": 1,
     "failedFeatures": [
-      "dawnloop-alarm-models-and-swiftdata",
-      "dawnloop-alarm-editor-validation",
-      "dawnloop-alarm-preview-and-gradient-ui"
+      "dawnloop-alarm-persistence-contract-fix"
     ]
   },
-  "blockingIssues": [
-    {
-      "featureId": "validator-run",
-      "severity": "blocking",
-      "description": "The full `xcodebuild test` validator did not complete within the allotted 1800-second timeout, and the partial output ended with a simulator launch denial for `com.dawnloop.app.uitests.xctrunner` (`FBSOpenApplicationServiceErrorDomain Code=1`), so the milestone test suite cannot be considered passing from this scrutiny run."
-    },
-    {
-      "featureId": "dawnloop-alarm-models-and-swiftdata",
-      "severity": "blocking",
-      "description": "Alarm persistence does not include a dedicated `WakeAlarmSchedule`/repeat-day model or repository sync path, so repeat schedules are not actually saved and reopened despite the feature contract requiring schedule round-tripping."
-    },
-    {
-      "featureId": "dawnloop-alarm-models-and-swiftdata",
-      "severity": "blocking",
-      "description": "The required validation-state persistence model was collapsed into a raw enum/string on `WakeAlarm`, leaving no separate validation-state model or repository mapping as specified."
-    },
-    {
-      "featureId": "dawnloop-alarm-editor-validation",
-      "severity": "blocking",
-      "description": "`AlarmEditorState.canGeneratePreview` allows preview generation from partially invalid editor state (for example invalid brightness relationships, invalid duration/color values, or invalidated accessories), violating the requirement that invalid states must not emit preview plans."
-    },
-    {
-      "featureId": "dawnloop-alarm-editor-validation",
-      "severity": "blocking",
-      "description": "The committed UI-test evidence for editor validation is not credible because it depends on a `Create Alarm` navigation path and launch hooks such as `--mock-invalidated-accessories` that are absent from the current app."
-    },
-    {
-      "featureId": "dawnloop-alarm-preview-and-gradient-ui",
-      "severity": "blocking",
-      "description": "The preview tests' accessory fixture helper silently downgrades requested tunable-white/full-color capabilities to `.brightnessOnly`, so mixed-capability degradation and full-color preview behavior are not actually being exercised."
-    }
-  ],
+  "blockingIssues": [],
   "appliedUpdates": [],
-  "suggestedGuidanceUpdates": [
-    {
-      "target": "skills",
-      "suggestion": "Clarify in the SwiftUI feature worker guidance that simulator UI-test evidence must be tied to committed navigation paths and implemented launch hooks; tests that rely on nonexistent entry points or flags should be treated as invalid proof.",
-      "evidence": "The review for `dawnloop-alarm-editor-validation` found UI tests referencing a missing `Create Alarm` flow and unimplemented `--mock-invalidated-accessories` hook.",
-      "isSystemic": true
-    }
-  ],
+  "suggestedGuidanceUpdates": [],
   "rejectedObservations": [
     {
-      "observation": "Fail the milestone solely because `swift-format lint` emits thousands of warnings.",
-      "reason": "Rejected because the configured lint validator exits successfully and the mission guidance says not to reopen otherwise acceptable work for broad formatting churn alone."
-    },
-    {
-      "observation": "Add a library note documenting the `AccessoryReference(isCompatible:)` initializer behavior immediately.",
-      "reason": "Rejected because the behavior is already directly discoverable in source and the current issue is a feature-specific test bug rather than broadly reusable operating knowledge."
+      "observation": "Fail the milestone solely because swift-format lint emits many warnings.",
+      "reason": "duplicate/already-triaged: the configured lint validator exits successfully and mission guidance says not to reopen work for broad formatting churn alone."
     }
   ],
-  "previousRound": null
+  "previousRound": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/alarm-editor-models/scrutiny/synthesis.json",
+  "nonBlockingIssues": [
+    {
+      "featureId": "dawnloop-alarm-persistence-contract-fix",
+      "severity": "non_blocking",
+      "description": "`deleteAlarm(_:)` and `deleteAlarm(byId:)` only delete the `WakeAlarm` row. The feature introduced `WakeAlarmSchedule` and `ValidationStateRecord` as separate persistence models keyed by `alarmId`, but neither delete path removes those records or clears their relationships. After deleting an alarm, `fetchSchedule(for:)` and `fetchValidationState(for:)` can still return orphaned rows for the deleted ID, which violates the stated contract that saved alarms round-trip through dedicated models cleanly and will accumulate stale records over time.",
+      "suggestedFix": "Extend both alarm deletion paths to remove any `WakeAlarmSchedule` and `ValidationStateRecord` rows for the alarm ID in the same transaction, and add repository tests covering delete cleanup for both dedicated models."
+    }
+  ]
 }

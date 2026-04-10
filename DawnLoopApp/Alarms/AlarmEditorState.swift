@@ -55,6 +55,19 @@ final class AlarmEditorState {
         didSet { clearValidationError(for: \.wakeTime) }
     }
 
+    var timeReference: AlarmTimeReference = .clock {
+        didSet {
+            if timeReference == .clock {
+                timeOffsetMinutes = 0
+            }
+            clearValidationError(for: \.timeReference)
+        }
+    }
+
+    var timeOffsetMinutes: Int = 0 {
+        didSet { clearValidationError(for: \.timeOffsetMinutes) }
+    }
+
     var durationMinutes: Int = 30 {
         didSet { clearValidationError(for: \.durationMinutes) }
     }
@@ -306,6 +319,8 @@ final class AlarmEditorState {
         self.isEnabled = alarm.isEnabled
         self.repeatSchedule = schedule
         self.availableAccessories = availableAccessories
+        self.timeReference = alarm.timeReference
+        self.timeOffsetMinutes = alarm.timeOffsetMinutes
 
         // Set wake time
         let calendar = Calendar.current
@@ -344,6 +359,8 @@ final class AlarmEditorState {
             id: editingAlarmId ?? UUID(),
             name: alarmName.trimmingCharacters(in: .whitespacesAndNewlines),
             wakeTimeSeconds: wakeTimeSeconds,
+            timeReference: timeReference,
+            timeOffsetMinutes: timeOffsetMinutes,
             durationMinutes: durationMinutes,
             gradientCurve: gradientCurve,
             colorMode: colorMode,
@@ -363,6 +380,8 @@ final class AlarmEditorState {
         self.editingAlarmId = nil
         self.alarmName = ""
         self.durationMinutes = 30
+        self.timeReference = .clock
+        self.timeOffsetMinutes = 0
         self.gradientCurve = .easeInOut
         self.colorMode = .brightnessOnly
         self.startBrightness = 0
@@ -491,6 +510,8 @@ final class AlarmEditorState {
             id: UUID(),
             name: alarmName,
             wakeTimeSeconds: wakeTimeSeconds,
+            timeReference: timeReference,
+            timeOffsetMinutes: timeOffsetMinutes,
             durationMinutes: durationMinutes,
             gradientCurve: gradientCurve,
             colorMode: colorMode,

@@ -163,21 +163,21 @@ enum HomeSelectionError: Error {
 enum HomeAccessBlockerCopy {
     static let permissionDenied = BlockerCopy(
         title: "Home Access Needed",
-        message: "DawnLoop needs access to Apple Home to create sunrise alarm automations with your lights. Please enable Home access in Settings to continue.",
+        message: "DawnLoop needs access to Apple Home to create Light Alarm automations with your lights. Please enable Home access in Settings to continue.",
         primaryAction: "Open Settings",
         secondaryAction: "Try Again"
     )
     
     static let noHomeConfigured = BlockerCopy(
         title: "Set Up Apple Home First",
-        message: "You'll need to create an Apple Home before DawnLoop can set up sunrise alarms. Open the Home app to get started, then return here.",
+        message: "You'll need to create an Apple Home before DawnLoop can set up Light Alarms. Open the Home app to get started, then return here.",
         primaryAction: "Open Home App",
         secondaryAction: "Check Again"
     )
     
     static let noHomeHub = BlockerCopy(
         title: "Home Hub Required",
-        message: "Sunrise alarms need a Home Hub (Apple TV, HomePod, or iPad) to run reliably while you're away. Set one up in the Home app, then return here.",
+        message: "Light Alarms need a Home Hub (Apple TV, HomePod, or iPad) to run reliably while you're away. Set one up in the Home app, then return here.",
         primaryAction: "Learn More",
         secondaryAction: "Check Again"
     )

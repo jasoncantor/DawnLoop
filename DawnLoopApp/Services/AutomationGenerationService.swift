@@ -2,6 +2,35 @@ import Foundation
 import SwiftData
 import HomeKit
 
+struct AutomationSyncProgress: Sendable {
+    let completedUnits: Int
+    let totalUnits: Int
+    let message: String
+
+    var fractionCompleted: Double {
+        guard totalUnits > 0 else { return 1 }
+        return min(max(Double(completedUnits) / Double(totalUnits), 0), 1)
+    }
+}
+
+struct DawnLoopHomeKitResetSummary: Sendable {
+    let homesVisited: Int
+    let triggersRemoved: Int
+    let actionSetsRemoved: Int
+    let bindingsCleared: Int
+}
+
+private struct StepScenePlan {
+    let stepNumber: Int
+    let actionRequests: [HomeKitActionRequest]
+}
+
+private enum DawnLoopHomeKitNamespace {
+    static let currentPrefix = "zzzz DawnLoop."
+    static let legacyPrefixes = ["DawnLoop."]
+    static let allPrefixes = [currentPrefix] + legacyPrefixes
+}
+
 @MainActor
 final class AutomationGenerationService {
     private let homeKitController: HomeKitControllerProtocol
@@ -18,7 +47,11 @@ final class AutomationGenerationService {
         self.alarmRepository = alarmRepository
     }
 
-    func syncAlarm(_ alarm: WakeAlarm, schedule: WeekdaySchedule?) async throws {
+    func syncAlarm(
+        _ alarm: WakeAlarm,
+        schedule: WeekdaySchedule?,
+        progress: ((AutomationSyncProgress) -> Void)? = nil
+    ) async throws {
         guard alarm.isEnabled else {
             try await removeAutomations(for: alarm, markDisabled: true)
             return
@@ -50,7 +83,7 @@ final class AutomationGenerationService {
             try await alarmRepository.updateValidationState(
                 for: alarm.id,
                 state: .needsSync,
-                message: "DawnLoop could not calculate the next sunrise run time.",
+                message: "DawnLoop could not calculate the next alarm run time.",
                 requiresUserAction: true
             )
             throw AutomationGenerationError.noUpcomingRun
@@ -70,28 +103,51 @@ final class AutomationGenerationService {
             actionSetByStep[binding.stepNumber] = actionSetIdentifier
         }
 
+        let scenePlans = scenePlans(for: alarm, accessories: accessories)
+        let existingBindingsByKey = Dictionary(
+            uniqueKeysWithValues: existingBindings.map { (BindingKey(binding: $0), $0) }
+        )
+
         var createdTriggers: [String] = []
         var createdActionSets: [String] = []
+        let totalUnits = max(scenePlans.count + expectedBindings.count + 2, 1)
+        var completedUnits = 0
+
+        func reportProgress(_ message: String) {
+            progress?(AutomationSyncProgress(
+                completedUnits: completedUnits,
+                totalUnits: totalUnits,
+                message: message
+            ))
+        }
+
+        reportProgress("Preparing HomeKit automations")
 
         do {
-            for expected in expectedBindings {
-                let existingBinding = existingBindings.first {
-                    $0.stepNumber == expected.stepNumber && $0.weekday == expected.weekday
-                }
-
-                let actionSetIdentifier = actionSetByStep[expected.stepNumber] ?? existingBinding?.actionSetIdentifier
+            for scenePlan in scenePlans {
+                let existingBinding = existingBindings.first { $0.stepNumber == scenePlan.stepNumber }
+                let actionSetIdentifier = actionSetByStep[scenePlan.stepNumber] ?? existingBinding?.actionSetIdentifier
                 let actionSetResult = try await homeKitController.upsertActionSet(
                     homeIdentifier: homeIdentifier,
                     identifier: actionSetIdentifier,
-                    name: namespacedActionSetName(for: alarm.id, stepNumber: expected.stepNumber),
-                    requests: expected.actionRequests
+                    name: namespacedActionSetName(for: alarm.id, stepNumber: scenePlan.stepNumber),
+                    requests: scenePlan.actionRequests
                 )
-                actionSetByStep[expected.stepNumber] = actionSetResult.identifier
+                actionSetByStep[scenePlan.stepNumber] = actionSetResult.identifier
                 if actionSetResult.created {
                     createdActionSets.append(actionSetResult.identifier)
                 }
+                completedUnits += 1
+                reportProgress("Configuring light scenes")
+            }
 
-                let triggerResult = try await homeKitController.upsertTimerTrigger(
+            for expected in expectedBindings {
+                let existingBinding = existingBindingsByKey[expected.bindingKey]
+                guard let actionSetIdentifier = actionSetByStep[expected.stepNumber] else {
+                    throw HomeKitControllerError.actionSetNotFound(namespacedActionSetName(for: alarm.id, stepNumber: expected.stepNumber))
+                }
+
+                let triggerResult = try await homeKitController.upsertScheduledTrigger(
                     homeIdentifier: homeIdentifier,
                     identifier: existingBinding?.triggerIdentifier,
                     name: namespacedTriggerName(
@@ -99,14 +155,16 @@ final class AutomationGenerationService {
                         stepNumber: expected.stepNumber,
                         weekday: expected.weekday
                     ),
-                    fireDate: expected.fireDate,
-                    recurrence: expected.recurrence,
-                    actionSetIdentifier: actionSetResult.identifier,
+                    schedule: expected.triggerSchedule,
+                    actionSetIdentifier: actionSetIdentifier,
+                    requiredOnAccessoryIdentifiers: accessories.map(\.id),
                     isEnabled: true
                 )
                 if triggerResult.created {
                     createdTriggers.append(triggerResult.identifier)
                 }
+                completedUnits += 1
+                reportProgress("Scheduling alarm triggers")
 
                 let binding = existingBinding ?? AutomationBinding(
                     alarmId: alarm.id,
@@ -118,9 +176,9 @@ final class AutomationGenerationService {
                 }
 
                 binding.weekday = expected.weekday
-                binding.actionSetIdentifier = actionSetResult.identifier
+                binding.actionSetIdentifier = actionSetIdentifier
                 binding.triggerIdentifier = triggerResult.identifier
-                binding.scheduledTime = expected.fireDate
+                binding.scheduledTime = expected.scheduledTime
                 binding.brightness = expected.step.brightness
                 binding.colorTemperature = expected.step.colorTemperature
                 binding.hue = expected.step.hue
@@ -136,6 +194,8 @@ final class AutomationGenerationService {
                 activeStepNumbers: Set(expectedBindings.map(\.stepNumber)),
                 in: context
             )
+            completedUnits += 1
+            reportProgress("Cleaning up old automations")
 
             try context.save()
             try await alarmRepository.updateValidationState(
@@ -144,9 +204,11 @@ final class AutomationGenerationService {
                 message: "Home automation is synced.",
                 requiresUserAction: false
             )
+            completedUnits += 1
+            reportProgress("Finishing up")
         } catch {
             for triggerIdentifier in createdTriggers {
-                try? await homeKitController.deleteTimerTrigger(homeIdentifier: homeIdentifier, identifier: triggerIdentifier)
+                try? await homeKitController.deleteTrigger(homeIdentifier: homeIdentifier, identifier: triggerIdentifier)
             }
             for actionSetIdentifier in createdActionSets {
                 try? await homeKitController.deleteActionSet(homeIdentifier: homeIdentifier, identifier: actionSetIdentifier)
@@ -172,7 +234,7 @@ final class AutomationGenerationService {
             let actionSetIdentifiers = Set(bindings.compactMap(\.actionSetIdentifier))
 
             for triggerIdentifier in triggerIdentifiers {
-                try? await homeKitController.deleteTimerTrigger(homeIdentifier: homeIdentifier, identifier: triggerIdentifier)
+                try? await homeKitController.deleteTrigger(homeIdentifier: homeIdentifier, identifier: triggerIdentifier)
             }
 
             for actionSetIdentifier in actionSetIdentifiers {
@@ -193,6 +255,51 @@ final class AutomationGenerationService {
         }
     }
 
+    func resetDawnLoopArtifacts() async throws -> DawnLoopHomeKitResetSummary {
+        var homesVisited = 0
+        var triggersRemoved = 0
+        var actionSetsRemoved = 0
+
+        for prefix in DawnLoopHomeKitNamespace.allPrefixes {
+            let cleanup = await homeKitController.removeObjects(prefixedBy: prefix)
+            homesVisited = max(homesVisited, cleanup.homesVisited)
+            triggersRemoved += cleanup.triggersRemoved
+            actionSetsRemoved += cleanup.actionSetsRemoved
+        }
+
+        let context = ModelContext(modelContainer)
+        let bindings = try context.fetch(FetchDescriptor<AutomationBinding>())
+        let alarms = await alarmRepository.fetchAllAlarms()
+
+        bindings.forEach(context.delete)
+        try context.save()
+
+        for alarm in alarms {
+            if alarm.isEnabled {
+                try? await alarmRepository.updateValidationState(
+                    for: alarm.id,
+                    state: .needsSync,
+                    message: "HomeKit automations were reset. Repair or re-enable this alarm to recreate them.",
+                    requiresUserAction: true
+                )
+            } else {
+                try? await alarmRepository.updateValidationState(
+                    for: alarm.id,
+                    state: .valid,
+                    message: "Alarm is disabled.",
+                    requiresUserAction: false
+                )
+            }
+        }
+
+        return DawnLoopHomeKitResetSummary(
+            homesVisited: homesVisited,
+            triggersRemoved: triggersRemoved,
+            actionSetsRemoved: actionSetsRemoved,
+            bindingsCleared: bindings.count
+        )
+    }
+
     func expectedBindings(
         for alarm: WakeAlarm,
         schedule: WeekdaySchedule?,
@@ -201,19 +308,31 @@ final class AutomationGenerationService {
         let schedule = schedule ?? .never
         let weekdayNumbers: [Int?] = schedule.isRepeating ? schedule.weekdayNumbers.map(Optional.some) : [nil]
         let capabilities = accessories.map(\.capability)
+        let degradedPlan = WakeAlarmStepPlanner.planSteps(
+            for: alarm,
+            capabilities: capabilities,
+            stepCount: WakeAlarmStepPlanner.defaultStepCount
+        )
+        let planningWakeDate = alarm.wakeTimeDate()
         var bindings: [ExpectedAutomationBinding] = []
 
         for weekday in weekdayNumbers {
-            guard let wakeDate = nextWakeDate(
-                for: alarm,
-                schedule: schedule,
-                weekday: weekday
-            ) else {
+            let resolvedWakeDate = if alarm.timeReference == .clock {
+                nextWakeDate(
+                    for: alarm,
+                    schedule: schedule,
+                    weekday: weekday
+                )
+            } else {
+                planningWakeDate
+            }
+
+            guard let resolvedWakeDate else {
                 continue
             }
 
             let planned = WakeAlarmStepPlanner.planSteps(
-                wakeTime: wakeDate,
+                wakeTime: resolvedWakeDate,
                 durationMinutes: alarm.durationMinutes,
                 curve: alarm.gradientCurve,
                 startBrightness: alarm.startBrightness,
@@ -225,24 +344,27 @@ final class AutomationGenerationService {
             )
 
             for (stepNumber, step) in planned.enumerated() {
+                let roundedStepDate = step.timestamp.roundedToMinute()
+                let relativeOffsetMinutes = Int(roundedStepDate.timeIntervalSince(resolvedWakeDate.roundedToMinute()) / 60)
+                guard let triggerSchedule = triggerSchedule(
+                    for: alarm,
+                    weekday: weekday,
+                    scheduledTime: roundedStepDate,
+                    relativeOffsetMinutes: relativeOffsetMinutes
+                ) else {
+                    continue
+                }
                 bindings.append(
                     ExpectedAutomationBinding(
                         alarmID: alarm.id,
                         stepNumber: stepNumber,
                         weekday: weekday,
-                        fireDate: step.timestamp.roundedToMinute(),
-                        recurrence: schedule.isRepeating ? DateComponents(weekOfYear: 1) : nil,
-                        step: WakeAlarmStepPlanner.planSteps(
-                            for: alarm,
-                            capabilities: capabilities,
-                            stepCount: WakeAlarmStepPlanner.defaultStepCount
-                        ).steps[stepNumber],
-                        actionRequests: actionRequests(
-                            for: stepNumber,
-                            alarm: alarm,
-                            accessories: accessories,
-                            capabilities: capabilities
-                        )
+                        scheduledTime: alarm.timeReference == .clock
+                            ? roundedStepDate
+                            : nil,
+                        triggerSchedule: triggerSchedule,
+                        step: degradedPlan.steps[stepNumber],
+                        actionRequests: []
                     )
                 )
             }
@@ -251,19 +373,32 @@ final class AutomationGenerationService {
         return bindings
     }
 
-    private func actionRequests(
-        for stepNumber: Int,
-        alarm: WakeAlarm,
-        accessories: [AccessorySnapshot],
-        capabilities: [AccessoryCapability]
-    ) -> [HomeKitActionRequest] {
+    private func scenePlans(
+        for alarm: WakeAlarm,
+        accessories: [AccessorySnapshot]
+    ) -> [StepScenePlan] {
+        let capabilities = accessories.map(\.capability)
         let degradedPlan = WakeAlarmStepPlanner.planSteps(
             for: alarm,
             capabilities: capabilities,
             stepCount: WakeAlarmStepPlanner.defaultStepCount
         )
-        let step = degradedPlan.steps[stepNumber]
 
+        return degradedPlan.steps.enumerated().map { stepNumber, step in
+            StepScenePlan(
+                stepNumber: stepNumber,
+                actionRequests: actionRequests(
+                    for: step,
+                    accessories: accessories
+                )
+            )
+        }
+    }
+
+    private func actionRequests(
+        for step: WakeAlarmStep,
+        accessories: [AccessorySnapshot]
+    ) -> [HomeKitActionRequest] {
         return accessories.flatMap { accessory -> [HomeKitActionRequest] in
             var requests: [HomeKitActionRequest] = [
                 HomeKitActionRequest(
@@ -335,7 +470,7 @@ final class AutomationGenerationService {
         )
 
         for triggerIdentifier in triggerIdentifiers {
-            try? await homeKitController.deleteTimerTrigger(homeIdentifier: homeIdentifier, identifier: triggerIdentifier)
+            try? await homeKitController.deleteTrigger(homeIdentifier: homeIdentifier, identifier: triggerIdentifier)
         }
 
         for actionSetIdentifier in actionSetIdentifiers {
@@ -351,10 +486,25 @@ final class AutomationGenerationService {
         weekday: Int?
     ) -> Date? {
         let record = WakeAlarmSchedule(alarmId: alarm.id, weekdaySchedule: schedule)
-        return record.nextOccurrence(
-            wakeTimeSeconds: alarm.wakeTimeSeconds,
-            restrictedToWeekday: weekday
-        )
+        return record.nextOccurrence(after: Date(), alarm: alarm, coordinate: nil, restrictedToWeekday: weekday)
+    }
+
+    private func triggerSchedule(
+        for alarm: WakeAlarm,
+        weekday: Int?,
+        scheduledTime: Date,
+        relativeOffsetMinutes: Int
+    ) -> HomeKitTriggerSchedule? {
+        switch alarm.timeReference {
+        case .clock:
+            return .calendar(fireDate: scheduledTime, weekday: weekday)
+        case .sunrise, .sunset:
+            return .significant(
+                reference: alarm.timeReference,
+                offsetMinutes: alarm.timeOffsetMinutes + relativeOffsetMinutes,
+                weekday: weekday
+            )
+        }
     }
 
     private func selectedAccessories(for alarm: WakeAlarm, in homeIdentifier: String) async -> [AccessorySnapshot] {
@@ -364,14 +514,14 @@ final class AutomationGenerationService {
     }
 
     private func namespacedActionSetName(for alarmID: UUID, stepNumber: Int) -> String {
-        "DawnLoop.\(alarmID.uuidString).step.\(stepNumber).scene"
+        "\(DawnLoopHomeKitNamespace.currentPrefix)\(alarmID.uuidString).step.\(stepNumber).scene"
     }
 
     private func namespacedTriggerName(for alarmID: UUID, stepNumber: Int, weekday: Int?) -> String {
         if let weekday {
-            return "DawnLoop.\(alarmID.uuidString).step.\(stepNumber).weekday.\(weekday).trigger"
+            return "\(DawnLoopHomeKitNamespace.currentPrefix)\(alarmID.uuidString).step.\(stepNumber).weekday.\(weekday).trigger"
         }
-        return "DawnLoop.\(alarmID.uuidString).step.\(stepNumber).trigger"
+        return "\(DawnLoopHomeKitNamespace.currentPrefix)\(alarmID.uuidString).step.\(stepNumber).trigger"
     }
 }
 
@@ -394,8 +544,8 @@ struct ExpectedAutomationBinding {
     let alarmID: UUID
     let stepNumber: Int
     let weekday: Int?
-    let fireDate: Date
-    let recurrence: DateComponents?
+    let scheduledTime: Date?
+    let triggerSchedule: HomeKitTriggerSchedule
     let step: WakeAlarmStep
     let actionRequests: [HomeKitActionRequest]
 

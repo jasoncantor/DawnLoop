@@ -208,6 +208,22 @@ final class AlarmEditorValidationTests: XCTestCase {
         XCTAssertEqual(alarm?.selectedAccessoryIdentifiers, ["acc-1"])
     }
 
+    func testCreateAlarm_SunriseReference_PersistsOffsetConfiguration() {
+        editorState.alarmName = "Sunrise Alarm"
+        editorState.timeReference = .sunrise
+        editorState.timeOffsetMinutes = -25
+        editorState.durationMinutes = 30
+        editorState.startBrightness = 5
+        editorState.targetBrightness = 90
+        editorState.selectedAccessoryIds = ["acc-1"]
+
+        let alarm = editorState.createAlarm()
+
+        XCTAssertEqual(alarm?.timeReference, .sunrise)
+        XCTAssertEqual(alarm?.timeOffsetMinutes, -25)
+        XCTAssertTrue(alarm?.isSolarBased ?? false)
+    }
+
     // MARK: - VAL-ALARM-002: Capability-aware controls appear only when supported
 
     func testCanShowColorTemperature_BrightnessOnlyAccessory_ReturnsFalse() {
@@ -442,6 +458,25 @@ final class AlarmEditorValidationTests: XCTestCase {
         XCTAssertEqual(editorState.targetHue, 30)
         XCTAssertEqual(editorState.targetSaturation, 80)
         XCTAssertEqual(editorState.isEnabled, false)
+    }
+
+    func testLoad_SolarAlarm_PreservesTimeReferenceAndOffset() {
+        let alarm = WakeAlarm(
+            name: "Sunset Alarm",
+            wakeTimeSeconds: 18 * 3600,
+            timeReference: .sunset,
+            timeOffsetMinutes: 40,
+            durationMinutes: 35,
+            selectedAccessoryIdentifiers: ["acc-1"],
+            homeIdentifier: "test-home"
+        )
+
+        let accessory = createAccessory(id: "acc-1", name: "Light", capability: .brightnessOnly)
+
+        editorState.load(alarm: alarm, availableAccessories: [accessory])
+
+        XCTAssertEqual(editorState.timeReference, .sunset)
+        XCTAssertEqual(editorState.timeOffsetMinutes, 40)
     }
 
     func testValidate_ClearingInvalidatedAccessoryBySelectingNewOne_ClearsError() {

@@ -17,7 +17,7 @@ struct HomeSelectionView: View {
                     .font(Theme.Typography.title2)
                     .foregroundStyle(Theme.Colors.textPrimary)
                 
-                Text("Select which Apple Home to use for sunrise alarms")
+                Text("Select which Apple Home to use for Light Alarms")
                     .font(Theme.Typography.body)
                     .foregroundStyle(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.center)

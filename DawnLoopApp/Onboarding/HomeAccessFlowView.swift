@@ -127,7 +127,7 @@ struct AlarmSetupReadyView: View {
                             .foregroundStyle(Theme.Colors.textPrimary)
                             .multilineTextAlignment(.center)
                         
-                        Text("Your Home is connected and ready. Let's set up your first wake-light alarm.")
+                        Text("Your Home is connected and ready. Let's set up your first Light Alarm.")
                             .font(Theme.Typography.body)
                             .foregroundStyle(Theme.Colors.textSecondary)
                             .multilineTextAlignment(.center)

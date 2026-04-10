@@ -10,6 +10,12 @@ final class AlarmListStore {
     var isLoading = false
     var alertMessage: String?
     var showingEditor = false
+    var isSavingEditor = false
+    var isResettingHomeKit = false
+    var showingResetConfirmation = false
+    var showingOnboardingResetConfirmation = false
+    var saveProgress: Double = 0
+    var saveProgressMessage = "Saving alarm..."
     var editorState = AlarmEditorState()
     var editingAlarmID: UUID?
     var pendingDeleteItem: AlarmListItem?
@@ -43,6 +49,7 @@ final class AlarmListStore {
         }
 
         configuredLightCount = (await selectedAccessories()).count
+        let solarCoordinate = await environment.currentLocationService.currentCoordinateIfAuthorized()
 
         let alarms = await environment.alarmRepository.fetchAllAlarms()
         var loadedItems: [AlarmListItem] = []
@@ -58,7 +65,13 @@ final class AlarmListStore {
                 AlarmListItem(
                     alarm: alarm,
                     schedule: schedule,
-                    validation: validation
+                    validation: validation,
+                    nextRunDate: alarm.isEnabled
+                        ? WakeAlarmSchedule(alarmId: alarm.id, weekdaySchedule: schedule).nextOccurrence(
+                            alarm: alarm,
+                            coordinate: solarCoordinate
+                        )
+                        : nil
                 )
             )
         }
@@ -104,13 +117,32 @@ final class AlarmListStore {
     }
 
     func saveEditor() async {
-        guard let homeIdentifier = activeHomeIdentifier,
-              let alarm = editorState.createAlarm() else {
-            alertMessage = "Review the alarm details before saving."
+        guard !isSavingEditor else {
             return
         }
 
+        guard let homeIdentifier = activeHomeIdentifier else {
+            alertMessage = "Choose an Apple Home before saving this alarm."
+            return
+        }
+
+        guard let alarm = editorState.createAlarm() else {
+            return
+        }
+
+        if alarm.isSolarBased {
+            environment.currentLocationService.requestAuthorizationIfNeeded()
+        }
+
         alarm.homeIdentifier = homeIdentifier
+        isSavingEditor = true
+        saveProgress = 0.05
+        saveProgressMessage = "Saving alarm details"
+        defer {
+            isSavingEditor = false
+            saveProgress = 0
+            saveProgressMessage = "Saving alarm..."
+        }
 
         do {
             let initialState: AlarmValidationState = alarm.isEnabled ? .needsSync : .valid
@@ -119,21 +151,46 @@ final class AlarmListStore {
                 schedule: editorState.repeatSchedule,
                 validationState: initialState
             )
+            saveProgress = 0.2
+            saveProgressMessage = alarm.isEnabled
+                ? "Preparing HomeKit automations"
+                : "Removing disabled automations"
 
-            if alarm.isEnabled {
-                try await environment.automationGenerationService.syncAlarm(
-                    alarm,
-                    schedule: editorState.repeatSchedule
-                )
-            } else {
-                try await environment.automationGenerationService.removeAutomations(
-                    for: alarm,
-                    markDisabled: true
-                )
+            var syncFailureMessage: String?
+
+            do {
+                if alarm.isEnabled {
+                    try await environment.automationGenerationService.syncAlarm(
+                        alarm,
+                        schedule: editorState.repeatSchedule,
+                        progress: { [weak self] progress in
+                            guard let self else { return }
+                            self.saveProgress = 0.2 + (progress.fractionCompleted * 0.75)
+                            self.saveProgressMessage = progress.message
+                        }
+                    )
+                } else {
+                    try await environment.automationGenerationService.removeAutomations(
+                        for: alarm,
+                        markDisabled: true
+                    )
+                    saveProgress = 0.95
+                    saveProgressMessage = "Finishing up"
+                }
+            } catch {
+                let detail = error.localizedDescription.isEmpty
+                    ? "Home automation could not be synced right now."
+                    : error.localizedDescription
+                syncFailureMessage = "Alarm saved, but HomeKit sync needs attention. \(detail)"
             }
 
+            saveProgress = 1
+            saveProgressMessage = "Done"
             showingEditor = false
             await refresh()
+            if let syncFailureMessage {
+                alertMessage = syncFailureMessage
+            }
         } catch {
             alertMessage = error.localizedDescription
         }
@@ -189,14 +246,25 @@ final class AlarmListStore {
     }
 
     func delete(_ item: AlarmListItem) async {
-        guard let alarm = await environment.alarmRepository.fetchAlarm(byId: item.id) else {
-            return
-        }
-
         do {
-            try await environment.automationGenerationService.removeAutomations(for: alarm)
-            try await environment.alarmRepository.deleteAlarm(alarm)
+            let alarm = await environment.alarmRepository.fetchAlarm(byId: item.id)
+            var cleanupFailed = false
+
+            if let alarm {
+                do {
+                    try await environment.automationGenerationService.removeAutomations(for: alarm)
+                } catch {
+                    cleanupFailed = true
+                    DawnLoopLogger.homeKit.error("Failed to remove HomeKit automations during delete: \(error.localizedDescription)")
+                }
+            }
+
+            try await environment.alarmRepository.deleteAlarm(byId: item.id)
             await refresh()
+
+            if cleanupFailed {
+                alertMessage = "Alarm deleted, but some HomeKit automations may need manual cleanup."
+            }
         } catch {
             alertMessage = error.localizedDescription
         }
@@ -214,6 +282,23 @@ final class AlarmListStore {
                 schedule: schedule?.weekdaySchedule
             )
             await refresh()
+        } catch {
+            alertMessage = error.localizedDescription
+        }
+    }
+
+    func resetHomeKitArtifacts() async {
+        guard !isResettingHomeKit else {
+            return
+        }
+
+        isResettingHomeKit = true
+        defer { isResettingHomeKit = false }
+
+        do {
+            let summary = try await environment.automationGenerationService.resetDawnLoopArtifacts()
+            await refresh()
+            alertMessage = "Removed \(summary.triggersRemoved) triggers and \(summary.actionSetsRemoved) scenes across \(summary.homesVisited) homes. Cleared \(summary.bindingsCleared) local bindings."
         } catch {
             alertMessage = error.localizedDescription
         }
@@ -238,19 +323,16 @@ struct AlarmListItem: Identifiable {
     let alarm: WakeAlarm
     let schedule: WeekdaySchedule
     let validation: ValidationStateSummary
+    let nextRunDate: Date?
 
     var id: UUID { alarm.id }
 
     var viewModel: AlarmViewModel {
         AlarmViewModel(
             from: alarm,
-            schedule: WakeAlarmSchedule(alarmId: alarm.id, weekdaySchedule: schedule),
-            validationSummary: validation
+            validationSummary: validation,
+            nextRunDate: nextRunDate
         )
-    }
-
-    var nextRunDate: Date? {
-        viewModel.nextRunDate
     }
 }
 
@@ -299,7 +381,7 @@ struct AlarmListView: View {
                         .listRowBackground(Color.clear)
                     }
                 } else {
-                    Section("Sunrise Alarms") {
+                    Section("Light Alarms") {
                         ForEach(store.items) { item in
                             AlarmRow(
                                 item: item,
@@ -353,8 +435,16 @@ struct AlarmListView: View {
 
 #if DEBUG
             ToolbarItem(placement: .topBarLeading) {
-                Button("Reset Onboarding") {
-                    environment.onboardingState.resetOnboarding()
+                Menu {
+                    Button("Reset Onboarding") {
+                        store.showingOnboardingResetConfirmation = true
+                    }
+
+                    Button("Nuke HomeKit", role: .destructive) {
+                        store.showingResetConfirmation = true
+                    }
+                } label: {
+                    Image(systemName: "gearshape")
                 }
             }
 #endif
@@ -362,6 +452,9 @@ struct AlarmListView: View {
         .sheet(isPresented: $store.showingEditor) {
             AlarmEditorView(
                 state: store.editorState,
+                isSaving: store.isSavingEditor,
+                saveProgress: store.saveProgress,
+                saveProgressMessage: store.saveProgressMessage,
                 onSave: {
                     Task { await store.saveEditor() }
                 },
@@ -393,6 +486,24 @@ struct AlarmListView: View {
         } message: {
             Text("This removes the alarm and its HomeKit automations.")
         }
+#if DEBUG
+        .alert("Reset Onboarding?", isPresented: $store.showingOnboardingResetConfirmation) {
+            Button("Reset", role: .destructive) {
+                environment.onboardingState.resetOnboarding()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This sends the app back to the onboarding flow on the next screen refresh.")
+        }
+        .alert("Nuke DawnLoop HomeKit?", isPresented: $store.showingResetConfirmation) {
+            Button("Nuke", role: .destructive) {
+                Task { await store.resetHomeKitArtifacts() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes DawnLoop-created HomeKit scenes and triggers, then clears local automation bindings.")
+        }
+#endif
         .alert("DawnLoop", isPresented: .init(
             get: { store.alertMessage != nil },
             set: { isPresented in
@@ -406,6 +517,33 @@ struct AlarmListView: View {
             }
         } message: {
             Text(store.alertMessage ?? "")
+        }
+        .overlay {
+            if store.isResettingHomeKit {
+                ZStack {
+                    Color.black.opacity(0.12)
+                        .ignoresSafeArea()
+
+                    VStack(spacing: Theme.Spacing.medium) {
+                        ProgressView()
+                            .controlSize(.large)
+                        Text("Resetting HomeKit")
+                            .font(Theme.Typography.bodyBold)
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                        Text("Removing DawnLoop-created scenes, triggers, and bindings.")
+                            .font(Theme.Typography.footnote)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(Theme.Spacing.xLarge)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.Radius.large)
+                            .fill(Theme.Colors.surface)
+                    )
+                    .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+                    .padding(.horizontal, Theme.Spacing.xxLarge)
+                }
+            }
         }
         .tint(Theme.Colors.sunriseOrange)
     }
@@ -422,7 +560,7 @@ private struct HomeSummaryCard: View {
                 .font(Theme.Typography.title3)
                 .foregroundStyle(Theme.Colors.textPrimary)
 
-            Text("\(lightCount) selected light\(lightCount == 1 ? "" : "s") ready for sunrise alarms")
+            Text("\(lightCount) selected light\(lightCount == 1 ? "" : "s") ready for light alarms")
                 .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.Colors.textSecondary)
 
@@ -455,7 +593,7 @@ private struct EmptyAlarmStateView: View {
                     .font(Theme.Typography.title3)
                     .foregroundStyle(Theme.Colors.textPrimary)
 
-                Text("Create your first sunrise alarm to brighten selected lights before wake-up.")
+                Text("Create your first Light Alarm to brighten selected lights before wake-up.")
                     .font(Theme.Typography.body)
                     .foregroundStyle(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.center)

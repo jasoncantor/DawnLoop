@@ -172,9 +172,11 @@ final class AutomationRepairService {
                 )
             }
 
-            let expectedFireDate = expected.fireDate
-            let scheduledTime = binding.scheduledTime ?? expectedFireDate
-            if abs(scheduledTime.timeIntervalSince(expectedFireDate)) > 61 {
+            if
+                let expectedScheduledTime = expected.scheduledTime,
+                let scheduledTime = binding.scheduledTime ?? expected.scheduledTime,
+                abs(scheduledTime.timeIntervalSince(expectedScheduledTime)) > 61
+            {
                 binding.markInvalid(reason: "Scheduled time drifted from expected plan")
                 try? context.save()
                 return ValidationStateSummary(
