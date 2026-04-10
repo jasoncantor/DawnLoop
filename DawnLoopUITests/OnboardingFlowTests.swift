@@ -24,6 +24,10 @@ final class OnboardingFlowTests: XCTestCase {
     }
     
     override func tearDownWithError() throws {
+        // Ensure app is terminated to clean up state between tests
+        if app != nil {
+            app.terminate()
+        }
         app = nil
     }
     

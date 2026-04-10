@@ -1,39 +1,37 @@
 {
   "milestone": "onboarding-discovery",
-  "round": 4,
+  "round": 5,
   "status": "fail",
   "validatorsRun": {
     "test": {
       "passed": false,
-      "command": "xcodebuild -project /Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3",
+      "command": "xcodebuild -project \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj\" -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3",
       "exitCode": 65
     },
     "typecheck": {
       "passed": true,
-      "command": "xcodebuild -project /Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build",
+      "command": "xcodebuild -project \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj\" -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build",
       "exitCode": 0
     },
     "lint": {
       "passed": true,
-      "command": "xcrun swift-format lint -r /Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp /Users/jasoncantor/Downloads/DawnLoop/Packages /Users/jasoncantor/Downloads/DawnLoop/DawnLoopWidgetExtension /Users/jasoncantor/Downloads/DawnLoop/DawnLoopIntentsExtension /Users/jasoncantor/Downloads/DawnLoop/DawnLoopTests",
+      "command": "xcrun swift-format lint -r \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp\" \"/Users/jasoncantor/Downloads/DawnLoop/Packages\" \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopWidgetExtension\" \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopIntentsExtension\" \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopTests\"",
       "exitCode": 0
     }
   },
   "reviewsSummary": {
     "total": 4,
-    "passed": 1,
-    "failed": 3,
+    "passed": 3,
+    "failed": 1,
     "failedFeatures": [
-      "dawnloop-homekit-test-seam-refactor",
-      "dawnloop-onboarding-discovery-ui-test-stabilization",
-      "dawnloop-onboarding-home-selection-ui-proof-fix"
+      "dawnloop-homekit-test-seam-refactor"
     ]
   },
   "blockingIssues": [
     {
       "featureId": "validator:test",
       "severity": "blocking",
-      "description": "The full `xcodebuild test` validator is no longer green on the current repo state. `OnboardingFlowTests.testCompletedOnboardingDoesNotReappearOnRelaunch` and `HomeDiscoveryFlowTests.testHomeSelection_ShowsHomeDetails` both failed, and xcodebuild also reported an `FBSOpenApplicationServiceErrorDomain` launch denial while trying to start the UI test runner."
+      "description": "The full `xcodebuild test` validator failed on the current repo state. `OnboardingFlowTests.testCompletedOnboardingDoesNotReappearOnRelaunch`, `OnboardingFlowTests.testOnboardingBackNavigation`, and `HomeDiscoveryFlowTests.testHomeSelection_ShowsHomeDetails` failed under the full scheme run."
     },
     {
       "featureId": "dawnloop-homekit-test-seam-refactor",
@@ -43,7 +41,7 @@
     {
       "featureId": "dawnloop-homekit-test-seam-refactor",
       "severity": "blocking",
-      "description": "The rewritten readiness tests for `noHomeHub`, `noCompatibleAccessories`, and the ready state still do not assert the real outcomes of the service logic. They never provide a home fixture that exercises `hasHomeHub(homes:)` or `fetchCompatibleAccessories(in:)`, and instead only check `readiness != .unknown` or enum helper properties. This leaves the prior blocker unresolved: the suite still does not verify the real decision tree beyond the empty-home case."
+      "description": "Several readiness tests still only assert that state changed from `.unknown` instead of proving concrete no-home-hub, no-compatible-accessories, or permission-request outcomes through controllable seams, leaving the real readiness decision tree only partially covered."
     },
     {
       "featureId": "dawnloop-homekit-test-seam-refactor",
@@ -53,59 +51,37 @@
     {
       "featureId": "dawnloop-homekit-test-seam-refactor",
       "severity": "blocking",
-      "description": "The accessory-discovery suite still never exercises `discoverAccessories(in:)` with a real home/accessory graph. It validates helper capability-detection logic on custom mock structs and persistence toggles, but it does not prove grouping by room, filtering unsupported devices from actual discovery results, or stale-result clearing when switching homes through the service method required by the feature."
+      "description": "`AccessoryDiscoveryServiceTests` still do not exercise `discoverAccessories(in:)` with a controllable home/accessory graph, so grouping by room, unsupported-device filtering from actual discovery results, and stale-result clearing remain unproven through the real service method."
     },
     {
-      "featureId": "dawnloop-onboarding-discovery-ui-test-stabilization",
+      "featureId": "dawnloop-homekit-test-seam-refactor",
       "severity": "blocking",
-      "description": "The reviewed fix feature itself stabilized the targeted UI tests by bypassing legitimate visible behavior: in commit `c6ab2e2` the `.noHomeConfigured` branch completed onboarding under `--simulate-home-ready` rather than surfacing a real blocked or ready state. The current repo has moved past that implementation, but the reviewed feature did not satisfy its own intended stabilization goal."
-    },
-    {
-      "featureId": "dawnloop-onboarding-discovery-ui-test-stabilization",
-      "severity": "blocking",
-      "description": "In the reviewed commit `c6ab2e2`, `testHomeSelection_ShowsHomeDetails` was broadened to accept unrelated blocker/loading screens as success, so the feature masked the original scrutiny concern instead of fixing it."
-    },
-    {
-      "featureId": "dawnloop-onboarding-home-selection-ui-proof-fix",
-      "severity": "blocking",
-      "description": "The latest UI-proof fix removes `--simulate-home-ready`, but the replacement `--seed-test-home` path still seeds only SwiftData while `HomeAccessState.checkReadiness()` continues to derive readiness solely from `adapter.fetchHomes()`, which remains empty in the mock adapter. The current tests therefore still do not prove a legitimate ready-path UI flow through the real readiness logic."
+      "description": "The current repo still includes a `readyTesting` shortcut that marks Home access ready whenever `--seed-test-home` is active and adapter homes are empty, bypassing the actual HomeKit readiness path rather than proving it through controlled adapter outputs."
     }
   ],
   "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
       "target": "skills",
-      "suggestion": "The worker marked followedProcedure true even though the SwiftUI feature skill requires manual simulator verification and recording it in verification.interactiveChecks for visible UI changes; the handoff left interactiveChecks empty after changing onboarding UI behavior.",
-      "evidence": "dawnloop-onboarding-success-flow-validator-fix: Skill file .factory/skills/swiftui-feature-worker/SKILL.md step 7 requires manual simulator verification; handoff 2026-04-09T22-32-10-493Z__dawnloop-onboarding-success-flow-validator-fix__eb7d3507-060b-4b43-a0de-9568776e356b.json reports \"interactiveChecks\": [].",
+      "suggestion": "Require workers who report visible UI changes under the SwiftUI feature worker skill to include a non-empty `verification.interactiveChecks` section in their handoff, and let scrutiny flag omitted simulator proof as procedural drift.",
+      "evidence": "Fresh reviews for `dawnloop-onboarding-success-flow-validator-fix` and `dawnloop-onboarding-home-selection-ui-proof-fix` both found the workers marked `followedProcedure: true` while their handoffs omitted the simulator `interactiveChecks` evidence that step 7 of `.factory/skills/swiftui-feature-worker/SKILL.md` requires.",
       "isSystemic": true
     },
     {
       "target": "skills",
-      "suggestion": "The apple-integration-worker skill says readiness/discovery tests must drive the real decision path through controlled adapter outputs and that handoffs must exactly reflect validator outcomes. This worker marked `followedProcedure: true`, but the transcript and current tests show several cases were still reduced to placeholder assertions like `XCTAssertNotEqual(..., .unknown)` or helper-only model checks instead of real service-path verification.",
-      "evidence": "dawnloop-homekit-test-seam-refactor: apple-integration-worker/SKILL.md step 4 and step 8; handoff 2026-04-09T23-08-05-334Z__dawnloop-homekit-test-seam-refactor__ac6f077c-e682-49d0-9f17-ac29df3096b3.json; DawnLoopTests/HomeAccessStateTests.swift:166-195, DawnLoopTests/HomeSelectionServiceTests.swift:112-119, DawnLoopTests/AccessoryDiscoveryServiceTests.swift:140-260",
+      "suggestion": "Clarify in the apple-integration-worker skill that replacing impossible HomeKit fixtures with shortcut states or placeholder assertions does not satisfy the requirement to drive real service outcomes through controllable seams; review should explicitly reject `not unknown`-style coverage as insufficient for readiness/discovery path fixes.",
+      "evidence": "Fresh review of `dawnloop-homekit-test-seam-refactor` found the repo no longer constructs unavailable `HMHome` / `HMAccessory` objects, but the tests still rely on placeholder assertions and a `readyTesting` shortcut rather than proving real readiness, selection, and discovery outcomes through the service methods.",
       "isSystemic": true
-    },
-    {
-      "target": "skills",
-      "suggestion": "The worker violated the SwiftUI feature worker guidance that launch-argument/reset hooks must not auto-complete product flows or convert blocked states into success semantics, but the skill could more explicitly tell reviewers to reject UI-test stabilizations that satisfy assertions by broadening tests to accept blocker screens.",
-      "evidence": "dawnloop-onboarding-discovery-ui-test-stabilization: .factory/skills/swiftui-feature-worker/SKILL.md says reset hooks must never auto-complete flows; the reviewed commit still completes onboarding from `HomeAccessFlowView.swift:49` on `.noHomeConfigured` and loosens `HomeDiscoveryFlowTests.swift:45` to accept blocker states instead of validating home-selection UI.",
-      "isSystemic": true
-    },
-    {
-      "target": "library",
-      "suggestion": "Document that `--seed-test-home` currently seeds only SwiftData-backed `HomeReference` and `AccessoryReference` records, while `HomeAccessState` readiness still comes exclusively from the HomeKit adapter. This split test path can mislead workers reviewing onboarding UI proof.",
-      "evidence": "dawnloop-onboarding-home-selection-ui-proof-fix review: `DawnLoopApp.swift:47-135` seeds SwiftData; `HomeSelectionService.swift:31-63` reads seeded records only when `TestEnvironment.isSeedingTestHome`; `HomeAccessService.swift:151-184` still computes readiness solely from adapter homes/accessories.",
-      "isSystemic": false
     }
   ],
   "rejectedObservations": [
     {
-      "observation": "dawnloop-homekit-test-seam-refactor: UI-test home-selection reset still only clears `activeHomeIdentifier` / `activeHomeName` from UserDefaults even though active-home state is stored in SwiftData `HomeReference` rows. That persistence detail remains undocumented shared state and can still mislead workers investigating home-selection UI behavior.",
-      "reason": "ambiguous"
+      "observation": "Document the `--seed-test-home` split path in `.factory/library/` immediately.",
+      "reason": "rejected for now because the current synthesis already captures the behavior clearly and the guidance belongs with the eventual fix or orchestrator decision rather than adding more churn during a failing scrutiny round."
     },
     {
-      "observation": "dawnloop-onboarding-home-selection-ui-proof-fix: the relaunch test still accepts `Good Morning` as success even though it is only the generic main shell.",
-      "reason": "captured-as-non-blocking-review-depth-concern"
+      "observation": "Fail `dawnloop-onboarding-home-selection-ui-proof-fix` because the relaunch test still allows the generic `Good Morning` shell as success.",
+      "reason": "rejected as non-blocking review-depth only; fresh review classified it as acceptable override-candidate context given the user's preference to avoid more scrutiny churn when deeper product behavior is otherwise legitimate."
     }
   ],
   "previousRound": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/synthesis.json"

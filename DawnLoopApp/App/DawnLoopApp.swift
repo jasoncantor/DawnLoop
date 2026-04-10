@@ -11,10 +11,15 @@ struct DawnLoopApp: App {
         // Check for test launch arguments and set flags before initializing environment
         LaunchArgumentHandler.handleTestArguments()
         
+        // Execute UserDefaults resets BEFORE creating environment
+        // This ensures OnboardingState reads fresh values on initialization
+        LaunchArgumentHandler.executeUserDefaultsResets()
+        
         // Initialize environment (this uses TestEnvironment flags)
+        // OnboardingState will now read fresh UserDefaults values
         self.container = AppEnvironment()
         
-        // Execute any pending test actions using the initialized environment
+        // Execute remaining pending test actions using the initialized AppEnvironment
         // This ensures all SwiftData operations use the same ModelContainer
         LaunchArgumentHandler.executePendingActions(using: self.container)
     }
@@ -75,15 +80,38 @@ enum LaunchArgumentHandler {
         }
     }
     
+    /// Execute UserDefaults resets BEFORE environment initialization
+    /// This ensures OnboardingState reads fresh values when it's created
+    static func executeUserDefaultsResets() {
+        let arguments = ProcessInfo.processInfo.arguments
+        
+        if arguments.contains("--reset-onboarding") {
+            // Clear UserDefaults BEFORE AppEnvironment is created
+            // so OnboardingState reads fresh values
+            UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
+            UserDefaults.standard.removeObject(forKey: "hasStartedHomeAccessFlow")
+            // Also reset discovery step to ensure fresh flow
+            UserDefaults.standard.removeObject(forKey: "discoveryStep")
+        }
+        
+        if arguments.contains("--reset-home-selection") {
+            UserDefaults.standard.removeObject(forKey: "activeHomeIdentifier")
+            UserDefaults.standard.removeObject(forKey: "activeHomeName")
+        }
+    }
+    
     /// Execute pending test actions using the initialized AppEnvironment
     /// This ensures all SwiftData operations use the same ModelContainer
     static func executePendingActions(using environment: AppEnvironment) {
+        // Note: UserDefaults were already reset in executeUserDefaultsResets()
+        // This method handles SwiftData operations that need the environment
+        
         if PendingTestActions.shouldResetOnboarding {
-            resetOnboardingState(using: environment)
+            resetOnboardingSwiftData(using: environment)
         }
         
         if PendingTestActions.shouldResetHomeSelection {
-            resetHomeSelection()
+            resetHomeSelectionSwiftData(using: environment)
         }
         
         if PendingTestActions.shouldSeedTestHome {
@@ -91,12 +119,8 @@ enum LaunchArgumentHandler {
         }
     }
     
-    private static func resetOnboardingState(using environment: AppEnvironment) {
-        // Clear UserDefaults
-        UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
-        UserDefaults.standard.removeObject(forKey: "hasStartedHomeAccessFlow")
-        
-        // Clear SwiftData onboarding records using the shared container
+    /// Clears SwiftData onboarding records (UserDefaults already cleared in executeUserDefaultsResets)
+    private static func resetOnboardingSwiftData(using environment: AppEnvironment) {
         let context = ModelContext(environment.modelContainer)
         
         do {
@@ -107,13 +131,26 @@ enum LaunchArgumentHandler {
             }
             try context.save()
         } catch {
-            print("Failed to reset onboarding state: \(error)")
+            print("Failed to reset onboarding SwiftData: \(error)")
         }
     }
     
-    private static func resetHomeSelection() {
-        UserDefaults.standard.removeObject(forKey: "activeHomeIdentifier")
-        UserDefaults.standard.removeObject(forKey: "activeHomeName")
+    /// Clears SwiftData home selection records (UserDefaults already cleared in executeUserDefaultsResets)
+    private static func resetHomeSelectionSwiftData(using environment: AppEnvironment) {
+        let context = ModelContext(environment.modelContainer)
+        
+        do {
+            var descriptor = FetchDescriptor<HomeReference>()
+            descriptor.predicate = #Predicate { $0.isActive }
+            
+            if let active = try context.fetch(descriptor).first {
+                active.isActive = false
+                active.updatedAt = Date()
+                try context.save()
+            }
+        } catch {
+            print("Failed to reset home selection SwiftData: \(error)")
+        }
     }
     
     /// Seeds deterministic test homes into SwiftData for UI testing.

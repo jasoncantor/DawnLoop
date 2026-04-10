@@ -1,21 +1,21 @@
 {
   "featureId": "dawnloop-onboarding-success-flow-validator-fix",
-  "reviewedAt": "2026-04-10T00:56:39Z",
+  "reviewedAt": "2026-04-10T02:32:46Z",
   "commitId": "fd9b84d2258e2199f84e4f1eb36f5c59e5d66e77",
   "transcriptSkeletonReviewed": true,
   "diffReviewed": true,
   "status": "pass",
   "codeReview": {
-    "summary": "The current repo state removes the earlier simulated-success shortcut and now uses seeded test-home data to drive a visible onboarding completion path. The relaunch coverage reaches and asserts the Home Selection UI rather than auto-completing from a blocker, and the HomeAccessStateTests file no longer contains the unavailable HMHome() construction that previously blocked compilation.",
+    "summary": "The current repo state adequately addresses this fix feature's goals. The earlier onboarding success backdoor is gone, onboarding UI tests now assert a visible home-selection path driven by seeded test data rather than blocker auto-completion, and HomeAccessStateTests no longer contain the unavailable HMHome() construction that previously blocked compilation.",
     "issues": []
   },
   "sharedStateObservations": [
     {
       "area": "skills",
-      "observation": "The worker reported followedProcedure true even though the SwiftUI feature skill requires brief simulator verification to be captured in verification.interactiveChecks for visible UI changes, but the handoff left interactiveChecks empty after changing onboarding UI behavior.",
+      "observation": "The worker marked followedProcedure true even though the SwiftUI feature skill requires brief simulator verification to be captured in verification.interactiveChecks for visible UI changes, but the handoff left interactiveChecks empty after changing onboarding UI behavior.",
       "evidence": "Skill file /Users/jasoncantor/Downloads/DawnLoop/.factory/skills/swiftui-feature-worker/SKILL.md step 7 requires manual simulator verification; handoff /Users/jasoncantor/.factory/missions/f4eaaa2b-ccf0-4261-b42d-e38d0bc996ef/handoffs/2026-04-09T22-32-10-493Z__dawnloop-onboarding-success-flow-validator-fix__eb7d3507-060b-4b43-a0de-9568776e356b.json reports \"interactiveChecks\": []."
     }
   ],
   "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-onboarding-success-flow-validator-fix.json",
-  "summary": "Reviewed the prior failed artifact, feature metadata, handoff, transcript skeleton, and current onboarding/test code. On the current repo state, the fix now passes scrutiny: simulated-success launch shortcuts are gone from the reviewed path, UI tests use seeded visible home-selection flow proof, and the HomeAccessStateTests compile blocker is resolved."
+  "summary": "Reviewed the prior failed artifact, feature metadata, handoff, transcript skeleton, original feature commit, and current onboarding/test code. On the current repo state this fix passes scrutiny: the backdoor success path is no longer present, the UI tests now require visible home-selection proof, and the original HomeAccessStateTests compile blocker is resolved."
 }
