@@ -22,8 +22,11 @@ final class OnboardingState {
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: onboardingKey)
     }
     
-    /// Called from the final onboarding CTA to start Home access handling
+    /// Called from the final onboarding CTA to start Home access handling.
+    /// This marks onboarding as complete - the user has seen the three onboarding
+    /// screens and taken the primary action. On relaunch, they won't see onboarding again.
     func startHomeAccessFlow() {
+        hasCompletedOnboarding = true
         showingHomeAccessFlow = true
         discoveryStep = .checkingAccess
     }

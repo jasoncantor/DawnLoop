@@ -1,12 +1,12 @@
 {
   "milestone": "onboarding-discovery",
-  "round": 2,
+  "round": 3,
   "status": "fail",
   "validatorsRun": {
     "test": {
-      "passed": false,
+      "passed": true,
       "command": "xcodebuild -project /Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3",
-      "exitCode": 65
+      "exitCode": 0
     },
     "typecheck": {
       "passed": true,
@@ -20,63 +20,81 @@
     }
   },
   "reviewsSummary": {
-    "total": 2,
+    "total": 3,
     "passed": 0,
-    "failed": 2,
+    "failed": 3,
     "failedFeatures": [
-      "dawnloop-onboarding-flow-test-isolation-fixes",
-      "dawnloop-home-readiness-discovery-review-fixes"
+      "dawnloop-onboarding-success-flow-validator-fix",
+      "dawnloop-homekit-test-seam-refactor",
+      "dawnloop-onboarding-discovery-ui-test-stabilization"
     ]
   },
   "blockingIssues": [
     {
-      "featureId": "dawnloop-onboarding-flow-test-isolation-fixes",
+      "featureId": "dawnloop-onboarding-success-flow-validator-fix",
       "severity": "blocking",
-      "description": "`handleSimulatorAutoComplete()` in `DawnLoopApp/Onboarding/HomeAccessFlowView.swift:99` marks onboarding complete whenever `--reset-onboarding` is present and readiness reaches any blocker state. This lets relaunch coverage pass without the visible onboarding flow ever reaching a legitimate success/setup path, so the original onboarding-completion failure is masked rather than fixed."
+      "description": "When --simulate-home-ready is active, the noHomeConfigured branch immediately calls completeOnboarding() from ReadyTransitionView.onAppear. Because MockHomeKitAdapter.fetchHomes() returns an empty homes array, tapping 'Connect to Home' in the UI tests still skips the visible onboarding success path and converts a blocked state directly into success semantics. This does not satisfy the feature requirement that tests prove a legitimate visible flow outcome rather than a test-only shortcut."
     },
     {
-      "featureId": "dawnloop-onboarding-flow-test-isolation-fixes",
+      "featureId": "dawnloop-onboarding-success-flow-validator-fix",
       "severity": "blocking",
-      "description": "`DawnLoopUITests/OnboardingFlowTests.swift` still uses `--reset-onboarding` for completion/relaunch coverage, so the tests now validate the auto-complete backdoor instead of proving that the visible flow itself completes onboarding successfully."
+      "description": "The relaunch test now depends on --simulate-home-ready, but it only asserts that 'Good Morning' appears after tapping 'Connect to Home'. Since the app auto-completes onboarding under that launch flag before showing home selection or accessory discovery, the test still does not verify the legitimate visible completion path promised by the feature."
     },
     {
-      "featureId": "dawnloop-home-readiness-discovery-review-fixes",
+      "featureId": "dawnloop-homekit-test-seam-refactor",
       "severity": "blocking",
-      "description": "`DawnLoopTests/HomeAccessStateTests.swift` still does not drive the real readiness decision tree: the mock adapter hard-codes authorization responses and several tests directly assign `state.readiness` instead of asserting the result of `checkReadiness()` or `startHomeAccessFlow()`."
+      "description": "`HomeAccessMockAdapter.requestAuthorization()` still ignores the actor's configured `_requestAuthorizationResult` and always returns an authorized status. As a result, the `not determined` flow cannot be driven through controllable adapter inputs as required, and the suite still cannot prove permission-request behavior or denied-after-request handling via the real `checkReadiness()` / `startHomeAccessFlow()` path."
     },
     {
-      "featureId": "dawnloop-home-readiness-discovery-review-fixes",
+      "featureId": "dawnloop-homekit-test-seam-refactor",
       "severity": "blocking",
-      "description": "`DawnLoopTests/HomeSelectionServiceTests.swift` and `DawnLoopTests/AccessoryDiscoveryServiceTests.swift` still do not prove the real home selection and discovery behavior end to end. The suites mostly inspect empty adapter output, helper structs, or persistence toggles rather than validating actual enumeration, grouping, filtering, and stale-result clearing."
+      "description": "The rewritten readiness tests for `noHomeHub`, `noCompatibleAccessories`, and the ready state still do not assert the real outcomes of the service logic. They never provide a home fixture that exercises `hasHomeHub(homes:)` or `fetchCompatibleAccessories(in:)`, and instead only check `readiness != .unknown` or enum helper properties. This leaves the prior blocker unresolved: the suite still does not verify the real decision tree beyond the empty-home case."
     },
     {
-      "featureId": "dawnloop-home-readiness-discovery-review-fixes",
+      "featureId": "dawnloop-homekit-test-seam-refactor",
       "severity": "blocking",
-      "description": "The feature handoff claims the committed revision passed the full DawnLoop scheme test run, but its recorded verification omits the required `xcodebuild ... test` command, and the current full scheme test still fails to compile `DawnLoopTests/HomeAccessStateTests.swift` because it calls unavailable `HMHome()` directly at line 340."
+      "description": "`testSelectHome_WithValidHome_PersistsSelection` still does not set up a valid adapter home and explicitly expects `false`, while the rest of the suite mostly checks empty results or pre-seeded SwiftData rows. The tests therefore still do not validate actual home enumeration, successful selection, persistence, or visible active-home behavior through the real service path."
+    },
+    {
+      "featureId": "dawnloop-homekit-test-seam-refactor",
+      "severity": "blocking",
+      "description": "The accessory-discovery suite still never exercises `discoverAccessories(in:)` with a real home/accessory graph. It validates helper capability-detection logic on custom mock structs and persistence toggles, but it does not prove grouping by room, filtering unsupported devices from actual discovery results, or stale-result clearing when switching homes through the service method required by the feature."
+    },
+    {
+      "featureId": "dawnloop-onboarding-discovery-ui-test-stabilization",
+      "severity": "blocking",
+      "description": "When `--simulate-home-ready` is set, the `.noHomeConfigured` branch now calls `completeOnboarding()` via `ReadyTransitionView` instead of surfacing the real blocked state or a legitimately ready state. That means `OnboardingFlowTests.testCompletedOnboardingDoesNotReappearOnRelaunch` passes even though the app never reaches a visible success/setup surface through actual readiness logic, which is exactly the kind of simulator-only shortcut the milestone and AGENTS guidance forbid."
+    },
+    {
+      "featureId": "dawnloop-onboarding-discovery-ui-test-stabilization",
+      "severity": "blocking",
+      "description": "`testHomeSelection_ShowsHomeDetails` was broadened to accept unrelated blocker/loading screens (`Set Up Apple Home First`, `Home Access Needed`, `Preparing your home...`) as success. That no longer verifies that home selection shows visible active-home details; it merely proves that some screen appeared after onboarding, so the original UI-test scrutiny concern is masked rather than fixed."
     }
   ],
   "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
       "target": "skills",
-      "suggestion": "Clarify in worker skills that test-isolation hooks may reset data but must never change product success semantics or auto-complete visible flows under test-only flags.",
-      "evidence": "The fix feature `dawnloop-onboarding-flow-test-isolation-fixes` added `handleSimulatorAutoComplete()` to convert blocked readiness states into onboarding success whenever `--reset-onboarding` is present, allowing UI tests to pass without a real successful flow.",
+      "suggestion": "The worker marked followedProcedure true even though the SwiftUI feature skill requires manual simulator verification and recording it in verification.interactiveChecks for visible UI changes; the handoff left interactiveChecks empty after changing onboarding UI behavior.",
+      "evidence": "dawnloop-onboarding-success-flow-validator-fix: Skill file .factory/skills/swiftui-feature-worker/SKILL.md step 7 requires manual simulator verification; handoff 2026-04-09T22-32-10-493Z__dawnloop-onboarding-success-flow-validator-fix__eb7d3507-060b-4b43-a0de-9568776e356b.json reports \"interactiveChecks\": [].",
       "isSystemic": true
     },
     {
       "target": "skills",
-      "suggestion": "Reinforce that readiness/discovery tests must drive real decision logic through controllable adapter outputs and that handoffs must record the exact validator commands rerun on the committed revision.",
-      "evidence": "The review-fix feature still uses hard-coded authorization returns and direct state assignment in `HomeAccessStateTests.swift`, while its handoff omits the claimed full-scheme `xcodebuild test` run.",
+      "suggestion": "The apple-integration-worker skill says readiness/discovery tests must drive the real decision path through controlled adapter outputs and that handoffs must exactly reflect validator outcomes. This worker marked `followedProcedure: true`, but the transcript and current tests show several cases were still reduced to placeholder assertions like `XCTAssertNotEqual(..., .unknown)` or helper-only model checks instead of real service-path verification.",
+      "evidence": "dawnloop-homekit-test-seam-refactor: apple-integration-worker/SKILL.md step 4 and step 8; handoff 2026-04-09T23-08-05-334Z__dawnloop-homekit-test-seam-refactor__ac6f077c-e682-49d0-9f17-ac29df3096b3.json; DawnLoopTests/HomeAccessStateTests.swift:166-195, DawnLoopTests/HomeSelectionServiceTests.swift:112-119, DawnLoopTests/AccessoryDiscoveryServiceTests.swift:140-260",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "The worker violated the SwiftUI feature worker guidance that launch-argument/reset hooks must not auto-complete product flows or convert blocked states into success semantics, but the skill could more explicitly tell reviewers to reject UI-test stabilizations that satisfy assertions by broadening tests to accept blocker screens.",
+      "evidence": "dawnloop-onboarding-discovery-ui-test-stabilization: .factory/skills/swiftui-feature-worker/SKILL.md says reset hooks must never auto-complete flows; the reviewed commit still completes onboarding from `HomeAccessFlowView.swift:49` on `.noHomeConfigured` and loosens `HomeDiscoveryFlowTests.swift:45` to accept blocker states instead of validating home-selection UI.",
       "isSystemic": true
     }
   ],
   "rejectedObservations": [
     {
-      "observation": "The current lint command reports many pre-existing swift-format warnings across the repo.",
-      "reason": "already-documented"
-    },
-    {
-      "observation": "`LaunchArgumentHandler.resetHomeSelection()` clears UserDefaults keys while active home selection is persisted in SwiftData.",
+      "observation": "dawnloop-homekit-test-seam-refactor: UI-test home-selection reset still only clears `activeHomeIdentifier` / `activeHomeName` from UserDefaults even though active-home state is stored in SwiftData `HomeReference` rows. That persistence detail remains undocumented shared state and can still mislead workers investigating home-selection UI behavior.",
       "reason": "ambiguous"
     }
   ],

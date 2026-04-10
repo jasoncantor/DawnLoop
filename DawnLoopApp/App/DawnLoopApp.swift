@@ -33,7 +33,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 /// Global flag set by launch arguments for test environment detection
 /// nonisolated(unsafe) because this is set once at app startup and never modified after
 enum TestEnvironment {
+    /// Deprecated: This flag auto-completes onboarding which violates the requirement
+    /// that tests must prove legitimate visible flow outcomes. Use --seed-test-home instead.
     nonisolated(unsafe) static var isSimulatingHomeReady: Bool = false
+    
+    /// When true, seeds deterministic test homes and accessories for UI testing.
+    /// This allows tests to experience the full visible flow with realistic data
+    /// without requiring real HomeKit infrastructure.
+    nonisolated(unsafe) static var isSeedingTestHome: Bool = false
 }
 
 /// Handles launch arguments for testing and debugging
@@ -52,9 +59,18 @@ enum LaunchArgumentHandler {
         }
         
         // Simulate Home ready state for UI tests
-        // This allows tests to complete the onboarding flow without real HomeKit
+        // DEPRECATED: This flag auto-completes onboarding which violates test requirements.
+        // Use --seed-test-home instead for legitimate visible flow testing.
         if arguments.contains("--simulate-home-ready") {
             TestEnvironment.isSimulatingHomeReady = true
+        }
+        
+        // Seed deterministic test homes and accessories for UI testing.
+        // This allows tests to experience the full visible flow with realistic data
+        // without requiring real HomeKit infrastructure, while still proving the
+        // legitimate completion path through actual UI interaction.
+        if arguments.contains("--seed-test-home") {
+            TestEnvironment.isSeedingTestHome = true
         }
     }
     

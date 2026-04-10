@@ -1,0 +1,34 @@
+{
+  "featureId": "dawnloop-onboarding-discovery-ui-test-stabilization",
+  "reviewedAt": "2026-04-09T23:47:07.378248+00:00",
+  "commitId": "c6ab2e2f79397180585a538ef3115971dfcbd430",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix does not robustly satisfy the milestone intent. It makes the relaunch UI test pass by introducing a test-only shortcut that completes onboarding from a blocked `.noHomeConfigured` state, and it weakens the home-selection UI test so it no longer proves the visible active-home-choice behavior the milestone requires.",
+    "issues": [
+      {
+        "file": "DawnLoopApp/Onboarding/HomeAccessFlowView.swift",
+        "line": 49,
+        "severity": "blocking",
+        "description": "When `--simulate-home-ready` is set, the `.noHomeConfigured` branch now calls `completeOnboarding()` via `ReadyTransitionView` instead of surfacing the real blocked state or a legitimately ready state. That means `OnboardingFlowTests.testCompletedOnboardingDoesNotReappearOnRelaunch` passes even though the app never reaches a visible success/setup surface through actual readiness logic, which is exactly the kind of simulator-only shortcut the milestone and AGENTS guidance forbid."
+      },
+      {
+        "file": "DawnLoopUITests/HomeDiscoveryFlowTests.swift",
+        "line": 45,
+        "severity": "blocking",
+        "description": "`testHomeSelection_ShowsHomeDetails` was broadened to accept unrelated blocker/loading screens (`Set Up Apple Home First`, `Home Access Needed`, `Preparing your home...`) as success. That no longer verifies that home selection shows visible active-home details; it merely proves that some screen appeared after onboarding, so the original UI-test scrutiny concern is masked rather than fixed."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The worker violated the SwiftUI feature worker guidance that launch-argument/reset hooks must not auto-complete product flows or convert blocked states into success semantics, but the skill could more explicitly tell reviewers to reject UI-test stabilizations that satisfy assertions by broadening tests to accept blocker screens.",
+      "evidence": ".factory/skills/swiftui-feature-worker/SKILL.md says reset hooks must never auto-complete flows; the reviewed commit still completes onboarding from `HomeAccessFlowView.swift:49` on `.noHomeConfigured` and loosens `HomeDiscoveryFlowTests.swift:45` to accept blocker states instead of validating home-selection UI."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Fail. The current repo state still relies on a test-only onboarding completion shortcut and a weakened home-selection assertion, so the UI stabilization does not demonstrate legitimate visible-state relaunch or home-selection behavior."
+}

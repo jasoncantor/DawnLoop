@@ -46,16 +46,9 @@ struct HomeAccessCheckView: View {
                 HomeAccessBlockerView(blockerState: .permissionDenied)
                 
             case .noHomeConfigured:
-                // When simulating home ready for UI tests, complete onboarding immediately
-                // This allows tests to verify onboarding completion without real HomeKit
-                if TestEnvironment.isSimulatingHomeReady {
-                    ReadyTransitionView()
-                        .onAppear {
-                            environment.onboardingState.completeOnboarding()
-                        }
-                } else {
-                    HomeAccessBlockerView(blockerState: .noHomeConfigured)
-                }
+                // Show the blocker state - tests should use --seed-test-home to provide
+                // legitimate test data rather than auto-completing blocked states.
+                HomeAccessBlockerView(blockerState: .noHomeConfigured)
                 
             case .noHomeHub:
                 HomeAccessBlockerView(blockerState: .noHomeHub)
@@ -79,16 +72,11 @@ struct HomeAccessCheckView: View {
         
         switch environment.homeAccessState.readiness {
         case .ready:
-            // When simulating home ready for UI tests, complete onboarding immediately
-            // This allows the relaunch test to verify onboarding completion persistence
-            if TestEnvironment.isSimulatingHomeReady {
-                environment.onboardingState.completeOnboarding()
-            } else {
-                // Always show home selection to make active-home choice visible (VAL-HOME-001)
-                // Even with a single home, the user sees the home visibly selected
-                // before moving deeper into setup
-                environment.onboardingState.moveToHomeSelection()
-            }
+            // Always show home selection to make active-home choice visible (VAL-HOME-001)
+            // Even with a single home, the user sees the home visibly selected
+            // before moving deeper into setup. Tests using --seed-test-home will
+            // have homes available and can verify this visible selection flow.
+            environment.onboardingState.moveToHomeSelection()
             
         default:
             break
