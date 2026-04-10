@@ -26,13 +26,45 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
     }
     
     /// Returns all available homes with active status indicated
+    /// When --seed-test-home is active, returns test homes from SwiftData instead of HomeKit
     func availableHomes() async -> [HomeViewModel] {
+        // Check for test-seeded homes first when in test mode
+        if TestEnvironment.isSeedingTestHome {
+            let testHomes = await fetchTestHomesFromPersistence()
+            if !testHomes.isEmpty {
+                return testHomes
+            }
+        }
+        
         do {
             let homes = try await adapter.fetchHomes()
             let activeId = await fetchActiveHomeIdentifier()
             
             return homes.map { home in
                 HomeViewModel(from: home, isActive: home.uniqueIdentifier.uuidString == activeId)
+            }
+        } catch {
+            return []
+        }
+    }
+    
+    /// Fetches test homes that were seeded via --seed-test-home launch argument
+    private func fetchTestHomesFromPersistence() async -> [HomeViewModel] {
+        let context = ModelContext(modelContainer)
+        
+        do {
+            let descriptor = FetchDescriptor<HomeReference>()
+            let homes = try context.fetch(descriptor)
+            
+            return homes.map { home in
+                HomeViewModel(
+                    id: home.homeKitIdentifier,
+                    homeKitIdentifier: home.homeKitIdentifier,
+                    name: home.name,
+                    isActive: home.isActive,
+                    roomCount: home.roomCount,
+                    accessoryCount: home.accessoryCount
+                )
             }
         } catch {
             return []

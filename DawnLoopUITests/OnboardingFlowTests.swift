@@ -17,9 +17,10 @@ final class OnboardingFlowTests: XCTestCase {
         // Reset onboarding state before each test to ensure deterministic runs
         app.launchArguments.append("--reset-onboarding")
         
-        // Note: We do NOT use --simulate-home-ready as it auto-completes
-        // onboarding and violates the requirement to prove legitimate visible flow.
-        // Tests verify the actual flow structure including blocker states.
+        // Use --seed-test-home to provide legitimate test data for visible flow testing.
+        // This seeds deterministic homes into SwiftData so tests can verify the real
+        // home selection UI without requiring real HomeKit infrastructure.
+        app.launchArguments.append("--seed-test-home")
     }
     
     override func tearDownWithError() throws {
@@ -51,7 +52,7 @@ final class OnboardingFlowTests: XCTestCase {
     func testCompletedOnboardingDoesNotReappearOnRelaunch() throws {
         // First launch - complete onboarding flow
         // This test verifies the legitimate visible completion path:
-        // Onboarding screens -> Home Access Flow -> Main Flow
+        // Onboarding screens -> Home Access Flow -> Home Selection (with seeded test home)
         app.launch()
         
         // Verify onboarding is shown
@@ -67,22 +68,18 @@ final class OnboardingFlowTests: XCTestCase {
         // Tap "Connect to Home" to start the Home access flow
         app.buttons["Connect to Home"].tap()
         
-        // After tapping "Connect to Home", the app enters the Home access flow.
-        // Without real HomeKit data on simulator, this will show a blocker state
-        // or the home selection flow. The key assertion is that we exit onboarding
-        // and enter a post-onboarding state (either setup flow or main flow).
-        // 
-        // We verify this by checking that one of the post-onboarding screens appears:
-        // - "Good Morning" (main flow)
-        // - "Choose Your Home" (home selection)
-        // - "Set Up Apple Home First" (blocker state)
-        // - "Home Access Needed" (permission state)
-        let postOnboardingReached = app.staticTexts["Good Morning"].waitForExistence(timeout: 5) ||
-                                    app.staticTexts["Choose Your Home"].waitForExistence(timeout: 5) ||
-                                    app.staticTexts["Set Up Apple Home First"].waitForExistence(timeout: 5) ||
-                                    app.staticTexts["Home Access Needed"].waitForExistence(timeout: 5)
+        // With --seed-test-home, the app should show the Home Selection UI
+        // with the test home visible. This proves the legitimate visible flow:
+        // onboarding completion -> home selection with actual data.
+        // We specifically require the "Choose Your Home" screen with home details,
+        // NOT a blocker or loading state.
+        let homeSelectionVisible = app.staticTexts["Choose Your Home"].waitForExistence(timeout: 10)
+        XCTAssertTrue(homeSelectionVisible, "Should show Home Selection UI with seeded test home")
         
-        XCTAssertTrue(postOnboardingReached, "Should reach a post-onboarding state after completing onboarding flow")
+        // Verify the test home appears with visible details (room count, accessory count)
+        // This proves the UI shows actual home data, not just a placeholder
+        let testHomeVisible = app.staticTexts["Test Home"].exists
+        XCTAssertTrue(testHomeVisible, "Test home should be visible in home selection")
         
         // Verify onboarding screens are no longer visible
         XCTAssertFalse(app.staticTexts["Welcome to DawnLoop"].exists)
@@ -95,11 +92,17 @@ final class OnboardingFlowTests: XCTestCase {
         let newApp = XCUIApplication()
         newApp.launch()
         
-        // After relaunch, we should see either the main flow (if onboarding was persisted as complete)
-        // or return to the same post-onboarding state we were in.
-        // The key assertion is that we don't see the onboarding screens again.
-        let onboardingRelaunched = newApp.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 2)
+        // After relaunch, onboarding should NOT reappear because it was completed.
+        // The app should either show the main flow or the home selection flow
+        // (depending on whether home selection was persisted).
+        let onboardingRelaunched = newApp.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 3)
         XCTAssertFalse(onboardingRelaunched, "Onboarding should not reappear on relaunch after completion")
+        
+        // Verify we see either main flow or home selection (legitimate post-onboarding state)
+        let postOnboardingVisible = newApp.staticTexts["Good Morning"].exists ||
+                                   newApp.staticTexts["Choose Your Home"].exists ||
+                                   newApp.staticTexts["Test Home"].exists
+        XCTAssertTrue(postOnboardingVisible, "Should be in post-onboarding state after relaunch")
     }
     
     func testOnboardingProgressIndicator() throws {

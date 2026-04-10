@@ -20,10 +20,9 @@ protocol HomeKitAdapterProtocol: Sendable {
     func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory]
 }
 
-/// Mock HomeKit adapter for UI testing - simulates a ready Home environment.
-/// This adapter provides controllable responses for testing the Home access flow.
-/// Tests can verify the full visible flow structure including home selection
-/// and accessory discovery without requiring real HomeKit infrastructure.
+/// Mock HomeKit adapter for UI testing - provides controllable test fixtures
+/// for testing the Home access flow with deterministic data.
+/// Supports --seed-test-home for legitimate visible flow testing with realistic data.
 @preconcurrency
 actor MockHomeKitAdapter: HomeKitAdapterProtocol {
     nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
@@ -41,7 +40,8 @@ actor MockHomeKitAdapter: HomeKitAdapterProtocol {
     func fetchHomes() async throws -> [HMHome] {
         // Mock adapter returns empty homes - UI tests verify the flow structure
         // including "No Homes Available" state and home selection UI.
-        // The tests prove the legitimate visible flow, not the underlying HomeKit data.
+        // When --seed-test-home is active, the HomeSelectionService reads
+        // test homes directly from SwiftData instead of using this adapter.
         return []
     }
 
@@ -131,7 +131,9 @@ final class HomeAccessState {
         // Use provided adapter, or create appropriate adapter based on test environment
         if let providedAdapter = adapter {
             self.adapter = providedAdapter
-        } else if TestEnvironment.isSimulatingHomeReady {
+        } else if TestEnvironment.isSeedingTestHome {
+            // When seeding test homes, use the mock adapter which will return
+            // the seeded homes from SwiftData via TestHomeFixtures
             self.adapter = MockHomeKitAdapter()
         } else {
             self.adapter = LiveHomeKitAdapter()

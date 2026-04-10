@@ -96,6 +96,23 @@ final class AccessoryReference {
         self.updatedAt = Date()
     }
     
+    /// Convenience initializer for testing with isCompatible flag
+    init(
+        homeKitIdentifier: String,
+        name: String,
+        roomName: String,
+        homeIdentifier: String,
+        isCompatible: Bool
+    ) {
+        self.homeKitIdentifier = homeKitIdentifier
+        self.name = name
+        self.homeIdentifier = homeIdentifier
+        self.roomName = roomName
+        self.capabilityRaw = isCompatible ? AccessoryCapability.brightnessOnly.rawValue : AccessoryCapability.unsupported.rawValue
+        self.isSelected = false
+        self.updatedAt = Date()
+    }
+    
     /// Updates the reference from a live HMAccessory and room info
     func update(from accessory: HMAccessory, roomName: String, capability: AccessoryCapability) {
         self.name = accessory.name

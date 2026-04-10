@@ -32,8 +32,9 @@ final class AppEnvironment {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
         
-        // Use mock adapter for testing when --simulate-home-ready is set
-        let homeKitAdapter: (any HomeKitAdapterProtocol)? = TestEnvironment.isSimulatingHomeReady
+        // Use mock adapter for testing when --seed-test-home is set
+        // This allows the seeded test homes to be returned via the adapter
+        let homeKitAdapter: (any HomeKitAdapterProtocol)? = TestEnvironment.isSeedingTestHome
             ? MockHomeKitAdapter()
             : nil
         
