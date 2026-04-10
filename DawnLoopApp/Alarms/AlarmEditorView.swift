@@ -110,10 +110,98 @@ struct AlarmEditorView: View {
                         }
                         .pickerStyle(.menu)
                         .font(Theme.Typography.body)
+                        .onChange(of: state.gradientCurve) { _, _ in
+                            // Regenerate preview when gradient curve changes (VAL-ALARM-003)
+                            state.regeneratePreview()
+                        }
                     } header: {
                         Text("Transition Style")
                             .font(Theme.Typography.footnote)
                             .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+
+                    // MARK: - Preview Section (VAL-ALARM-003, VAL-ALARM-004)
+                    Section {
+                        if state.canGeneratePreview {
+                            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                                // Preview degradation message for mixed capabilities (VAL-ALARM-004)
+                                if let explanation = state.previewDegradationExplanation {
+                                    HStack(spacing: Theme.Spacing.small) {
+                                        Image(systemName: "info.circle.fill")
+                                            .foregroundStyle(Theme.Colors.sunriseOrange)
+                                        Text(explanation)
+                                            .font(Theme.Typography.footnote)
+                                            .foregroundStyle(Theme.Colors.textSecondary)
+                                    }
+                                    .padding(.bottom, Theme.Spacing.small)
+                                }
+
+                                // Preview steps visualization
+                                AlarmPreviewChart(steps: state.previewSteps)
+                                    .frame(height: 120)
+
+                                // Legend
+                                HStack(spacing: Theme.Spacing.medium) {
+                                    HStack(spacing: Theme.Spacing.xSmall) {
+                                        Circle()
+                                            .fill(Theme.Colors.sunriseOrange)
+                                            .frame(width: 8, height: 8)
+                                        Text("Brightness")
+                                            .font(Theme.Typography.caption)
+                                            .foregroundStyle(Theme.Colors.textSecondary)
+                                    }
+
+                                    if state.previewSteps.contains(where: { $0.hasColorTemperature }) {
+                                        HStack(spacing: Theme.Spacing.xSmall) {
+                                            Circle()
+                                                .fill(Theme.Colors.sunriseGold)
+                                                .frame(width: 8, height: 8)
+                                            Text("Warmth")
+                                                .font(Theme.Typography.caption)
+                                                .foregroundStyle(Theme.Colors.textSecondary)
+                                        }
+                                    }
+                                }
+                                .padding(.top, Theme.Spacing.small)
+                            }
+                        } else {
+                            // Invalid state - show message explaining why preview is unavailable (VAL-ALARM-004)
+                            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+                                HStack(spacing: Theme.Spacing.small) {
+                                    Image(systemName: "eye.slash.fill")
+                                        .foregroundStyle(Theme.Colors.textTertiary)
+                                    Text("Preview unavailable")
+                                        .font(Theme.Typography.body)
+                                        .foregroundStyle(Theme.Colors.textSecondary)
+                                }
+
+                                if state.alarmName.isEmpty {
+                                    Text("Add an alarm name to see preview")
+                                        .font(Theme.Typography.footnote)
+                                        .foregroundStyle(Theme.Colors.textTertiary)
+                                } else if state.selectedAccessoryIds.isEmpty {
+                                    Text("Select at least one light to see preview")
+                                        .font(Theme.Typography.footnote)
+                                        .foregroundStyle(Theme.Colors.textTertiary)
+                                }
+                            }
+                            .padding(.vertical, Theme.Spacing.small)
+                        }
+                    } header: {
+                        Text("Preview")
+                            .font(Theme.Typography.footnote)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                    .onAppear {
+                        // Generate initial preview if valid
+                        state.regeneratePreview()
+                    }
+                    .onChange(of: state.canGeneratePreview) { _, canGenerate in
+                        if canGenerate {
+                            state.regeneratePreview()
+                        } else {
+                            state.clearPreview()
+                        }
                     }
 
                     // MARK: - Accessories Section
@@ -300,6 +388,90 @@ struct AlarmEditorView: View {
                 }
             }
             .tint(Theme.Colors.sunriseOrange)
+        }
+    }
+}
+
+// MARK: - Preview Chart
+
+/// Visualizes the alarm preview steps as a gradient curve chart
+struct AlarmPreviewChart: View {
+    let steps: [WakeAlarmStep]
+
+    var body: some View {
+        GeometryReader { geometry in
+            if steps.isEmpty {
+                EmptyView()
+            } else {
+                ZStack {
+                    // Background grid
+                    VStack(spacing: 0) {
+                        Divider()
+                            .opacity(0.2)
+                        Spacer()
+                        Divider()
+                            .opacity(0.2)
+                        Spacer()
+                        Divider()
+                            .opacity(0.2)
+                    }
+
+                    // Brightness curve
+                    brightnessCurve(in: geometry)
+                        .stroke(Theme.Colors.sunriseOrange, lineWidth: 2)
+
+                    // Step markers
+                    ForEach(steps.indices, id: \.self) { index in
+                        stepMarker(at: index, in: geometry)
+                    }
+                }
+            }
+        }
+    }
+
+    private func brightnessCurve(in geometry: GeometryProxy) -> Path {
+        var path = Path()
+
+        let width = geometry.size.width
+        let height = geometry.size.height
+        let stepWidth = width / CGFloat(max(steps.count - 1, 1))
+
+        for (index, step) in steps.enumerated() {
+            let x = CGFloat(index) * stepWidth
+            let y = height - (CGFloat(step.brightness) / 100.0 * height)
+
+            if index == 0 {
+                path.move(to: CGPoint(x: x, y: y))
+            } else {
+                path.addLine(to: CGPoint(x: x, y: y))
+            }
+        }
+
+        return path
+    }
+
+    private func stepMarker(at index: Int, in geometry: GeometryProxy) -> some View {
+        let width = geometry.size.width
+        let height = geometry.size.height
+        let stepWidth = width / CGFloat(max(steps.count - 1, 1))
+
+        let step = steps[index]
+        let x = CGFloat(index) * stepWidth
+        let y = height - (CGFloat(step.brightness) / 100.0 * height)
+
+        return Circle()
+            .fill(stepMarkerColor(for: step))
+            .frame(width: 6, height: 6)
+            .position(x: x, y: y)
+    }
+
+    private func stepMarkerColor(for step: WakeAlarmStep) -> Color {
+        if step.hasFullColor {
+            return Theme.Colors.sunriseGold
+        } else if step.hasColorTemperature {
+            return Theme.Colors.sunriseGold
+        } else {
+            return Theme.Colors.sunriseOrange
         }
     }
 }

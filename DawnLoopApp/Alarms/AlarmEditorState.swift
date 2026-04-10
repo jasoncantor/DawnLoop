@@ -376,6 +376,88 @@ final class AlarmEditorState {
         components.minute = 0
         components.second = 0
         self.wakeTime = calendar.date(from: components) ?? Date()
+
+        // Clear preview on reset
+        self.currentPreview = nil
+    }
+
+    // MARK: - Preview Section
+
+    /// The current preview plan based on editor inputs
+    /// Only valid when the editor state passes validation (VAL-ALARM-004)
+    var currentPreview: CapabilityAwarePlan?
+
+    /// Whether the editor is in a valid state for preview generation
+    var canGeneratePreview: Bool {
+        // Preview requires valid form state and at least one selected accessory
+        !selectedAccessoryIds.isEmpty && !alarmName.isEmpty
+    }
+
+    /// The preview steps to display (empty if invalid state)
+    var previewSteps: [WakeAlarmStep] {
+        currentPreview?.steps ?? []
+    }
+
+    /// Degradation explanation from the preview plan
+    var previewDegradationExplanation: String? {
+        currentPreview?.degradation.explanation
+    }
+
+    /// Whether the preview shows mixed capability behavior
+    var previewHasMixedCapabilities: Bool {
+        currentPreview?.hasMixedCapabilities ?? false
+    }
+
+    // MARK: - Preview Generation
+
+    /// Regenerates the preview plan based on current editor inputs
+    /// Only generates from valid state - invalid states clear the preview (VAL-ALARM-004)
+    func regeneratePreview() {
+        // Only generate preview from valid state
+        guard canGeneratePreview else {
+            currentPreview = nil
+            return
+        }
+
+        // Get capabilities of selected accessories
+        let selectedAccessories = availableAccessories.filter {
+            selectedAccessoryIds.contains($0.homeKitIdentifier)
+        }
+        let capabilities = selectedAccessories.map { $0.capability }
+
+        // Create a temporary alarm for planning
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute], from: wakeTime)
+        let wakeTimeSeconds = (components.hour ?? 7) * 3600 + (components.minute ?? 0) * 60
+
+        let tempAlarm = WakeAlarm(
+            id: UUID(),
+            name: alarmName,
+            wakeTimeSeconds: wakeTimeSeconds,
+            durationMinutes: durationMinutes,
+            gradientCurve: gradientCurve,
+            colorMode: colorMode,
+            startBrightness: startBrightness,
+            targetBrightness: targetBrightness,
+            targetColorTemperature: targetColorTemperature,
+            targetHue: targetHue,
+            targetSaturation: targetSaturation,
+            isEnabled: isEnabled,
+            selectedAccessoryIdentifiers: Array(selectedAccessoryIds),
+            homeIdentifier: nil
+        )
+
+        // Generate capability-aware plan
+        currentPreview = WakeAlarmStepPlanner.planSteps(
+            for: tempAlarm,
+            capabilities: capabilities,
+            stepCount: WakeAlarmStepPlanner.defaultStepCount
+        )
+    }
+
+    /// Clears the current preview
+    func clearPreview() {
+        currentPreview = nil
     }
 }
 
