@@ -1,5 +1,5 @@
 import Foundation
-import HomeKit
+@preconcurrency import HomeKit
 
 struct HomeSnapshot: Identifiable, Equatable, Sendable {
     let id: String
