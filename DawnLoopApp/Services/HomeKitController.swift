@@ -1,5 +1,5 @@
 import Foundation
-@preconcurrency import HomeKit
+import HomeKit
 
 struct HomeSnapshot: Identifiable, Equatable, Sendable {
     let id: String
@@ -293,7 +293,7 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
             try await trigger.updateRecurrences(desiredRecurrences)
         }
         if !matchesPredicate(trigger.predicate, desired: desiredPredicate) {
-            try await trigger.updatePredicate(desiredPredicate)
+            try await updatePredicate(for: trigger, desired: desiredPredicate)
         }
         if trigger.executeOnce != desiredExecuteOnce {
             try await trigger.updateExecuteOnce(desiredExecuteOnce)
@@ -549,6 +549,18 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
             return lhs.predicateFormat == rhs.predicateFormat
         default:
             return false
+        }
+    }
+
+    private func updatePredicate(for trigger: HMEventTrigger, desired predicate: NSPredicate?) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            trigger.updatePredicate(predicate) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            }
         }
     }
 
