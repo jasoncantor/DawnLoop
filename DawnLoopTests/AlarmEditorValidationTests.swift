@@ -128,6 +128,27 @@ final class AlarmEditorValidationTests: XCTestCase {
         XCTAssertEqual(editorState.validation.durationError, "Duration must be 2 hours or less")
     }
 
+    func testValidate_FullColor_InvalidHueAndSaturation_IncludesBothMessagesInColorError() {
+        // Arrange — both invalid; a single colorError must not hide hue behind saturation
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.colorMode = .fullColor
+        editorState.targetHue = 400
+        editorState.targetSaturation = 150
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Color Light", capability: .fullColor)
+        ]
+
+        // Act
+        let isValid = editorState.validate()
+
+        // Assert
+        XCTAssertFalse(isValid)
+        let msg = editorState.validation.colorError ?? ""
+        XCTAssertTrue(msg.contains("Hue"), "Expected hue error in combined color message: \(msg)")
+        XCTAssertTrue(msg.contains("Saturation"), "Expected saturation error in combined color message: \(msg)")
+    }
+
     func testValidate_InvalidationPreservesOtherInputs() {
         // Arrange - Set all valid values
         editorState.alarmName = "Test Alarm"
