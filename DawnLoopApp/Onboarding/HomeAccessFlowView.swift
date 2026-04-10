@@ -28,6 +28,7 @@ struct HomeAccessFlowView: View {
 /// Initial view that checks Home access readiness and routes appropriately
 struct HomeAccessCheckView: View {
     @Environment(AppEnvironment.self) private var environment
+    @State private var hasTransitioned = false
     
     var body: some View {
         Group {
@@ -56,33 +57,18 @@ struct HomeAccessCheckView: View {
             case .noCompatibleAccessories:
                 HomeAccessBlockerView(blockerState: .noCompatibleAccessories)
                 
-            case .ready:
-                // Home is ready - determine next step based on discovery state
+            case .ready, .readyTesting:
+                // Home is ready - show transition and move to selection
                 ReadyTransitionView()
+                    .onAppear {
+                        if !hasTransitioned {
+                            hasTransitioned = true
+                            environment.onboardingState.moveToHomeSelection()
+                        }
+                    }
             }
         }
-        .task {
-            await evaluateNextStep()
-        }
     }
-    
-    private func evaluateNextStep() async {
-        // Small delay to allow UI to settle
-        try? await Task.sleep(nanoseconds: 100_000_000)
-        
-        switch environment.homeAccessState.readiness {
-        case .ready:
-            // Always show home selection to make active-home choice visible (VAL-HOME-001)
-            // Even with a single home, the user sees the home visibly selected
-            // before moving deeper into setup. Tests using --seed-test-home will
-            // have homes available and can verify this visible selection flow.
-            environment.onboardingState.moveToHomeSelection()
-            
-        default:
-            break
-        }
-    }
-    
 }
 
 /// Transition view shown briefly when home access is ready

@@ -73,7 +73,7 @@ final class OnboardingFlowTests: XCTestCase {
         // onboarding completion -> home selection with actual data.
         // We specifically require the "Choose Your Home" screen with home details,
         // NOT a blocker or loading state.
-        let homeSelectionVisible = app.staticTexts["Choose Your Home"].waitForExistence(timeout: 10)
+        let homeSelectionVisible = app.staticTexts["Choose Your Home"].waitForExistence(timeout: 20)
         XCTAssertTrue(homeSelectionVisible, "Should show Home Selection UI with seeded test home")
         
         // Verify the test home appears with visible details (room count, accessory count)

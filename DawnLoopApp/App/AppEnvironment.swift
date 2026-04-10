@@ -38,7 +38,7 @@ final class AppEnvironment {
             ? MockHomeKitAdapter()
             : nil
         
-        self.homeAccessState = HomeAccessState(adapter: homeKitAdapter)
+        self.homeAccessState = HomeAccessState(adapter: homeKitAdapter, modelContainer: modelContainer)
         self.homeSelectionService = HomeSelectionService(modelContainer: modelContainer)
         self.accessoryDiscoveryService = AccessoryDiscoveryService(modelContainer: modelContainer)
     }

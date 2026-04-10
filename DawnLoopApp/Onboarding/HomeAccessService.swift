@@ -1,5 +1,6 @@
 import Foundation
 import HomeKit
+import SwiftData
 
 /// Protocol for HomeKit platform adapter - enables mocking in tests
 @preconcurrency
@@ -101,10 +102,17 @@ enum HomeAccessReadiness: Equatable, Sendable {
     case noHomeHub
     case noCompatibleAccessories
     case ready(home: HMHome, accessories: [HMAccessory])
+    /// Test mode ready state - used when --seed-test-home provides homes via SwiftData
+    /// This allows UI tests to verify the flow without requiring real HMHome objects
+    case readyTesting
     
     var isReady: Bool {
-        if case .ready = self { return true }
-        return false
+        switch self {
+        case .ready, .readyTesting:
+            return true
+        default:
+            return false
+        }
     }
     
     var isBlocked: Bool {
@@ -122,12 +130,13 @@ enum HomeAccessReadiness: Equatable, Sendable {
 @MainActor
 final class HomeAccessState {
     private let adapter: any HomeKitAdapterProtocol
+    private let modelContainer: ModelContainer?
     
     var readiness: HomeAccessReadiness = .unknown
     var isLoading = false
     var lastError: Error?
     
-    init(adapter: (any HomeKitAdapterProtocol)? = nil) {
+    init(adapter: (any HomeKitAdapterProtocol)? = nil, modelContainer: ModelContainer? = nil) {
         // Use provided adapter, or create appropriate adapter based on test environment
         if let providedAdapter = adapter {
             self.adapter = providedAdapter
@@ -138,6 +147,8 @@ final class HomeAccessState {
         } else {
             self.adapter = LiveHomeKitAdapter()
         }
+        
+        self.modelContainer = modelContainer
     }
     
     /// Initiates the Home access flow from onboarding
@@ -176,6 +187,14 @@ final class HomeAccessState {
         do {
             let homes = try await adapter.fetchHomes()
             
+            // If no homes from HomeKit but --seed-test-home is active, proceed to ready state.
+            // The test homes will be read from SwiftData by HomeSelectionService.
+            // This allows UI tests to verify the full visible flow without real HomeKit.
+            if homes.isEmpty && TestEnvironment.isSeedingTestHome {
+                readiness = .readyTesting
+                return
+            }
+            
             guard let primaryHome = homes.first else {
                 readiness = .noHomeConfigured
                 return
@@ -202,6 +221,22 @@ final class HomeAccessState {
             lastError = error
             // If we can't fetch homes, assume none configured
             readiness = .noHomeConfigured
+        }
+    }
+    
+    /// Checks for test homes seeded via --seed-test-home in SwiftData
+    /// Returns true if test homes exist in SwiftData
+    private func checkForSeededTestHomes() async -> Bool {
+        guard let container = modelContainer else { return false }
+        
+        let context = ModelContext(container)
+        
+        do {
+            let descriptor = FetchDescriptor<HomeReference>()
+            let homes = try context.fetch(descriptor)
+            return !homes.isEmpty
+        } catch {
+            return false
         }
     }
     
