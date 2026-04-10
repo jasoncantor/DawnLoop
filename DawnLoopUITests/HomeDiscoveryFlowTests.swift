@@ -9,25 +9,9 @@ import XCTest
 /// and proper handling of empty/blocker states rather than specific home data.
 @MainActor
 final class HomeDiscoveryFlowTests: XCTestCase {
-    
-    var app: XCUIApplication!
-    
+
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
-        
-        // Reset onboarding and home selection state before each test
-        app.launchArguments.append("--reset-onboarding")
-        app.launchArguments.append("--reset-home-selection")
-        
-        // Use --seed-test-home to provide legitimate test data for visible flow testing.
-        // This seeds deterministic homes into SwiftData so tests can verify the real
-        // home selection UI without requiring real HomeKit infrastructure.
-        app.launchArguments.append("--seed-test-home")
-    }
-    
-    override func tearDownWithError() throws {
-        app = nil
     }
     
     // MARK: - VAL-HOME-001: All available homes shown with active choice
@@ -35,24 +19,26 @@ final class HomeDiscoveryFlowTests: XCTestCase {
     func testHomeSelection_ShowsAllAvailableHomes() throws {
         // Note: This test requires mocking or a Home environment with multiple homes
         // On simulator without HomeKit data, this validates the UI structure
-        
+
+        let app = launchConfiguredApp()
         app.launch()
-        
+
         // Complete onboarding to reach home selection
-        completeOnboarding()
-        
+        completeOnboarding(in: app)
+
         // If no homes are available, the empty state should be shown
         if app.staticTexts["No Homes Available"].waitForExistence(timeout: 5) {
             // Empty state is shown - this is valid for simulator
             XCTAssertTrue(app.staticTexts["Create a home in the Apple Home app first, then return here."].exists)
         }
     }
-    
+
     func testHomeSelection_ShowsHomeDetails() throws {
+        let app = launchConfiguredApp()
         app.launch()
-        
-        completeOnboarding()
-        
+
+        completeOnboarding(in: app)
+
         // With --seed-test-home, the app should show the Home Selection UI
         // with the test home visible. This test verifies that the UI shows
         // actual home details (name, room count, accessory count) rather than
@@ -94,12 +80,13 @@ final class HomeDiscoveryFlowTests: XCTestCase {
     }
     
     // MARK: - VAL-HOME-003: Compatible accessories grouped by room
-    
+
     func testAccessoryDiscovery_ShowsRoomGrouping() throws {
+        let app = launchConfiguredApp()
         app.launch()
-        
-        completeOnboarding()
-        
+
+        completeOnboarding(in: app)
+
         // Wait for either accessory discovery or empty state
         let discoveryLoaded = app.staticTexts["Select Your Lights"].waitForExistence(timeout: 10)
         let noLights = app.staticTexts["No Compatible Lights"].waitForExistence(timeout: 2)
@@ -115,37 +102,40 @@ final class HomeDiscoveryFlowTests: XCTestCase {
         }
         // If preparing, single home was auto-selected and may transition
     }
-    
+
     func testAccessoryDiscovery_EmptyStateAction() throws {
+        let app = launchConfiguredApp()
         app.launch()
-        
-        completeOnboarding()
-        
+
+        completeOnboarding(in: app)
+
         // If no lights available, check button exists
         if app.staticTexts["No Compatible Lights"].waitForExistence(timeout: 10) {
             XCTAssertTrue(app.buttons["Check Again"].exists)
         }
     }
-    
+
     // MARK: - VAL-HOME-006: Home switching clears stale results
-    
+
     func testAccessoryDiscovery_SwitchHomeButtonExists() throws {
+        let app = launchConfiguredApp()
         app.launch()
-        
-        completeOnboarding()
-        
+
+        completeOnboarding(in: app)
+
         // Wait for discovery view with accessories
         if app.staticTexts["Select Your Lights"].waitForExistence(timeout: 10) {
             // Switch Home button should be available when accessories are shown
             XCTAssertTrue(app.buttons["Switch Home"].exists)
         }
     }
-    
+
     func testAccessoryDiscovery_ContinueAction() throws {
+        let app = launchConfiguredApp()
         app.launch()
-        
-        completeOnboarding()
-        
+
+        completeOnboarding(in: app)
+
         // Wait for discovery view
         if app.staticTexts["Select Your Lights"].waitForExistence(timeout: 10) {
             // Continue button should exist (either "Continue" or "Skip for Now")
@@ -157,8 +147,18 @@ final class HomeDiscoveryFlowTests: XCTestCase {
     }
     
     // MARK: - Helper Methods
-    
-    private func completeOnboarding() {
+
+    private func launchConfiguredApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--reset-onboarding",
+            "--reset-home-selection",
+            "--seed-test-home"
+        ]
+        return app
+    }
+
+    private func completeOnboarding(in app: XCUIApplication) {
         // Complete all three onboarding screens
         if app.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 5) {
             app.buttons["Get Started"].tap()
