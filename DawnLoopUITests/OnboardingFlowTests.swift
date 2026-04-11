@@ -96,6 +96,8 @@ final class OnboardingFlowTests: XCTestCase {
             newApp.staticTexts["Preparing your home..."].waitForExistence(timeout: 5) ||
             newApp.staticTexts["No Alarms Yet"].exists ||
             newApp.buttons["Create Your First Alarm"].exists ||
+            newApp.staticTexts["Finish Home Setup"].exists ||
+            newApp.buttons["Choose Home and Lights"].exists ||
             newApp.staticTexts["Choose Your Home"].exists ||
             newApp.staticTexts["Test Home"].exists
         XCTAssertTrue(postOnboardingVisible, "Should be in post-onboarding state after relaunch")
