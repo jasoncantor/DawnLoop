@@ -49,7 +49,7 @@ final class HomeDiscoveryFlowTests: XCTestCase {
         XCTAssertTrue(homeSelectionVisible, "Home Selection UI must be visible with seeded test data")
         
         // Verify the explanatory subtitle is shown
-        XCTAssertTrue(app.staticTexts["Select which Apple Home to use for sunrise alarms"].exists,
+        XCTAssertTrue(app.staticTexts["Select which Apple Home to use for Light Alarms"].exists,
                      "Home selection should show explanatory subtitle (VAL-HOME-001)")
         
         // Verify the test home is visible with its name

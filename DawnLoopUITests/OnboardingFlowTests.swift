@@ -19,7 +19,7 @@ final class OnboardingFlowTests: XCTestCase {
         
         // Verify first screen is shown
         XCTAssertTrue(app.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Gentle sunrise alarms that transform your mornings using the lights you already have."].exists)
+        XCTAssertTrue(app.staticTexts["Gentle light alarms that transform your mornings using the lights you already have."].exists)
         
         // Advance to second screen
         app.buttons["Get Started"].tap()
@@ -33,7 +33,7 @@ final class OnboardingFlowTests: XCTestCase {
         
         // Verify third screen
         XCTAssertTrue(app.staticTexts["Ready to Wake"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Connect to Apple Home and set up your first wake-light alarm in under a minute."].exists)
+        XCTAssertTrue(app.staticTexts["Connect to Apple Home and set up your first Light Alarm in under a minute."].exists)
     }
     
     func testCompletedOnboardingDoesNotReappearOnRelaunch() throws {
@@ -89,12 +89,15 @@ final class OnboardingFlowTests: XCTestCase {
         // (depending on whether home selection was persisted).
         let onboardingRelaunched = newApp.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 3)
         XCTAssertFalse(onboardingRelaunched, "Onboarding should not reappear on relaunch after completion")
-        
-        // Verify we see either the main alarm flow or home selection.
-        let postOnboardingVisible = newApp.staticTexts["No Alarms Yet"].exists ||
-                                   newApp.buttons["Create Your First Alarm"].exists ||
-                                   newApp.staticTexts["Choose Your Home"].exists ||
-                                   newApp.staticTexts["Test Home"].exists
+
+        // The persisted relaunch may land in the home-access transition first before
+        // settling on selection or the main alarm flow.
+        let postOnboardingVisible =
+            newApp.staticTexts["Preparing your home..."].waitForExistence(timeout: 5) ||
+            newApp.staticTexts["No Alarms Yet"].exists ||
+            newApp.buttons["Create Your First Alarm"].exists ||
+            newApp.staticTexts["Choose Your Home"].exists ||
+            newApp.staticTexts["Test Home"].exists
         XCTAssertTrue(postOnboardingVisible, "Should be in post-onboarding state after relaunch")
     }
     
