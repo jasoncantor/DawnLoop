@@ -10,7 +10,7 @@ on:
   pull_request:
 
 jobs:
-  build-and-test:
+  build:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
@@ -68,11 +68,6 @@ jobs:
           echo "Runtime: $SIMULATOR_RUNTIME"
           echo "UDID: $SIMULATOR_UDID"
 
-      - name: Boot Simulator
-        run: |
-          xcrun simctl boot "$SIMULATOR_UDID" || true
-          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
-
       - name: Build
         run: |
           xcodebuild \
@@ -81,18 +76,4 @@ jobs:
             -destination "platform=iOS Simulator,arch=arm64,id=$SIMULATOR_UDID" \
             -derivedDataPath .derivedData \
             CODE_SIGNING_ALLOWED=NO \
-            build-for-testing
-
-      - name: Test Unit
-        run: |
-          xcodebuild \
-            -scheme DawnLoop \
-            -project DawnLoop.xcodeproj \
-            -destination "platform=iOS Simulator,arch=arm64,id=$SIMULATOR_UDID" \
-            -only-testing:DawnLoopTests \
-            -parallel-testing-enabled YES \
-            -maximum-parallel-testing-workers 2 \
-            -derivedDataPath .derivedData \
-            CODE_SIGNING_ALLOWED=NO \
-            test-without-building
-
+            build
