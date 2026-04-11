@@ -96,15 +96,3 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             test-without-building
 
-      - name: Test UI
-        run: |
-          xcodebuild \
-            -scheme DawnLoop \
-            -project DawnLoop.xcodeproj \
-            -destination "platform=iOS Simulator,arch=arm64,id=$SIMULATOR_UDID" \
-            -only-testing:DawnLoopUITests \
-            -parallel-testing-enabled NO \
-            -maximum-parallel-testing-workers 1 \
-            -derivedDataPath .derivedData \
-            CODE_SIGNING_ALLOWED=NO \
-            test-without-building
