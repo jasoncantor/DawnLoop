@@ -58,8 +58,6 @@ final class HomeSelectionServiceTests: XCTestCase {
     var service: HomeSelectionService!
 
     override func setUp() async throws {
-        try await super.setUp()
-
         let schema = Schema([HomeReference.self, AccessoryReference.self, OnboardingCompletion.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
 
@@ -78,7 +76,6 @@ final class HomeSelectionServiceTests: XCTestCase {
         modelContainer = nil
         mockAdapter = nil
         service = nil
-        try await super.tearDown()
     }
 
     // MARK: - VAL-HOME-001: All available homes are shown

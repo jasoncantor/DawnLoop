@@ -11,8 +11,6 @@ final class AutomationServicesTests: XCTestCase {
     var repairService: AutomationRepairService!
 
     override func setUp() async throws {
-        try await super.setUp()
-
         let schema = Schema([
             WakeAlarm.self,
             WakeAlarmSchedule.self,
@@ -45,7 +43,6 @@ final class AutomationServicesTests: XCTestCase {
         controller = nil
         generationService = nil
         repairService = nil
-        try await super.tearDown()
     }
 
     func testSyncAlarm_CreatesBindingsAndHomeKitObjects() async throws {

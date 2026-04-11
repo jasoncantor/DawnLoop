@@ -11,8 +11,6 @@ final class WakeAlarmRepositoryTests: XCTestCase {
     var repository: WakeAlarmRepository!
 
     override func setUp() async throws {
-        try await super.setUp()
-
         let schema = Schema([
             WakeAlarm.self,
             WakeAlarmSchedule.self,
@@ -37,7 +35,6 @@ final class WakeAlarmRepositoryTests: XCTestCase {
     override func tearDown() async throws {
         modelContainer = nil
         repository = nil
-        try await super.tearDown()
     }
 
     // MARK: - Helper Methods
