@@ -4,16 +4,16 @@ import XCTest
 @MainActor
 final class OnboardingStateTests: XCTestCase {
     
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         // Reset UserDefaults before each test
         UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
     }
     
-    override func tearDown() {
+    override func tearDown() async throws {
         // Clean up after each test
         UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
-        super.tearDown()
+        try await super.tearDown()
     }
     
     func testInitialState_IsNotCompleted() {
