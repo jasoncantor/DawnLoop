@@ -62,7 +62,7 @@ First release of DawnLoop with onboarding, Light Alarm creation, local persisten
 
 ## Screenshot upload plan
 
-Upload the following files from [/Users/jasoncantor/Downloads/DawnLoop/AppStoreSubmission/Screenshots/iPhone-6.9](/Users/jasoncantor/Downloads/DawnLoop/AppStoreSubmission/Screenshots/iPhone-6.9) in this order:
+Upload the following files from [AppStoreSubmission/Screenshots/iPhone-6.9](AppStoreSubmission/Screenshots/iPhone-6.9) in this order:
 
 1. `01-welcome.png`
    Caption concept: `Gentle Light Alarms for calmer mornings`
