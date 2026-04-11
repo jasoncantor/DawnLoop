@@ -118,7 +118,6 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
     var service: AccessoryDiscoveryService!
 
     override func setUp() async throws {
-        try await super.setUp()
 
         let schema = Schema([HomeReference.self, AccessoryReference.self, OnboardingCompletion.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
@@ -138,7 +137,6 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
         modelContainer = nil
         mockAdapter = nil
         service = nil
-        try await super.tearDown()
     }
 
     // MARK: - VAL-HOME-006: Switching homes clears stale accessory results

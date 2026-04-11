@@ -9,13 +9,11 @@ final class WakeAlarmPlannerPreviewTests: XCTestCase {
     var editorState: AlarmEditorState!
 
     override func setUp() async throws {
-        try await super.setUp()
         editorState = AlarmEditorState()
     }
 
     override func tearDown() async throws {
         editorState = nil
-        try await super.tearDown()
     }
 
     // MARK: - Helper Methods
