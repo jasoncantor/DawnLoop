@@ -8,31 +8,13 @@ import XCTest
 /// The tests prove the flow structure and state persistence work correctly.
 @MainActor
 final class OnboardingFlowTests: XCTestCase {
-    
-    var app: XCUIApplication!
-    
+
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
-        
-        // Reset onboarding state before each test to ensure deterministic runs
-        app.launchArguments.append("--reset-onboarding")
-        
-        // Use --seed-test-home to provide legitimate test data for visible flow testing.
-        // This seeds deterministic homes into SwiftData so tests can verify the real
-        // home selection UI without requiring real HomeKit infrastructure.
-        app.launchArguments.append("--seed-test-home")
-    }
-    
-    override func tearDownWithError() throws {
-        // Ensure app is terminated to clean up state between tests
-        if app != nil {
-            app.terminate()
-        }
-        app = nil
     }
     
     func testOnboardingShowsThreeScreensInOrder() throws {
+        let app = launchConfiguredApp()
         app.launch()
         
         // Verify first screen is shown
@@ -58,6 +40,7 @@ final class OnboardingFlowTests: XCTestCase {
         // First launch - complete onboarding flow
         // This test verifies the legitimate visible completion path:
         // Onboarding screens -> Home Access Flow -> Home Selection (with seeded test home)
+        let app = launchConfiguredApp()
         app.launch()
         
         // Verify onboarding is shown
@@ -116,6 +99,7 @@ final class OnboardingFlowTests: XCTestCase {
     }
     
     func testOnboardingProgressIndicator() throws {
+        let app = launchConfiguredApp()
         app.launch()
         
         // First screen - should show progress for step 1
@@ -131,6 +115,7 @@ final class OnboardingFlowTests: XCTestCase {
     }
     
     func testOnboardingBackNavigation() throws {
+        let app = launchConfiguredApp()
         app.launch()
         
         // Go to second screen
@@ -144,5 +129,14 @@ final class OnboardingFlowTests: XCTestCase {
         
         // Verify back on first screen
         XCTAssertTrue(app.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 5))
+    }
+
+    private func launchConfiguredApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--reset-onboarding",
+            "--seed-test-home"
+        ]
+        return app
     }
 }
