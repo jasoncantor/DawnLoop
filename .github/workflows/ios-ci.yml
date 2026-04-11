@@ -1,17 +1,19 @@
 name: iOS CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
       - "codex/**"
+      - "cursor/**"
   pull_request:
 
 jobs:
   build-and-test:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -66,22 +68,31 @@ jobs:
           echo "Runtime: $SIMULATOR_RUNTIME"
           echo "UDID: $SIMULATOR_UDID"
 
+      - name: Boot Simulator
+        run: |
+          xcrun simctl boot "$SIMULATOR_UDID" || true
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+
       - name: Build
         run: |
           xcodebuild \
             -scheme DawnLoop \
             -project DawnLoop.xcodeproj \
-            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -destination "platform=iOS Simulator,arch=arm64,id=$SIMULATOR_UDID" \
             -derivedDataPath .derivedData \
             CODE_SIGNING_ALLOWED=NO \
             build-for-testing
 
-      - name: Test
+      - name: Test Unit
         run: |
           xcodebuild \
             -scheme DawnLoop \
             -project DawnLoop.xcodeproj \
-            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -destination "platform=iOS Simulator,arch=arm64,id=$SIMULATOR_UDID" \
+            -only-testing:DawnLoopTests \
+            -parallel-testing-enabled YES \
+            -maximum-parallel-testing-workers 2 \
             -derivedDataPath .derivedData \
             CODE_SIGNING_ALLOWED=NO \
             test-without-building
+

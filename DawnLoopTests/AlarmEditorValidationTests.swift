@@ -8,14 +8,12 @@ final class AlarmEditorValidationTests: XCTestCase {
 
     var editorState: AlarmEditorState!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
         editorState = AlarmEditorState()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         editorState = nil
-        super.tearDown()
     }
 
     // MARK: - Helper Methods

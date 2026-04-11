@@ -6,37 +6,20 @@ import XCTest
 /// Note: These tests verify the legitimate visible flow of onboarding.
 /// They do NOT use shortcuts that auto-complete blocked states into success.
 /// The tests prove the flow structure and state persistence work correctly.
+@MainActor
 final class OnboardingFlowTests: XCTestCase {
-    
-    var app: XCUIApplication!
-    
+
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
-        
-        // Reset onboarding state before each test to ensure deterministic runs
-        app.launchArguments.append("--reset-onboarding")
-        
-        // Use --seed-test-home to provide legitimate test data for visible flow testing.
-        // This seeds deterministic homes into SwiftData so tests can verify the real
-        // home selection UI without requiring real HomeKit infrastructure.
-        app.launchArguments.append("--seed-test-home")
-    }
-    
-    override func tearDownWithError() throws {
-        // Ensure app is terminated to clean up state between tests
-        if app != nil {
-            app.terminate()
-        }
-        app = nil
     }
     
     func testOnboardingShowsThreeScreensInOrder() throws {
+        let app = launchConfiguredApp()
         app.launch()
         
         // Verify first screen is shown
         XCTAssertTrue(app.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Gentle sunrise alarms that transform your mornings using the lights you already have."].exists)
+        XCTAssertTrue(app.staticTexts["Gentle light alarms that transform your mornings using the lights you already have."].exists)
         
         // Advance to second screen
         app.buttons["Get Started"].tap()
@@ -50,13 +33,14 @@ final class OnboardingFlowTests: XCTestCase {
         
         // Verify third screen
         XCTAssertTrue(app.staticTexts["Ready to Wake"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Connect to Apple Home and set up your first wake-light alarm in under a minute."].exists)
+        XCTAssertTrue(app.staticTexts["Connect to Apple Home and set up your first Light Alarm in under a minute."].exists)
     }
     
     func testCompletedOnboardingDoesNotReappearOnRelaunch() throws {
         // First launch - complete onboarding flow
         // This test verifies the legitimate visible completion path:
         // Onboarding screens -> Home Access Flow -> Home Selection (with seeded test home)
+        let app = launchConfiguredApp()
         app.launch()
         
         // Verify onboarding is shown
@@ -105,16 +89,22 @@ final class OnboardingFlowTests: XCTestCase {
         // (depending on whether home selection was persisted).
         let onboardingRelaunched = newApp.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 3)
         XCTAssertFalse(onboardingRelaunched, "Onboarding should not reappear on relaunch after completion")
-        
-        // Verify we see either the main alarm flow or home selection.
-        let postOnboardingVisible = newApp.staticTexts["No Alarms Yet"].exists ||
-                                   newApp.buttons["Create Your First Alarm"].exists ||
-                                   newApp.staticTexts["Choose Your Home"].exists ||
-                                   newApp.staticTexts["Test Home"].exists
+
+        // The persisted relaunch may land in the home-access transition first before
+        // settling on selection or the main alarm flow.
+        let postOnboardingVisible =
+            newApp.staticTexts["Preparing your home..."].waitForExistence(timeout: 5) ||
+            newApp.staticTexts["No Alarms Yet"].exists ||
+            newApp.buttons["Create Your First Alarm"].exists ||
+            newApp.staticTexts["Finish Home Setup"].exists ||
+            newApp.buttons["Choose Home and Lights"].exists ||
+            newApp.staticTexts["Choose Your Home"].exists ||
+            newApp.staticTexts["Test Home"].exists
         XCTAssertTrue(postOnboardingVisible, "Should be in post-onboarding state after relaunch")
     }
     
     func testOnboardingProgressIndicator() throws {
+        let app = launchConfiguredApp()
         app.launch()
         
         // First screen - should show progress for step 1
@@ -130,6 +120,7 @@ final class OnboardingFlowTests: XCTestCase {
     }
     
     func testOnboardingBackNavigation() throws {
+        let app = launchConfiguredApp()
         app.launch()
         
         // Go to second screen
@@ -143,5 +134,14 @@ final class OnboardingFlowTests: XCTestCase {
         
         // Verify back on first screen
         XCTAssertTrue(app.staticTexts["Welcome to DawnLoop"].waitForExistence(timeout: 5))
+    }
+
+    private func launchConfiguredApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--reset-onboarding",
+            "--seed-test-home"
+        ]
+        return app
     }
 }

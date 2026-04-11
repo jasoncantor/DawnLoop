@@ -3,7 +3,7 @@ import Foundation
 /// Broadcasts one eventual result to every caller that joined while work was in flight.
 /// This prevents re-entrant `withCheckedContinuation` calls from overwriting an earlier waiter.
 @MainActor
-final class PendingCheckedContinuations<Value> {
+final class PendingCheckedContinuations<Value: Sendable> {
     private var continuations: [CheckedContinuation<Value, Never>] = []
 
     func add(_ continuation: CheckedContinuation<Value, Never>) -> Bool {

@@ -57,9 +57,7 @@ final class HomeSelectionServiceTests: XCTestCase {
     var mockAdapter: HomeSelectionMockAdapter!
     var service: HomeSelectionService!
 
-    override func setUp() {
-        super.setUp()
-
+    override func setUp() async throws {
         let schema = Schema([HomeReference.self, AccessoryReference.self, OnboardingCompletion.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
 
@@ -74,11 +72,10 @@ final class HomeSelectionServiceTests: XCTestCase {
         service = HomeSelectionService(adapter: mockAdapter, modelContainer: modelContainer)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         modelContainer = nil
         mockAdapter = nil
         service = nil
-        super.tearDown()
     }
 
     // MARK: - VAL-HOME-001: All available homes are shown

@@ -46,7 +46,8 @@ final class PendingCheckedContinuationsTests: XCTestCase {
 
         pending.resumeAll(returning: 1)
 
-        XCTAssertEqual(await firstWave.value, 1)
+        let firstWaveResult = await firstWave.value
+        XCTAssertEqual(firstWaveResult, 1)
         XCTAssertTrue(firstWaveShouldStart)
 
         var secondWaveShouldStart = false
@@ -59,7 +60,8 @@ final class PendingCheckedContinuationsTests: XCTestCase {
 
         pending.resumeAll(returning: 2)
 
-        XCTAssertEqual(await secondWave.value, 2)
+        let secondWaveResult = await secondWave.value
+        XCTAssertEqual(secondWaveResult, 2)
         XCTAssertTrue(secondWaveShouldStart)
     }
 }
