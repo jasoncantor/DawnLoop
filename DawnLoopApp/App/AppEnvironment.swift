@@ -86,6 +86,9 @@ protocol CurrentLocationServiceProtocol: AnyObject {
 
 @MainActor
 final class CurrentLocationService: NSObject, CurrentLocationServiceProtocol {
+    /// Cached `manager.location` can be very old across launches; only trust it within this window.
+    private static let maxCachedLocationAge: TimeInterval = 3600
+
     private let manager: CLLocationManager
     private let coordinateContinuations = PendingCheckedContinuations<SolarCoordinate?>()
 
@@ -114,7 +117,10 @@ final class CurrentLocationService: NSObject, CurrentLocationServiceProtocol {
             return nil
         }
 
-        if let coordinate = manager.location?.coordinate {
+        if let location = manager.location,
+            abs(location.timestamp.timeIntervalSinceNow) <= Self.maxCachedLocationAge
+        {
+            let coordinate = location.coordinate
             return SolarCoordinate(latitude: coordinate.latitude, longitude: coordinate.longitude)
         }
 
