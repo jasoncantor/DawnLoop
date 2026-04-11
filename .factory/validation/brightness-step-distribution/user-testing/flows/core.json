@@ -4,8 +4,8 @@
   "surface": "iPhone Simulator / xcodebuild",
   "isolation": {
     "surface": "iPhone Simulator / xcodebuild",
-    "missionDir": "/Users/jasoncantor/.factory/missions/21b7f05f-dfbe-4267-aef3-7a797cd4555e",
-    "evidenceDir": "/Users/jasoncantor/.factory/missions/21b7f05f-dfbe-4267-aef3-7a797cd4555e/evidence/brightness-step-distribution/core"
+    "missionDir": ".factory/missions/21b7f05f-dfbe-4267-aef3-7a797cd4555e",
+    "evidenceDir": ".factory/missions/21b7f05f-dfbe-4267-aef3-7a797cd4555e/evidence/brightness-step-distribution/core"
   },
   "toolsUsed": [
     "Read",

@@ -29,6 +29,6 @@
       "evidence": "`DawnLoopApp/Onboarding/HomeAccessFlowView.swift` in commit `c6ab2e2f79397180585a538ef3115971dfcbd430` completes onboarding from the `.noHomeConfigured` branch when `TestEnvironment.isSimulatingHomeReady` is true; the worker handoff also states it updated test assertions to handle blocker states."
     }
   ],
-  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-homekit-test-seam-refactor.json",
+  "addressesFailureFrom": ".factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-homekit-test-seam-refactor.json",
   "summary": "Reviewed the fix feature handoff, prior failed review, transcript skeleton, skill guidance, and the actual fix commit `c6ab2e2f79397180585a538ef3115971dfcbd430`. Result: fail, because the fix achieved green targeted UI tests by adding a simulated-success backdoor and by accepting blocker states in the strict home-selection test, so it did not genuinely resolve the UI-proof concerns."
 }

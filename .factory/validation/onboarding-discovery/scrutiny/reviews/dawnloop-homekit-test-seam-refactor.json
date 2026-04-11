@@ -44,7 +44,7 @@
     {
       "area": "skills",
       "observation": "The apple-integration-worker skill says readiness and discovery tests must drive real decision paths through controlled adapter outputs, but this worker handoff still claimed full coverage even though the tests retained placeholder assertions and omitted the real discovery path.",
-      "evidence": "`/Users/jasoncantor/.factory/missions/f4eaaa2b-ccf0-4261-b42d-e38d0bc996ef/handoffs/2026-04-09T23-08-05-334Z__dawnloop-homekit-test-seam-refactor__ac6f077c-e682-49d0-9f17-ac29df3096b3.json` says the suites exercise the full decision tree, but `DawnLoopTests/HomeAccessStateTests.swift:129, 176, 193, 220, 237`, `DawnLoopTests/HomeSelectionServiceTests.swift:124-127`, and `DawnLoopTests/AccessoryDiscoveryServiceTests.swift` still show placeholder or helper-only coverage."
+      "evidence": "`.factory/missions/f4eaaa2b-ccf0-4261-b42d-e38d0bc996ef/handoffs/2026-04-09T23-08-05-334Z__dawnloop-homekit-test-seam-refactor__ac6f077c-e682-49d0-9f17-ac29df3096b3.json` says the suites exercise the full decision tree, but `DawnLoopTests/HomeAccessStateTests.swift:129, 176, 193, 220, 237`, `DawnLoopTests/HomeSelectionServiceTests.swift:124-127`, and `DawnLoopTests/AccessoryDiscoveryServiceTests.swift` still show placeholder or helper-only coverage."
     },
     {
       "area": "library",
@@ -52,6 +52,6 @@
       "evidence": "`DawnLoopApp/App/DawnLoopApp.swift:68-168` seeds test homes/accessories, while `DawnLoopApp/Onboarding/HomeAccessService.swift:190-194` short-circuits readiness to `.readyTesting` when no HomeKit homes are returned. The shared library files reviewed (`architecture.md`, `environment.md`, `user-testing.md`) do not describe this special-case test path."
     }
   ],
-  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-homekit-test-seam-refactor.json",
+  "addressesFailureFrom": ".factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-homekit-test-seam-refactor.json",
   "summary": "Rerun fix review result: fail. The same blocking scrutiny issues remain in the current repo state, so the prior failure is not resolved."
 }

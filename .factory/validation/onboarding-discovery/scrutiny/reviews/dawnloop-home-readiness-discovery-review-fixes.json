@@ -27,7 +27,7 @@
         "description": "The accessory-discovery suite still avoids the real `discoverAccessories(in:)` path for meaningful coverage because the adapter cannot supply realistic `HMHome`/`HMAccessory` fixtures. The tests mainly verify helper structs and SwiftData toggling, so they do not prove room grouping, unsupported-device filtering, or stale-result clearing for actual discovery results as required by the feature description."
       },
       {
-        "file": "/Users/jasoncantor/.factory/missions/f4eaaa2b-ccf0-4261-b42d-e38d0bc996ef/handoffs/2026-04-09T22-17-44-180Z__dawnloop-home-readiness-discovery-review-fixes__af10dd30-4b8f-4cf7-bbd6-93962937c7b6.json",
+        "file": ".factory/missions/f4eaaa2b-ccf0-4261-b42d-e38d0bc996ef/handoffs/2026-04-09T22-17-44-180Z__dawnloop-home-readiness-discovery-review-fixes__af10dd30-4b8f-4cf7-bbd6-93962937c7b6.json",
         "line": 19,
         "severity": "blocking",
         "description": "The handoff claims the committed revision passes the full DawnLoop scheme test run, but `verification.commandsRun` records only `xcodebuild ... build` and `git commit with all changes`. There is no evidence in the handoff that the required full-scheme `xcodebuild test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3` command was rerun on the committed revision without temporary local edits."
@@ -47,9 +47,9 @@
     }
   ],
   "addressesFailureFrom": [
-    "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-home-access-blocker-states.json",
-    "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-home-selection-accessory-discovery.json",
-    "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-onboarding-discovery-project-test-target-repair.json"
+    ".factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-home-access-blocker-states.json",
+    ".factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-home-selection-accessory-discovery.json",
+    ".factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-onboarding-discovery-project-test-target-repair.json"
   ],
   "summary": "Fail. The single-home UX regression appears addressed, but the fix does not adequately resolve the prior blocking review findings around real logic-driving coverage and trustworthy full-scheme validation evidence. The rewritten tests still rely on hard-coded adapter behavior or manual state setup instead of exercising the real readiness/discovery paths, and the handoff does not document the claimed full test run on the committed revision."
 }

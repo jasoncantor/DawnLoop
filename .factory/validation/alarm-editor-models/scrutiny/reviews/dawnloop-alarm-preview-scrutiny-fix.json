@@ -11,8 +11,8 @@
   },
   "sharedStateObservations": [],
   "addressesFailureFrom": [
-    "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/alarm-editor-models/scrutiny/reviews/dawnloop-alarm-editor-validation.json",
-    "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/alarm-editor-models/scrutiny/reviews/dawnloop-alarm-preview-and-gradient-ui.json"
+    ".factory/validation/alarm-editor-models/scrutiny/reviews/dawnloop-alarm-editor-validation.json",
+    ".factory/validation/alarm-editor-models/scrutiny/reviews/dawnloop-alarm-preview-and-gradient-ui.json"
   ],
   "summary": "Pass. `AlarmEditorState.canGeneratePreview` now blocks preview generation for invalid editor states and clears stale previews, the preview/validation test fixture helpers now preserve requested accessory capabilities instead of silently downgrading them, and the UI-test files were reduced to committed onboarding/main-flow paths rather than claiming unsupported alarm-editor navigation evidence. No additional blocking or non-blocking issues were identified from the current feature diff and related repo state."
 }

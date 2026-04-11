@@ -34,6 +34,6 @@
       "evidence": "`DawnLoopApp/App/DawnLoopApp.swift:141-194` seeds `HomeReference`/`AccessoryReference` records for `--seed-test-home`, while `DawnLoopApp/Onboarding/HomeAccessService.swift:188-194` converts empty HomeKit homes into `.readyTesting`. AGENTS.md covers reset hooks not auto-completing flows, but it does not describe this seeded-ready exception or how workers should reason about it."
     }
   ],
-  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-homekit-test-seam-refactor.json",
+  "addressesFailureFrom": ".factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-homekit-test-seam-refactor.json",
   "summary": "Reviewed the fix feature transcript, handoff, current code, prior failed review, and both relevant diffs. The commit fixes the HMHome constructor compile issue and removes the earlier reset-driven auto-completion path, but it still fails scrutiny because onboarding success is now gated by a different test-only readiness shortcut (`readyTesting` on seeded homes) and the previously reported HomeAccessState authorization seam remains unresolved."
 }

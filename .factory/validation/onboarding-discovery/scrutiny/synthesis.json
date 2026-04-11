@@ -5,17 +5,17 @@
   "validatorsRun": {
     "test": {
       "passed": true,
-      "command": "xcodebuild -project \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj\" -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3",
+      "command": "shared .factory/services.yaml test command",
       "exitCode": 0
     },
     "typecheck": {
       "passed": true,
-      "command": "xcodebuild -project \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj\" -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build",
+      "command": "shared .factory/services.yaml build command",
       "exitCode": 0
     },
     "lint": {
       "passed": true,
-      "command": "xcrun swift-format lint -r \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp\" \"/Users/jasoncantor/Downloads/DawnLoop/Packages\" \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopWidgetExtension\" \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopIntentsExtension\" \"/Users/jasoncantor/Downloads/DawnLoop/DawnLoopTests\"",
+      "command": "shared .factory/services.yaml lint command",
       "exitCode": 0
     }
   },
@@ -86,7 +86,7 @@
       "reason": "Rejected because the configured lint validator exits successfully and the mission guidance says not to reopen otherwise acceptable work for broad formatting churn."
     }
   ],
-  "previousRound": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/synthesis.json",
+  "previousRound": null,
   "orchestratorNotes": [
     {
       "timestamp": "2026-04-10T04:00:44Z",
