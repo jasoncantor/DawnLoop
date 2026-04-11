@@ -52,6 +52,8 @@
 		D041 /* AutomationRepairService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F041 /* AutomationRepairService.swift */; };
 		D042 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F042 /* Assets.xcassets */; };
 		D043 /* AutomationServicesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F044 /* AutomationServicesTests.swift */; };
+		D046 /* PendingCheckedContinuations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F046 /* PendingCheckedContinuations.swift */; };
+		D047 /* PendingCheckedContinuationsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F047 /* PendingCheckedContinuationsTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -119,6 +121,8 @@
 		F042 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F043 /* DawnLoop.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DawnLoop.entitlements; sourceTree = "<group>"; };
 		F044 /* AutomationServicesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationServicesTests.swift; sourceTree = "<group>"; };
+		F046 /* PendingCheckedContinuations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingCheckedContinuations.swift; sourceTree = "<group>"; };
+		F047 /* PendingCheckedContinuationsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingCheckedContinuationsTests.swift; sourceTree = "<group>"; };
 		F100 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		T001 /* DawnLoopTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		T002 /* DawnLoopUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -187,6 +191,7 @@
 				F033 /* AlarmEditorValidationTests.swift */,
 				F034 /* WakeAlarmPlannerPreviewTests.swift */,
 				F044 /* AutomationServicesTests.swift */,
+				F047 /* PendingCheckedContinuationsTests.swift */,
 			);
 			path = DawnLoopTests;
 			sourceTree = "<group>";
@@ -276,6 +281,7 @@
 				F018 /* AccessoryDiscoveryService.swift */,
 				F019 /* HomeSelectionService.swift */,
 				F028 /* WakeAlarmRepository.swift */,
+				F046 /* PendingCheckedContinuations.swift */,
 				F038 /* HomeKitController.swift */,
 				F039 /* DawnLoopLogger.swift */,
 				F040 /* AutomationGenerationService.swift */,
@@ -436,6 +442,7 @@
 				D039 /* DawnLoopLogger.swift in Sources */,
 				D040 /* AutomationGenerationService.swift in Sources */,
 				D041 /* AutomationRepairService.swift in Sources */,
+				D046 /* PendingCheckedContinuations.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -451,6 +458,7 @@
 				D033 /* AlarmEditorValidationTests.swift in Sources */,
 				D034 /* WakeAlarmPlannerPreviewTests.swift in Sources */,
 				D043 /* AutomationServicesTests.swift in Sources */,
+				D047 /* PendingCheckedContinuationsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
