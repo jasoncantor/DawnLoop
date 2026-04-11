@@ -137,6 +137,163 @@ final class WakeAlarmPlannerPreviewTests: XCTestCase {
         XCTAssertEqual(editorState.previewSteps.count, 24)
     }
 
+    // MARK: - VAL-STEP-001: Selected custom step count survives create/edit paths and preserves preview endpoints
+
+    func testStepCount_SurvivesCreateAlarm() {
+        // Arrange
+        setupValidEditorState()
+        editorState.stepCount = 20
+        editorState.startBrightness = 5
+        editorState.targetBrightness = 95
+
+        // Act
+        let alarm = editorState.createAlarm()
+
+        // Assert
+        XCTAssertNotNil(alarm)
+        XCTAssertEqual(alarm?.stepCount, 20)
+    }
+
+    func testStepCount_LoadExistingAlarm_PreservesCustomStepCount() {
+        // Arrange - Create alarm with custom step count
+        let alarm = WakeAlarm(
+            name: "Dense Alarm",
+            wakeTimeSeconds: 7 * 3600,
+            durationMinutes: 25,
+            stepCount: 25,
+            startBrightness: 0,
+            targetBrightness: 100,
+            selectedAccessoryIdentifiers: ["acc-1"],
+            homeIdentifier: "test-home"
+        )
+
+        let accessory = createAccessory(id: "acc-1", name: "Test Light", capability: .brightnessOnly)
+
+        // Act
+        editorState.load(alarm: alarm, availableAccessories: [accessory])
+
+        // Assert
+        XCTAssertEqual(editorState.stepCount, 25)
+    }
+
+    func testPreview_PreservesExactEndpoints() {
+        // Arrange
+        setupValidEditorState()
+        editorState.startBrightness = 10
+        editorState.targetBrightness = 90
+        editorState.stepCount = 15
+
+        // Act
+        editorState.regeneratePreview()
+
+        // Assert - First and last steps should match configured endpoints exactly
+        XCTAssertEqual(editorState.previewSteps.first?.brightness, 10,
+                      "First step brightness should match configured start brightness")
+        XCTAssertEqual(editorState.previewSteps.last?.brightness, 90,
+                      "Last step brightness should match configured target brightness")
+    }
+
+    // MARK: - VAL-STEP-002: Dense ramps redistribute brightness across the full configured range
+
+    func testDenseRamp_RedistributesBrightness_StrictlyIncreasingSequence() {
+        // Arrange - Dense fixture: 20 steps with 0-100 brightness range (enough for unique values)
+        // Use linear curve for predictable linear redistribution
+        setupValidEditorState()
+        editorState.gradientCurve = .linear  // Linear ensures even redistribution
+        editorState.durationMinutes = 24  // Supports up to 24 steps
+        editorState.stepCount = 20  // Dense: >10 steps
+        editorState.startBrightness = 0
+        editorState.targetBrightness = 100  // Full range: 100 units
+
+        // Act
+        editorState.regeneratePreview()
+
+        // Assert
+        let steps = editorState.previewSteps
+        XCTAssertEqual(steps.count, 20, "Should produce exactly 20 steps")
+
+        // Verify strictly increasing brightness sequence (linear curve ensures this)
+        var previousBrightness = -1
+        for (index, step) in steps.enumerated() {
+            XCTAssertGreaterThan(step.brightness, previousBrightness,
+                               "Step \(index) brightness (\(step.brightness)) should be greater than previous (\(previousBrightness))")
+            previousBrightness = step.brightness
+        }
+
+        // Verify endpoints are preserved
+        XCTAssertEqual(steps.first?.brightness, 0, "First step should be at minimum brightness")
+        XCTAssertEqual(steps.last?.brightness, 100, "Last step should be at maximum brightness")
+    }
+
+    func testDenseRamp_WithNarrowRange_StillRedistributes() {
+        // Arrange - 15 steps with 10-30 brightness range (20 units, less than step count)
+        setupValidEditorState()
+        editorState.durationMinutes = 20
+        editorState.stepCount = 15
+        editorState.startBrightness = 10
+        editorState.targetBrightness = 30
+
+        // Act
+        editorState.regeneratePreview()
+
+        // Assert
+        let steps = editorState.previewSteps
+        XCTAssertEqual(steps.count, 15)
+
+        // Verify monotonic non-decreasing (may have duplicates with narrow range)
+        var previousBrightness = -1
+        for (index, step) in steps.enumerated() {
+            XCTAssertGreaterThanOrEqual(step.brightness, previousBrightness,
+                                      "Step \(index) should not decrease brightness")
+            previousBrightness = step.brightness
+        }
+
+        // Endpoints preserved
+        XCTAssertEqual(steps.first?.brightness, 10)
+        XCTAssertEqual(steps.last?.brightness, 30)
+    }
+
+    // MARK: - VAL-STEP-003: Density guardrails still apply after redistribution
+
+    func testStepCount_DurationClamping_LimitsToOnePerMinute() {
+        // Arrange - 10 minute duration should clamp to max 10 steps
+        setupValidEditorState()
+        editorState.durationMinutes = 10
+        editorState.stepCount = 30  // Try to set more than duration allows
+
+        // Assert - stepCount should be clamped
+        XCTAssertEqual(editorState.stepCount, 10,
+                      "Step count should be clamped to duration (1 per minute)")
+        XCTAssertEqual(editorState.maxStepCount, 10)
+    }
+
+    func testStepCount_GlobalCapOf30Preserved() {
+        // Arrange - 60 minute duration supports 60 steps, but global cap is 30
+        setupValidEditorState()
+        editorState.durationMinutes = 60
+        editorState.stepCount = 35  // Try to exceed global cap
+
+        // Assert - stepCount should be clamped to global max
+        XCTAssertEqual(editorState.stepCount, 30,
+                      "Step count should be clamped to global maximum of 30")
+        XCTAssertEqual(editorState.maxStepCount, 30)
+    }
+
+    func testDurationReduction_AutoClampsStepCount() {
+        // Arrange - Start with longer duration
+        setupValidEditorState()
+        editorState.durationMinutes = 30
+        editorState.stepCount = 25
+        XCTAssertEqual(editorState.stepCount, 25)
+
+        // Act - Reduce duration
+        editorState.durationMinutes = 15
+
+        // Assert - Step count auto-clamped
+        XCTAssertEqual(editorState.stepCount, 15,
+                      "Step count should auto-clamp when duration is reduced")
+    }
+
     // MARK: - VAL-ALARM-004: Preview only runs from valid editor state
 
     func testPreview_InvalidState_NoName_NoPreviewGenerated() {
