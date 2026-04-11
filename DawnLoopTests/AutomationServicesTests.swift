@@ -271,6 +271,7 @@ final class AutomationServicesTests: XCTestCase {
 
     func testSyncAlarm_DenseRamp_AutomationPreservesEndpointBrightness() async throws {
         // Arrange - Alarm with specific start/target brightness endpoints
+        // Use .never schedule for 1:1 binding-to-step comparison (VAL-CROSS-001)
         let alarm = WakeAlarm(
             name: "Endpoint Parity Test",
             wakeTimeSeconds: 7 * 3600,
@@ -284,13 +285,13 @@ final class AutomationServicesTests: XCTestCase {
             selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
             homeIdentifier: "test-home-uuid-001"
         )
-        try await repository.saveAlarm(alarm, schedule: .weekdays, validationState: .needsSync)
+        try await repository.saveAlarm(alarm, schedule: .never, validationState: .needsSync)
 
         // Get planner output
         let plannerSteps = WakeAlarmStepPlanner.planSteps(for: alarm, stepCount: alarm.stepCount)
 
         // Act
-        try await generationService.syncAlarm(alarm, schedule: .weekdays)
+        try await generationService.syncAlarm(alarm, schedule: .never)
 
         // Assert - Verify endpoints in automation match planner and configured values
         let bindings = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
