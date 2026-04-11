@@ -125,11 +125,12 @@ struct WakeAlarmStepPlanner {
                 Double(stepIndex) / Double(stepCount - 1)
             }
 
-            // Apply the gradient curve
+            // Apply the gradient curve to values only; step times are evenly spaced in wall-clock
+            // time so perceived brightness vs elapsed time matches the selected curve (not curved twice).
             let curvedT = curveFunction.apply(t)
 
-            // Calculate timestamp for this step
-            let secondsOffset = curvedT * totalSeconds
+            // Calculate timestamp for this step (linear in normalized ramp progress)
+            let secondsOffset = t * totalSeconds
             guard let timestamp = calendar.date(
                 byAdding: .second,
                 value: Int(secondsOffset),

@@ -49,8 +49,8 @@ final class WakeAlarmPlannerPreviewTests: XCTestCase {
 
     // MARK: - VAL-ALARM-003: Gradient curve changes the preview plan
 
-    func testGradientCurve_Linear_ProducesDifferentStepsThanEaseIn() {
-        // Arrange - Setup valid state with linear curve
+    func testGradientCurve_Linear_AndEaseIn_ShareWallClockStepTimes_DifferInBrightness() {
+        // Arrange - Same duration and step count; only the value curve changes
         setupValidEditorState()
         editorState.gradientCurve = .linear
         editorState.regeneratePreview()
@@ -65,31 +65,41 @@ final class WakeAlarmPlannerPreviewTests: XCTestCase {
         let easeInSteps = editorState.previewSteps
         XCTAssertFalse(easeInSteps.isEmpty, "Preview should generate steps")
 
-        // Assert - Different curves should produce different step distributions
-        // At least some timestamps should differ
+        // Assert - Timestamps are evenly spaced in wall time for all curves; curve shapes brightness only
         let linearTimestamps = linearSteps.map { $0.timestamp }
         let easeInTimestamps = easeInSteps.map { $0.timestamp }
-        XCTAssertNotEqual(linearTimestamps, easeInTimestamps, "Linear and easeIn should produce different step timing")
+        XCTAssertEqual(linearTimestamps, easeInTimestamps, "Step times should not depend on gradient curve")
+
+        let mid = linearSteps.count / 2
+        XCTAssertGreaterThan(
+            linearSteps[mid].brightness,
+            easeInSteps[mid].brightness,
+            "Ease-in should lag linear brightness in the interior of the ramp"
+        )
     }
 
-    func testGradientCurve_EaseOut_ProducesDifferentStepsThanEaseInOut() {
-        // Arrange - Setup valid state
+    func testGradientCurve_EaseOut_AndEaseInOut_ShareWallClockStepTimes_DifferInBrightness() {
         setupValidEditorState()
         editorState.gradientCurve = .easeOut
         editorState.regeneratePreview()
 
         let easeOutSteps = editorState.previewSteps
 
-        // Act - Change to easeInOut
         editorState.gradientCurve = .easeInOut
         editorState.regeneratePreview()
 
         let easeInOutSteps = editorState.previewSteps
 
-        // Assert - Different curves should produce different timing
         let easeOutTimestamps = easeOutSteps.map { $0.timestamp }
         let easeInOutTimestamps = easeInOutSteps.map { $0.timestamp }
-        XCTAssertNotEqual(easeOutTimestamps, easeInOutTimestamps, "EaseOut and easeInOut should produce different step timing")
+        XCTAssertEqual(easeOutTimestamps, easeInOutTimestamps, "Step times should not depend on gradient curve")
+
+        let mid = easeOutSteps.count / 2
+        XCTAssertNotEqual(
+            easeOutSteps[mid].brightness,
+            easeInOutSteps[mid].brightness,
+            "EaseOut and easeInOut should differ in brightness at the same wall-clock step"
+        )
     }
 
     func testGradientCurve_Change_UpdatesPreviewAutomatically() {
@@ -103,8 +113,7 @@ final class WakeAlarmPlannerPreviewTests: XCTestCase {
         editorState.gradientCurve = .easeInOut
         editorState.regeneratePreview()
 
-        // Assert - Preview should be updated with new curve
-        // The step timing will be different even if brightness range is same
+        // Assert - Preview should be updated with new curve (brightness profile changes; step times stay linear in wall clock)
         XCTAssertEqual(editorState.previewSteps.first?.brightness, initialFirstStepBrightness,
                       "First step brightness should remain start brightness regardless of curve")
         XCTAssertEqual(editorState.previewSteps.last?.brightness, 100,
