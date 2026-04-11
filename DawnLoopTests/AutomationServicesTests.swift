@@ -234,6 +234,7 @@ final class AutomationServicesTests: XCTestCase {
 
     func testSyncAlarm_DenseRamp_AutomationBrightnessMatchesPlannerOutput() async throws {
         // Arrange - Dense fixture: 20 steps with 0-100 brightness range
+        // Use .never schedule for 1:1 binding-to-step comparison
         let alarm = WakeAlarm(
             name: "Dense Parity Test Alarm",
             wakeTimeSeconds: 7 * 3600,
@@ -247,13 +248,13 @@ final class AutomationServicesTests: XCTestCase {
             selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
             homeIdentifier: "test-home-uuid-001"
         )
-        try await repository.saveAlarm(alarm, schedule: .weekdays, validationState: .needsSync)
+        try await repository.saveAlarm(alarm, schedule: .never, validationState: .needsSync)
 
         // Get the planner output for comparison
         let plannerSteps = WakeAlarmStepPlanner.planSteps(for: alarm, stepCount: alarm.stepCount)
 
         // Act - Generate automation
-        try await generationService.syncAlarm(alarm, schedule: .weekdays)
+        try await generationService.syncAlarm(alarm, schedule: .never)
 
         // Assert - Compare automation bindings brightness with planner output
         let bindings = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
@@ -310,6 +311,7 @@ final class AutomationServicesTests: XCTestCase {
 
     func testSyncAlarm_DenseRamp_AutomationStepCountMatchesPlanner() async throws {
         // Arrange - Dense fixture with custom step count
+        // Use .never schedule for 1:1 binding-to-step comparison (VAL-CROSS-001)
         let alarm = WakeAlarm(
             name: "Step Count Parity Test",
             wakeTimeSeconds: 7 * 3600,
@@ -323,14 +325,14 @@ final class AutomationServicesTests: XCTestCase {
             selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
             homeIdentifier: "test-home-uuid-001"
         )
-        try await repository.saveAlarm(alarm, schedule: .weekdays, validationState: .needsSync)
+        try await repository.saveAlarm(alarm, schedule: .never, validationState: .needsSync)
 
         // Get planner step count
         let plannerSteps = WakeAlarmStepPlanner.planSteps(for: alarm, stepCount: alarm.stepCount)
         XCTAssertEqual(plannerSteps.count, 24, "Planner should produce 24 steps")
 
         // Act
-        try await generationService.syncAlarm(alarm, schedule: .weekdays)
+        try await generationService.syncAlarm(alarm, schedule: .never)
 
         // Assert - Automation bindings count should match planner step count
         let bindings = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
