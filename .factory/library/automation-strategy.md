@@ -22,6 +22,13 @@ The app is responsible for generating, diffing, validating, repairing, and delet
 - Treat partially created HomeKit objects as failure states that require rollback or cleanup.
 - Never expose raw HomeKit errors directly to end users.
 
+## Brightness Distribution Invariants
+
+- Increasing `stepCount` must redistribute brightness across the selected number of steps, not leave the ramp effectively capped at an older smaller ladder.
+- Preview and automation generation must use the same ordered brightness sequence for the same alarm configuration.
+- Dense ramps should remain monotonic from configured start brightness to configured target brightness.
+- Duration-based clamping still limits density to one step per minute with a hard 30-step maximum.
+
 ## Capability Rules
 
 - Brightness-only accessories must remain valid targets.

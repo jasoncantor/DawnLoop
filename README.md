@@ -35,8 +35,9 @@ A plain-language summary is in [LEGAL.md](/Users/jasoncantor/Downloads/DawnLoop/
 
 ## Running tests
 
-- App build: `xcodebuild -scheme DawnLoop -project DawnLoop.xcodeproj -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build`
-- Simulator tests: `xcodebuild -scheme DawnLoop -project DawnLoop.xcodeproj -destination 'platform=iOS Simulator,OS=26.4,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test`
+- Shared local simulator validation is defined in `.factory/services.yaml` and mirrors CI by resolving an available iPhone simulator dynamically, running `build-for-testing`, then `test-without-building`.
+- App build: use the shared `.factory/services.yaml` `build` command.
+- Simulator tests: use the shared `.factory/services.yaml` `test` command.
 
 ## TestFlight readiness notes
 

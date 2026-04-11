@@ -8,18 +8,77 @@ commands:
       echo "Bootstrap pending: Xcode project not created yet.";
     fi
   build: >-
-    if [ -d "DawnLoop.xcworkspace" ]; then
-      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build;
+    SIMULATOR_UDID=$(python3 - <<'PY'
+    import json, re, subprocess, sys
+    devices = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "--json", "devices", "available"], text=True))["devices"]
+    candidates = []
+    for runtime, entries in devices.items():
+        if "iOS" not in runtime:
+            continue
+        match = re.search(r"iOS-(\d+)-(\d+)", runtime)
+        version = (int(match.group(1)), int(match.group(2))) if match else (0, 0)
+        for entry in entries:
+            if entry.get("isAvailable") and entry.get("name", "").startswith("iPhone"):
+                candidates.append((version, entry["udid"]))
+    if not candidates:
+        sys.exit("No available iPhone simulators found.")
+    candidates.sort(reverse=True)
+    print(candidates[0][1])
+    PY
+    ) && if [ -d "DawnLoop.xcworkspace" ]; then
+      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build-for-testing;
     elif [ -d "DawnLoop.xcodeproj" ]; then
-      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build;
+      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build-for-testing;
     else
       echo "Bootstrap pending: Xcode project not created yet.";
     fi
   test: >-
-    if [ -d "DawnLoop.xcworkspace" ]; then
-      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3;
+    SIMULATOR_UDID=$(python3 - <<'PY'
+    import json, re, subprocess, sys
+    devices = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "--json", "devices", "available"], text=True))["devices"]
+    candidates = []
+    for runtime, entries in devices.items():
+        if "iOS" not in runtime:
+            continue
+        match = re.search(r"iOS-(\d+)-(\d+)", runtime)
+        version = (int(match.group(1)), int(match.group(2))) if match else (0, 0)
+        for entry in entries:
+            if entry.get("isAvailable") and entry.get("name", "").startswith("iPhone"):
+                candidates.append((version, entry["udid"]))
+    if not candidates:
+        sys.exit("No available iPhone simulators found.")
+    candidates.sort(reverse=True)
+    print(candidates[0][1])
+    PY
+    ) && if [ -d "DawnLoop.xcworkspace" ]; then
+      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build-for-testing && xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO test-without-building -parallel-testing-enabled YES -maximum-parallel-testing-workers 1;
     elif [ -d "DawnLoop.xcodeproj" ]; then
-      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3;
+      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build-for-testing && xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO test-without-building -parallel-testing-enabled YES -maximum-parallel-testing-workers 1;
+    else
+      echo "Bootstrap pending: Xcode project not created yet.";
+    fi
+  planner_tests: >-
+    SIMULATOR_UDID=$(python3 - <<'PY'
+    import json, re, subprocess, sys
+    devices = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "--json", "devices", "available"], text=True))["devices"]
+    candidates = []
+    for runtime, entries in devices.items():
+        if "iOS" not in runtime:
+            continue
+        match = re.search(r"iOS-(\d+)-(\d+)", runtime)
+        version = (int(match.group(1)), int(match.group(2))) if match else (0, 0)
+        for entry in entries:
+            if entry.get("isAvailable") and entry.get("name", "").startswith("iPhone"):
+                candidates.append((version, entry["udid"]))
+    if not candidates:
+        sys.exit("No available iPhone simulators found.")
+    candidates.sort(reverse=True)
+    print(candidates[0][1])
+    PY
+    ) && if [ -d "DawnLoop.xcworkspace" ]; then
+      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO test -parallel-testing-enabled NO -only-testing:DawnLoopTests/WakeAlarmPlannerPreviewTests -only-testing:DawnLoopTests/AutomationServicesTests -only-testing:DawnLoopTests/AlarmEditorValidationTests;
+    elif [ -d "DawnLoop.xcodeproj" ]; then
+      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO test -parallel-testing-enabled NO -only-testing:DawnLoopTests/WakeAlarmPlannerPreviewTests -only-testing:DawnLoopTests/AutomationServicesTests -only-testing:DawnLoopTests/AlarmEditorValidationTests;
     else
       echo "Bootstrap pending: Xcode project not created yet.";
     fi

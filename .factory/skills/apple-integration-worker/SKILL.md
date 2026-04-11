@@ -37,9 +37,11 @@ None.
    - persist durable app-to-HomeKit bindings
    - roll back or surface repair-needed state on partial failure
 6. Run the lightest credible validation for the changed integration path, then use the shared `build` and `test` commands at milestone confidence points or when the feature explicitly requires them.
+   - for planner/automation changes, add or update at least one dense fixture that proves the exact brightness sequence and one automation-parity check that compares generated automation values to planner output
 7. Manually verify the changed surface:
    - simulator for planner/UI/platform-independent state
    - real iPhone + Apple Home when the feature genuinely requires live HomeKit, widget interaction, or App Intent validation
+   - if `mission.md` or `AGENTS.md` explicitly defers real-device validation for the current mission, do not block on physical-device checks; record simulator-only validation clearly in the handoff
 8. Before handing off success, verify that the committed revision matches your validation claim:
    - re-run the final validator commands after your last code edit
    - ensure the results come from the code you are actually committing
@@ -58,12 +60,12 @@ None.
   "verification": {
     "commandsRun": [
       {
-        "command": "xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing DawnLoopTests/AutomationBindingServiceTests",
+        "command": "Run a targeted simulator test against the dynamically resolved simulator destination for the relevant automation/planner test target, or use the shared `.factory/services.yaml` planner_tests command when it covers the changed path.",
         "exitCode": 0,
         "observation": "Planner, binding, and rollback tests passed with mocked HomeKit services."
       },
       {
-        "command": "xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build",
+        "command": "Use the shared `.factory/services.yaml` build command against the dynamically resolved simulator destination.",
         "exitCode": 0,
         "observation": "App and extensions compiled cleanly for simulator."
       }

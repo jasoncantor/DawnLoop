@@ -33,6 +33,7 @@ None.
 4. Implement the feature using SwiftUI + Swift Concurrency while keeping business logic out of views.
 5. Use protocols and dependency injection for anything that could later need HomeKit, WidgetKit, App Intents, StoreKit, time, UUID, or persistence seams.
 6. Run the lightest validation that credibly proves the changed behavior, then use the shared project validators at milestone confidence points or when the feature explicitly requires them.
+   - if the feature touches the Xcode project, shared test path, or simulator configuration, use the shared simulator `build-for-testing` / `test-without-building` flow from `.factory/services.yaml` rather than ad-hoc `xcodebuild test`
 7. When the feature affects visible UI, do brief simulator verification for the changed path and capture it in `verification.interactiveChecks` when practical.
 8. Before handing off success, verify that the committed revision matches your validation claim:
    - re-run the final validator commands after your last code edit
@@ -52,12 +53,12 @@ None.
   "verification": {
     "commandsRun": [
       {
-        "command": "xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing DawnLoopUITests/OnboardingFlowTests",
+        "command": "Use the shared `.factory/services.yaml` simulator test flow, or run a targeted simulator test against the dynamically resolved simulator destination for DawnLoopUITests/OnboardingFlowTests.",
         "exitCode": 0,
         "observation": "Onboarding UI tests passed, including relaunch coverage."
       },
       {
-        "command": "xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build",
+        "command": "Use the shared `.factory/services.yaml` build command against the dynamically resolved simulator destination.",
         "exitCode": 0,
         "observation": "App built cleanly for simulator."
       }

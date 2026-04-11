@@ -63,9 +63,9 @@ Expected evidence:
 
 ### Simulator-based validation
 
-- **Max concurrent validators:** `3`
-- Rationale: iOS Simulator + `xcodebuild test` is materially heavier than a typical web or CLI validation path on this 10-core / 16 GB machine.
-- Use `-maximum-parallel-testing-workers 3` for simulator test runs unless a worker has a narrower, cheaper test target.
+- **Max concurrent validators:** `1`
+- Rationale: the validation dry run showed the simulator path is relatively heavy on this 10-core / 16 GB machine, and this mission only needs one reliable simulator lane while the test-path repair is in flight.
+- Use CI-style `build-for-testing` + `test-without-building` against a dynamically resolved available iPhone simulator, with `-maximum-parallel-testing-workers 1` for the shared full-suite command.
 
 ### Real-device / Apple Home validation
 
@@ -75,7 +75,8 @@ Expected evidence:
 ## Special Guidance
 
 - Treat HomeKit execution through Apple Home as the reliability contract; do not validate wake execution via foreground timers.
-- Current user preference for this mission phase: keep active feature work light on testing. Use minimal manual checks during implementation and reserve heavier validation for milestone confidence checks or clearly risky changes.
+- Current user preference for this mission: automated validation only for now. Do not require physical-device or Apple Home checks to complete this mission.
+- Current user preference for this mission phase: keep active feature work light on testing. Use targeted simulator checks during implementation and reserve the shared full-suite simulator flow for milestone confidence checks or clearly risky changes.
 - For widget quick controls, validate both shipped states:
   - interactive controls enabled and working safely, or
   - widget intentionally shipped as read-only
