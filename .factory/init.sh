@@ -16,22 +16,7 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
-python3 <<'PY' >/dev/null
-import json
-import subprocess
-import sys
-
-devices = json.loads(
-    subprocess.check_output(["xcrun", "simctl", "list", "--json", "devices", "available"], text=True)
-)["devices"]
-
-for entries in devices.values():
-    for entry in entries:
-        if entry.get("isAvailable") and entry.get("name", "").startswith("iPhone"):
-            raise SystemExit(0)
-
-sys.exit("No available iPhone simulators found for DawnLoop validation.")
-PY
+python3 .factory/resolve_simulator_udid.py >/dev/null
 
 if [ -d "DawnLoop.xcworkspace" ]; then
   xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -resolvePackageDependencies >/dev/null
