@@ -654,6 +654,19 @@ final class AlarmEditorValidationTests: XCTestCase {
                       "Preview should be blocked when full color values are missing")
     }
 
+    func testCanGeneratePreview_WhitespaceOnlyName_UsesValidationRules() {
+        editorState.alarmName = "   "
+        editorState.selectedAccessoryIds = ["acc-1"]
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Test Light", capability: .brightnessOnly)
+        ]
+
+        XCTAssertFalse(editorState.canGeneratePreview,
+                      "Preview should be blocked when the trimmed name is empty")
+        XCTAssertFalse(editorState.validate())
+        XCTAssertEqual(editorState.validation.nameError, "Alarm name is required")
+    }
+
     func testCanGeneratePreview_ValidState_ReturnsTrue() {
         // Arrange - Fully valid state
         editorState.alarmName = "Test Alarm"

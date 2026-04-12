@@ -200,9 +200,7 @@ final class AlarmEditorState {
 
     // MARK: - Validation
 
-    /// Validates the form and returns whether it's valid
-    /// Preserves entered values even when validation fails (VAL-ALARM-001)
-    func validate() -> Bool {
+    private func makeValidationState() -> AlarmEditorValidationState {
         var newValidation = AlarmEditorValidationState()
 
         // Validate name
@@ -281,6 +279,13 @@ final class AlarmEditorState {
             break
         }
 
+        return newValidation
+    }
+
+    /// Validates the form and returns whether it's valid
+    /// Preserves entered values even when validation fails (VAL-ALARM-001)
+    func validate() -> Bool {
+        let newValidation = makeValidationState()
         validation = newValidation
         return newValidation.isValid
     }
@@ -461,53 +466,7 @@ final class AlarmEditorState {
     /// - Invalid duration or color values
     /// - Invalidated accessories (VAL-ALARM-004)
     var canGeneratePreview: Bool {
-        // Basic requirements: name and accessories
-        guard !selectedAccessoryIds.isEmpty && !alarmName.isEmpty else {
-            return false
-        }
-
-        // Must pass all validation checks
-        // Block preview if any validation errors exist
-        if !validation.isValid {
-            return false
-        }
-
-        // Additional explicit validation for preview safety
-        // Validate brightness relationship
-        if startBrightness >= targetBrightness {
-            return false
-        }
-
-        // Validate duration bounds
-        if durationMinutes < 1 || durationMinutes > 120 {
-            return false
-        }
-
-        // Validate color mode requirements
-        switch colorMode {
-        case .colorTemperature:
-            if let temp = targetColorTemperature {
-                if temp < 153 || temp > 454 {
-                    return false
-                }
-            } else {
-                return false
-            }
-        case .fullColor:
-            if targetHue == nil || targetSaturation == nil {
-                return false
-            }
-            if let hue = targetHue, hue < 0 || hue > 360 {
-                return false
-            }
-            if let sat = targetSaturation, sat < 0 || sat > 100 {
-                return false
-            }
-        case .brightnessOnly:
-            break
-        }
-
-        return true
+        makeValidationState().isValid
     }
 
     /// The preview steps to display (empty if invalid state)

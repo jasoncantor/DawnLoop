@@ -172,19 +172,28 @@ final class AutomationRepairService {
                 )
             }
 
-            if
-                let expectedScheduledTime = expected.scheduledTime,
-                let scheduledTime = binding.scheduledTime ?? expected.scheduledTime,
-                abs(scheduledTime.timeIntervalSince(expectedScheduledTime)) > 61
-            {
-                binding.markInvalid(reason: "Scheduled time drifted from expected plan")
-                try? context.save()
-                return ValidationStateSummary(
-                    state: .outOfSync,
-                    message: "The next HomeKit run time drifted and needs repair.",
-                    requiresUserAction: true,
-                    lastUpdated: Date()
-                )
+            if let expectedScheduledTime = expected.scheduledTime {
+                guard let scheduledTime = binding.scheduledTime else {
+                    binding.markInvalid(reason: "Scheduled time missing from binding")
+                    try? context.save()
+                    return ValidationStateSummary(
+                        state: .outOfSync,
+                        message: "The next HomeKit run time drifted and needs repair.",
+                        requiresUserAction: true,
+                        lastUpdated: Date()
+                    )
+                }
+
+                if abs(scheduledTime.timeIntervalSince(expectedScheduledTime)) > 61 {
+                    binding.markInvalid(reason: "Scheduled time drifted from expected plan")
+                    try? context.save()
+                    return ValidationStateSummary(
+                        state: .outOfSync,
+                        message: "The next HomeKit run time drifted and needs repair.",
+                        requiresUserAction: true,
+                        lastUpdated: Date()
+                    )
+                }
             }
 
             binding.markVerified()

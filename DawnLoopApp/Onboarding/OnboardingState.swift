@@ -7,10 +7,11 @@ import SwiftData
 final class OnboardingState {
     private let onboardingKey = "hasCompletedOnboarding"
     private let homeAccessStartedKey = "hasStartedHomeAccessFlow"
+    private let defaults: UserDefaults
     
     var hasCompletedOnboarding: Bool {
         didSet {
-            UserDefaults.standard.set(hasCompletedOnboarding, forKey: onboardingKey)
+            defaults.set(hasCompletedOnboarding, forKey: onboardingKey)
         }
     }
     
@@ -18,8 +19,9 @@ final class OnboardingState {
     var currentScreen: OnboardingScreen = .welcome
     var discoveryStep: DiscoveryStep = .none
     
-    init() {
-        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: onboardingKey)
+    init(userDefaults: UserDefaults = .standard) {
+        self.defaults = userDefaults
+        self.hasCompletedOnboarding = userDefaults.bool(forKey: onboardingKey)
     }
     
     /// Called from the final onboarding CTA to start Home access handling.

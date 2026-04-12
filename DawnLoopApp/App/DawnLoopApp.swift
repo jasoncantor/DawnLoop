@@ -103,12 +103,14 @@ enum LaunchArgumentHandler {
     
     /// Execute pending test actions using the initialized AppEnvironment
     /// This ensures all SwiftData operations use the same ModelContainer
+    @MainActor
     static func executePendingActions(using environment: AppEnvironment) {
         // Note: UserDefaults were already reset in executeUserDefaultsResets()
         // This method handles SwiftData operations that need the environment
         
         if PendingTestActions.shouldResetOnboarding {
             resetOnboardingSwiftData(using: environment)
+            environment.onboardingState.resetOnboarding()
         }
         
         if PendingTestActions.shouldResetHomeSelection {

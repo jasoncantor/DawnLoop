@@ -56,15 +56,12 @@ final class HomeDiscoveryFlowTests: XCTestCase {
         let testHomeVisible = app.staticTexts["Test Home"].exists
         XCTAssertTrue(testHomeVisible, "Test home name should be visible in home selection list")
         
-        // Verify home details are visible (room count, accessory count)
+        // Verify exact home details are visible (room count, accessory count)
         // This proves the UI shows actual home data, not a placeholder
-        // Check for either the exact text or partial matches
-        let roomCountVisible = app.staticTexts["4 rooms"].exists || app.staticTexts["4"].exists
-        let accessoryCountVisible = app.staticTexts["8 accessories"].exists || app.staticTexts["8"].exists
-        
-        // At least one detail should be visible to prove it's real home data
-        XCTAssertTrue(roomCountVisible || accessoryCountVisible,
-                     "Home details (rooms or accessories) should be visible to prove real data is shown")
+        XCTAssertTrue(app.staticTexts["4 rooms"].exists,
+                     "Home selection should show the exact seeded room count")
+        XCTAssertTrue(app.staticTexts["8 accessories"].exists,
+                     "Home selection should show the exact seeded accessory count")
         
         // Verify the selection affordance is present (chevron or checkmark)
         let selectionIndicator = app.images["chevron.right"].exists || app.images["checkmark.circle.fill"].exists

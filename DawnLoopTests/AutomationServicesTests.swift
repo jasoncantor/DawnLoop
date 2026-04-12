@@ -117,6 +117,38 @@ final class AutomationServicesTests: XCTestCase {
         XCTAssertEqual(repaired.state, .valid)
     }
 
+    func testValidateAlarm_MissingScheduledTimeCountsAsDrift() async throws {
+        let alarm = WakeAlarm(
+            name: "Missing Scheduled Time",
+            wakeTimeSeconds: 7 * 3600,
+            durationMinutes: 30,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        try await repository.saveAlarm(alarm, schedule: .never, validationState: .needsSync)
+        try await generationService.syncAlarm(alarm, schedule: .never)
+
+        let context = ModelContext(modelContainer)
+        var descriptor = FetchDescriptor<AutomationBinding>()
+        let alarmID = alarm.id
+        descriptor.predicate = #Predicate { $0.alarmId == alarmID }
+        let bindings = try context.fetch(descriptor)
+        let binding = try XCTUnwrap(bindings.first)
+        binding.scheduledTime = nil
+        try context.save()
+
+        let summary = await repairService.validateAlarm(alarm, schedule: .never)
+
+        XCTAssertEqual(summary.state, .outOfSync)
+        XCTAssertEqual(summary.message, "The next HomeKit run time drifted and needs repair.")
+        XCTAssertTrue(summary.requiresUserAction)
+    }
+
     func testSyncAlarm_ReusesScenesAcrossRepeatingDays() async throws {
         let alarm = WakeAlarm(
             name: "Weekday Light Alarm",

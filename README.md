@@ -4,12 +4,12 @@ DawnLoop is an iPhone app for iOS 17+ that creates stepped Light Alarms in Apple
 
 ## License
 
-This repository is source-available under [LICENSE](/Users/jasoncantor/Downloads/DawnLoop/LICENSE).
+This repository is source-available under [LICENSE](LICENSE).
 It is intentionally not released under an OSI-approved open-source license.
 People may build and install DawnLoop for themselves, but public App Store and
 TestFlight redistribution of this app or its branded forks is reserved. Brand
-rules are in [TRADEMARKS.md](/Users/jasoncantor/Downloads/DawnLoop/TRADEMARKS.md).
-A plain-language summary is in [LEGAL.md](/Users/jasoncantor/Downloads/DawnLoop/LEGAL.md).
+rules are in [TRADEMARKS.md](TRADEMARKS.md).
+A plain-language summary is in [LEGAL.md](LEGAL.md).
 
 ## What v1 ships
 
@@ -22,9 +22,9 @@ A plain-language summary is in [LEGAL.md](/Users/jasoncantor/Downloads/DawnLoop/
 
 ## Local setup
 
-1. Open [DawnLoop.xcodeproj](/Users/jasoncantor/Downloads/DawnLoop/DawnLoop.xcodeproj) in Xcode 16+.
+1. Open [DawnLoop.xcodeproj](DawnLoop.xcodeproj) in Xcode 16+.
 2. Set a valid Apple development team for the `DawnLoop` target.
-3. Confirm the `HomeKit` capability is enabled and [DawnLoop.entitlements](/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/DawnLoop.entitlements) is attached.
+3. Confirm the `HomeKit` capability is enabled and [DawnLoop.entitlements](DawnLoopApp/DawnLoop.entitlements) is attached.
 4. Build and run on an iPhone running iOS 17+ for real HomeKit verification.
 
 ## Required capabilities
@@ -41,6 +41,6 @@ A plain-language summary is in [LEGAL.md](/Users/jasoncantor/Downloads/DawnLoop/
 
 ## TestFlight readiness notes
 
-- CI is defined in [.github/workflows/ios-ci.yml](/Users/jasoncantor/Downloads/DawnLoop/.github/workflows/ios-ci.yml).
-- App submission assets and copy are in [AppStoreSubmission/README.md](/Users/jasoncantor/Downloads/DawnLoop/AppStoreSubmission/README.md) and [APP_STORE_METADATA.md](/Users/jasoncantor/Downloads/DawnLoop/APP_STORE_METADATA.md).
+- CI is defined in [.github/workflows/ios-ci.yml](.github/workflows/ios-ci.yml).
+- App submission assets and copy are in [AppStoreSubmission/README.md](AppStoreSubmission/README.md) and [APP_STORE_METADATA.md](APP_STORE_METADATA.md).
 - The remaining manual work is signing, real-home validation, hosted policy/support URLs, privacy disclosures, and App Store Connect submission.

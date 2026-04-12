@@ -3,7 +3,7 @@
 ## Before archiving
 
 - Confirm the `DawnLoop` target signs with the correct team and bundle identifier.
-- Verify [DawnLoop.entitlements](/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/DawnLoop.entitlements) is present in Signing & Capabilities.
+- Verify [DawnLoop.entitlements](DawnLoopApp/DawnLoop.entitlements) is present in Signing & Capabilities.
 - Build and run the app on an iPhone running iOS 17+.
 - Run unit and UI tests locally or through CI.
 
@@ -25,8 +25,8 @@
 
 ## App Store submission prep
 
-- Upload the prepared screenshots from [AppStoreSubmission/Screenshots/iPhone-6.9](/Users/jasoncantor/Downloads/DawnLoop/AppStoreSubmission/Screenshots/iPhone-6.9).
+- Upload the prepared screenshots from [AppStoreSubmission/Screenshots/iPhone-6.9](AppStoreSubmission/Screenshots/iPhone-6.9).
 - Finalize privacy disclosures in App Store Connect.
-- Review metadata in [APP_STORE_METADATA.md](/Users/jasoncantor/Downloads/DawnLoop/APP_STORE_METADATA.md).
-- Review screenshot order and regeneration notes in [AppStoreSubmission/README.md](/Users/jasoncantor/Downloads/DawnLoop/AppStoreSubmission/README.md).
+- Review metadata in [APP_STORE_METADATA.md](APP_STORE_METADATA.md).
+- Review screenshot order and regeneration notes in [AppStoreSubmission/README.md](AppStoreSubmission/README.md).
 - Archive, validate, and upload the build.

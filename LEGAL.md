@@ -14,7 +14,7 @@ Recommended App Store Connect copyright field:
 ## Repository license
 
 This repository is distributed under the custom license in
-[LICENSE](/Users/jasoncantor/Downloads/DawnLoop/LICENSE).
+[LICENSE](LICENSE).
 
 That license is source-available, not OSI open source. It is designed to allow
 people to inspect the code, build it themselves, and install it for their own
@@ -24,7 +24,7 @@ holder.
 ## Trademark and branding
 
 The `DawnLoop` name, app icon, screenshots, bundle identifiers, and related
-brand assets are reserved. See [TRADEMARKS.md](/Users/jasoncantor/Downloads/DawnLoop/TRADEMARKS.md).
+brand assets are reserved. See [TRADEMARKS.md](TRADEMARKS.md).
 
 Forks distributed outside a private household or organization should be renamed
 and rebranded.
@@ -46,7 +46,7 @@ own or control, subject to the repository license.
 ## No warranty
 
 DawnLoop is provided without warranty, as described in
-[LICENSE](/Users/jasoncantor/Downloads/DawnLoop/LICENSE).
+[LICENSE](LICENSE).
 
 ## Not legal advice
 
