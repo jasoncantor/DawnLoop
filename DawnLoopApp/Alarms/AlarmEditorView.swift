@@ -202,10 +202,6 @@ struct AlarmEditorView: View {
                         }
                         .pickerStyle(.menu)
                         .font(Theme.Typography.body)
-                        .onChange(of: state.gradientCurve) { _, _ in
-                            // Regenerate preview when gradient curve changes (VAL-ALARM-003)
-                            state.regeneratePreview()
-                        }
                     } header: {
                         Text("Transition Style")
                             .font(Theme.Typography.footnote)
@@ -541,6 +537,7 @@ private struct PreviewRefreshState: Equatable {
     let stepCount: Int
     let startBrightness: Int
     let targetBrightness: Int
+    let gradientCurve: GradientCurve
     let colorMode: AlarmColorMode
     let targetColorTemperature: Int?
     let targetHue: Int?
@@ -557,6 +554,7 @@ private struct PreviewRefreshState: Equatable {
         stepCount = state.stepCount
         startBrightness = state.startBrightness
         targetBrightness = state.targetBrightness
+        gradientCurve = state.gradientCurve
         colorMode = state.colorMode
         targetColorTemperature = state.targetColorTemperature
         targetHue = state.targetHue
