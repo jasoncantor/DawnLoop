@@ -23,6 +23,6 @@
       "evidence": "`.factory/skills/swiftui-feature-worker/SKILL.md` step 7 requires brief simulator verification for visible UI changes; handoff `.factory/missions/f4eaaa2b-ccf0-4261-b42d-e38d0bc996ef/handoffs/2026-04-10T00-47-47-817Z__dawnloop-onboarding-home-selection-ui-proof-fix__cecf84c5-3333-4df9-9748-61bbd56fae43.json` contains `commandsRun` only and no `interactiveChecks`."
     }
   ],
-  "addressesFailureFrom": ".factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-onboarding-home-selection-ui-proof-fix.json",
+  "addressesFailureFrom": ".factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-onboarding-discovery-ui-test-stabilization.json",
   "summary": "Pass on current repo state. The fix removed the simulated-success shortcut and the current onboarding/home-selection UI tests now require visible seeded-home details rather than blocker/loading-state fallbacks. The remaining relaunch-test looseness is non-blocking review-depth only, which matches the user's preference to avoid more churn while validators are green."
 }

@@ -9,9 +9,9 @@ commands:
     fi
   build: >-
     SIMULATOR_UDID=$(python3 .factory/resolve_simulator_udid.py) && if [ -d "DawnLoop.xcworkspace" ]; then
-      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build-for-testing;
+      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build;
     elif [ -d "DawnLoop.xcodeproj" ]; then
-      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build-for-testing;
+      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build;
     else
       echo "Bootstrap pending: Xcode project not created yet.";
     fi
