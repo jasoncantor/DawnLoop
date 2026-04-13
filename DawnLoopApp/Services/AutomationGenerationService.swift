@@ -107,6 +107,9 @@ final class AutomationGenerationService {
         let existingBindingsByKey = Dictionary(
             uniqueKeysWithValues: existingBindings.map { (BindingKey(binding: $0), $0) }
         )
+        DawnLoopLogger.automation.info(
+            "Scheduled run sync started for alarm \(alarm.id.uuidString, privacy: .public); steps=\(scenePlans.count, privacy: .public); bindings=\(expectedBindings.count, privacy: .public)"
+        )
 
         var createdTriggers: [String] = []
         var createdActionSets: [String] = []
@@ -157,9 +160,14 @@ final class AutomationGenerationService {
                     ),
                     schedule: expected.triggerSchedule,
                     actionSetIdentifier: actionSetIdentifier,
-                    requiredOnAccessoryIdentifiers: accessories.map(\.id),
+                    requiredOnAccessoryIdentifiers: [],
                     isEnabled: true
                 )
+                if expected.stepNumber == 0 {
+                    DawnLoopLogger.automation.info(
+                        "First wake step configured as authoritative command for alarm \(alarm.id.uuidString, privacy: .public); brightness=\(expected.step.brightness, privacy: .public)"
+                    )
+                }
                 if triggerResult.created {
                     createdTriggers.append(triggerResult.identifier)
                 }

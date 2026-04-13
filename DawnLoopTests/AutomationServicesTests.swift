@@ -1,4 +1,5 @@
 import XCTest
+import HomeKit
 import SwiftData
 @testable import DawnLoop
 
@@ -173,7 +174,7 @@ final class AutomationServicesTests: XCTestCase {
         )
     }
 
-    func testSyncAlarm_StopsFutureStepsWhenSelectedLightsAreTurnedOff() async throws {
+    func testSyncAlarm_DoesNotGateTriggersOnCurrentLightPowerState() async throws {
         let alarm = WakeAlarm(
             name: "Bedroom Light Alarm",
             wakeTimeSeconds: 7 * 3600,
@@ -197,12 +198,100 @@ final class AutomationServicesTests: XCTestCase {
         XCTAssertFalse(triggers.isEmpty)
         XCTAssertTrue(
             triggers.allSatisfy {
-                $0.requiredOnAccessoryIdentifiers == [
-                    "test-accessory-bedroom-001",
-                    "test-accessory-living-room-001",
-                ]
+                $0.requiredOnAccessoryIdentifiers.isEmpty
             }
         )
+    }
+
+    func testMockUpsertScheduledTrigger_SortsRequiredOnAccessoryIdentifiers() async throws {
+        let homeID = "test-home-uuid-001"
+        let actionSet = try await controller.upsertActionSet(
+            homeIdentifier: homeID,
+            identifier: nil,
+            name: "precondition.test.scene",
+            requests: []
+        )
+        _ = try await controller.upsertScheduledTrigger(
+            homeIdentifier: homeID,
+            identifier: nil,
+            name: "precondition.test.trigger",
+            schedule: .calendar(fireDate: Date(), weekday: nil),
+            actionSetIdentifier: actionSet.identifier,
+            requiredOnAccessoryIdentifiers: ["zebra-id", "alpha-id", "alpha-id"],
+            isEnabled: true
+        )
+        let trigger = try XCTUnwrap(controller.storedTriggers(for: homeID).first)
+        XCTAssertEqual(trigger.requiredOnAccessoryIdentifiers, ["alpha-id", "zebra-id"])
+    }
+
+    func testSyncAlarm_FirstStepSceneAlwaysTurnsLightOnAndAppliesStepZeroBrightness() async throws {
+        let alarm = WakeAlarm(
+            name: "Low Start Brightness Alarm",
+            wakeTimeSeconds: 7 * 3600,
+            durationMinutes: 30,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 60,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        try await repository.saveAlarm(alarm, schedule: .never, validationState: .needsSync)
+
+        let plannedStepZero = try XCTUnwrap(WakeAlarmStepPlanner.planSteps(for: alarm, stepCount: alarm.stepCount).first)
+        try await generationService.syncAlarm(alarm, schedule: .never)
+
+        let stepZeroScene = try XCTUnwrap(
+            controller
+                .storedActionSets(for: "test-home-uuid-001")
+                .first(where: { $0.name.contains(".step.0.scene") })
+        )
+
+        XCTAssertTrue(
+            stepZeroScene.requests.contains(
+                HomeKitActionRequest(
+                    accessoryIdentifier: "test-accessory-living-room-001",
+                    characteristicType: HMCharacteristicTypePowerState,
+                    value: .bool(true)
+                )
+            )
+        )
+        XCTAssertTrue(
+            stepZeroScene.requests.contains(
+                HomeKitActionRequest(
+                    accessoryIdentifier: "test-accessory-living-room-001",
+                    characteristicType: HMCharacteristicTypeBrightness,
+                    value: .int(plannedStepZero.brightness)
+                )
+            )
+        )
+    }
+
+    func testSyncAlarm_PreflightDisagreementCannotAbortStepZeroSchedule() async throws {
+        let alarm = WakeAlarm(
+            name: "No Preflight Gating Alarm",
+            wakeTimeSeconds: 6 * 3600,
+            durationMinutes: 15,
+            gradientCurve: .linear,
+            colorMode: .brightnessOnly,
+            startBrightness: 1,
+            targetBrightness: 80,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-bedroom-001"],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        try await repository.saveAlarm(alarm, schedule: .never, validationState: .needsSync)
+
+        try await generationService.syncAlarm(alarm, schedule: .never)
+
+        let firstStepTrigger = try XCTUnwrap(
+            controller
+                .storedTriggers(for: "test-home-uuid-001")
+                .first(where: { $0.name.contains(".step.0.trigger") })
+        )
+        XCTAssertTrue(firstStepTrigger.requiredOnAccessoryIdentifiers.isEmpty)
+        XCTAssertEqual(firstStepTrigger.isEnabled, true)
     }
 
     func testSyncAlarm_SunriseAlarm_UsesSignificantTimeTriggersWithOffsets() async throws {
