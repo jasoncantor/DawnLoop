@@ -42,7 +42,7 @@ First release of DawnLoop with onboarding, Light Alarm creation, local persisten
 
 - Support URL: replace with your real support page or contact page
 - Marketing URL: optional for 1.0
-- Privacy Policy URL: replace with your hosted privacy policy before submission
+- Privacy Policy URL: `https://github.com/jasoncantor/DawnLoop/blob/main/PRIVACY_POLICY.md`
 
 ## App Review notes
 
@@ -62,7 +62,7 @@ First release of DawnLoop with onboarding, Light Alarm creation, local persisten
 
 ## Screenshot upload plan
 
-Upload the following files from [AppStoreSubmission/Screenshots/iPhone-6.9](AppStoreSubmission/Screenshots/iPhone-6.9) in this order:
+Upload the following files from [AppStoreSubmission/Screenshots/iPhone-6.9](AppStoreSubmission/Screenshots/iPhone-6.9) for the iPhone 6.9-inch display class, and the matching files from [AppStoreSubmission/Screenshots/iPad-13](AppStoreSubmission/Screenshots/iPad-13) for the 13-inch iPad display class, in this order:
 
 1. `01-welcome.png`
    Caption concept: `Gentle Light Alarms for calmer mornings`

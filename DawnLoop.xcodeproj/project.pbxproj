@@ -51,9 +51,9 @@
 		D041 /* AutomationRepairService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F041 /* AutomationRepairService.swift */; };
 		D042 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F042 /* Assets.xcassets */; };
 		D043 /* AutomationServicesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F044 /* AutomationServicesTests.swift */; };
+		D045 /* AppStoreScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F045 /* AppStoreScreenshotTests.swift */; };
 		D046 /* PendingCheckedContinuations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F046 /* PendingCheckedContinuations.swift */; };
 		D047 /* PendingCheckedContinuationsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F047 /* PendingCheckedContinuationsTests.swift */; };
-		D045 /* AppStoreScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F045 /* AppStoreScreenshotTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,9 +120,9 @@
 		F042 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F043 /* DawnLoop.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DawnLoop.entitlements; sourceTree = "<group>"; };
 		F044 /* AutomationServicesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationServicesTests.swift; sourceTree = "<group>"; };
+		F045 /* AppStoreScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreScreenshotTests.swift; sourceTree = "<group>"; };
 		F046 /* PendingCheckedContinuations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingCheckedContinuations.swift; sourceTree = "<group>"; };
 		F047 /* PendingCheckedContinuationsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingCheckedContinuationsTests.swift; sourceTree = "<group>"; };
-		F045 /* AppStoreScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreScreenshotTests.swift; sourceTree = "<group>"; };
 		F100 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		T001 /* DawnLoopTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		T002 /* DawnLoopUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DawnLoopUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -500,7 +500,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 46QSP33EUF;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DawnLoopApp/Info.plist;
@@ -536,7 +536,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 46QSP33EUF;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DawnLoopApp/Info.plist;

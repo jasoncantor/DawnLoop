@@ -1,0 +1,107 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "4983E388-A09C-4420-BF20-499A20B60398",
+        "deviceName" : "iPad Pro 13-inch (M5)",
+        "exportedFileName" : "7BD2C0FD-1954-4D2D-9506-0CE8BCA5992D.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "01-welcome_0_B8223349-6AD9-45EE-AD80-723C183AAB5B.png",
+        "timestamp" : 1776041133.124
+      }
+    ],
+    "testIdentifier" : "AppStoreScreenshotTests/testCapture01Welcome()",
+    "testIdentifierURL" : "test://com.apple.xcode/DawnLoop/DawnLoopUITests/AppStoreScreenshotTests/testCapture01Welcome"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "4983E388-A09C-4420-BF20-499A20B60398",
+        "deviceName" : "iPad Pro 13-inch (M5)",
+        "exportedFileName" : "C25D78EA-1A89-48C6-A434-38AA2FBCD2E9.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "02-home-selection_0_24AC37A1-6864-4C25-B1BE-83E22695D186.png",
+        "timestamp" : 1776041143.023
+      }
+    ],
+    "testIdentifier" : "AppStoreScreenshotTests/testCapture02HomeSelection()",
+    "testIdentifierURL" : "test://com.apple.xcode/DawnLoop/DawnLoopUITests/AppStoreScreenshotTests/testCapture02HomeSelection"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "4983E388-A09C-4420-BF20-499A20B60398",
+        "deviceName" : "iPad Pro 13-inch (M5)",
+        "exportedFileName" : "094213CF-0379-44AC-8743-A1FB038F8E19.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "03-light-selection_0_CEA01B42-19F6-4ED4-84C4-09FAEE9D658F.png",
+        "timestamp" : 1776041152.906
+      }
+    ],
+    "testIdentifier" : "AppStoreScreenshotTests/testCapture03LightSelection()",
+    "testIdentifierURL" : "test://com.apple.xcode/DawnLoop/DawnLoopUITests/AppStoreScreenshotTests/testCapture03LightSelection"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "4983E388-A09C-4420-BF20-499A20B60398",
+        "deviceName" : "iPad Pro 13-inch (M5)",
+        "exportedFileName" : "EFF12839-F62B-4932-A2BB-6D1DFD0E984C.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "04-empty-alarm-list_0_33FAE82C-8A83-40A5-9C16-45C6C533514A.png",
+        "timestamp" : 1776041166.854
+      }
+    ],
+    "testIdentifier" : "AppStoreScreenshotTests/testCapture04EmptyAlarmList()",
+    "testIdentifierURL" : "test://com.apple.xcode/DawnLoop/DawnLoopUITests/AppStoreScreenshotTests/testCapture04EmptyAlarmList"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "4983E388-A09C-4420-BF20-499A20B60398",
+        "deviceName" : "iPad Pro 13-inch (M5)",
+        "exportedFileName" : "245C508B-611E-4768-96E3-5D1EB5DE0F18.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "05-alarm-editor_0_17208A87-93B2-470D-94A4-160142C09DCB.png",
+        "timestamp" : 1776041186.418
+      }
+    ],
+    "testIdentifier" : "AppStoreScreenshotTests/testCapture05AlarmEditor()",
+    "testIdentifierURL" : "test://com.apple.xcode/DawnLoop/DawnLoopUITests/AppStoreScreenshotTests/testCapture05AlarmEditor"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "4983E388-A09C-4420-BF20-499A20B60398",
+        "deviceName" : "iPad Pro 13-inch (M5)",
+        "exportedFileName" : "E693A1E9-6B72-46A3-A7C6-8B775F20A9C0.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "06-alarm-list-populated_0_EBB4FF30-F339-434F-93E2-0816A3385070.png",
+        "timestamp" : 1776041206.064
+      }
+    ],
+    "testIdentifier" : "AppStoreScreenshotTests/testCapture06AlarmListPopulated()",
+    "testIdentifierURL" : "test://com.apple.xcode/DawnLoop/DawnLoopUITests/AppStoreScreenshotTests/testCapture06AlarmListPopulated"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "4983E388-A09C-4420-BF20-499A20B60398",
+        "deviceName" : "iPad Pro 13-inch (M5)",
+        "exportedFileName" : "99866BA5-FD12-4394-9FFC-73A2A7D4068F.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "07-repair-needed_0_D2A93783-463E-4995-8417-2F610B9496EA.png",
+        "timestamp" : 1776041211.859
+      }
+    ],
+    "testIdentifier" : "AppStoreScreenshotTests/testCapture07RepairNeeded()",
+    "testIdentifierURL" : "test://com.apple.xcode/DawnLoop/DawnLoopUITests/AppStoreScreenshotTests/testCapture07RepairNeeded"
+  }
+]
