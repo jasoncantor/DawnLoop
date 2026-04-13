@@ -20,6 +20,7 @@
     }
   },
   "reviewsSummary": {
+    "countsFeatureReviewsOnly": true,
     "total": 3,
     "passed": 0,
     "failed": 3,

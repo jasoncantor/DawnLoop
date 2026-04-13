@@ -20,12 +20,19 @@
     }
   },
   "reviewsSummary": {
+    "countsFeatureReviewsOnly": true,
     "total": 2,
     "passed": 2,
     "failed": 0,
     "failedFeatures": []
   },
-  "blockingIssues": [],
+  "blockingIssues": [
+    {
+      "featureId": "__validator:test__",
+      "severity": "blocking",
+      "description": "Shared `.factory/services.yaml` test command failed with exit code 65 (see `validatorsRun.test`). Feature scrutiny reviews can still pass while the shared test gate is red."
+    }
+  ],
   "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
