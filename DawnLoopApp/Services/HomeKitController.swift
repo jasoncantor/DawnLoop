@@ -251,10 +251,13 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
 
         let desiredEvent = event(for: schedule)
         let desiredRecurrences = recurrences(for: schedule)
-        let desiredPredicate: NSPredicate? = nil
-        if !requiredOnAccessoryIdentifiers.isEmpty {
-            DawnLoopLogger.automation.info(
-                "Scheduling trigger without power-state precondition for \(name, privacy: .public); accessories=\(requiredOnAccessoryIdentifiers.sorted(), privacy: .public)"
+        let desiredPredicate = try powerOnPredicate(
+            home: home,
+            requiredOnAccessoryIdentifiers: requiredOnAccessoryIdentifiers
+        )
+        if desiredPredicate != nil {
+            DawnLoopLogger.automation.debug(
+                "Scheduled trigger with power-on precondition for \(name, privacy: .public); accessories=\(requiredOnAccessoryIdentifiers.sorted(), privacy: .public)"
             )
         }
         let desiredExecuteOnce = !isRepeating(schedule)
@@ -414,6 +417,40 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
         return actions
     }
 
+    /// Builds an `HMEventTrigger` precondition requiring power-on for each listed accessory (AND). Returns `nil` when the list is empty.
+    private func powerOnPredicate(home: HMHome, requiredOnAccessoryIdentifiers: [String]) throws -> NSPredicate? {
+        let sortedIDs = Array(Set(requiredOnAccessoryIdentifiers)).sorted()
+        guard !sortedIDs.isEmpty else {
+            return nil
+        }
+
+        let accessoriesByID = Dictionary(uniqueKeysWithValues: home.accessories.map { ($0.uniqueIdentifier.uuidString, $0) })
+        var subpredicates: [NSPredicate] = []
+
+        for id in sortedIDs {
+            guard let accessory = accessoriesByID[id] else {
+                throw HomeKitControllerError.preconditionAccessoryUnavailable(id)
+            }
+            guard let powerCharacteristic = accessory.services
+                .flatMap(\.characteristics)
+                .first(where: { $0.characteristicType == HMCharacteristicTypePowerState }) else {
+                throw HomeKitControllerError.preconditionAccessoryUnavailable(id)
+            }
+            subpredicates.append(
+                HMEventTrigger.predicateForEvaluatingTrigger(
+                    powerCharacteristic,
+                    relatedBy: .equalTo,
+                    toValue: true
+                )
+            )
+        }
+
+        if subpredicates.count == 1 {
+            return subpredicates[0]
+        }
+        return NSCompoundPredicate(andPredicateWithSubpredicates: subpredicates)
+    }
+
     private func event(for schedule: HomeKitTriggerSchedule) -> HMEvent {
         switch schedule {
         case .calendar(let fireDate, let weekday):
@@ -558,6 +595,7 @@ enum HomeKitControllerError: LocalizedError {
     case homeNotFound(String)
     case actionSetNotFound(String)
     case noWritableCharacteristics
+    case preconditionAccessoryUnavailable(String)
 
     var errorDescription: String? {
         switch self {
@@ -567,6 +605,8 @@ enum HomeKitControllerError: LocalizedError {
             return "The HomeKit action set (\(identifier)) could not be found."
         case .noWritableCharacteristics:
             return "The selected lights no longer expose writable characteristics for this alarm."
+        case .preconditionAccessoryUnavailable(let accessoryId):
+            return "Power state is required for trigger precondition, but accessory \(accessoryId) has no power characteristic in Home."
         }
     }
 }
@@ -728,7 +768,7 @@ final class MockHomeKitController: HomeKitControllerProtocol {
             name: name,
             schedule: schedule,
             actionSetIdentifier: actionSetIdentifier,
-            requiredOnAccessoryIdentifiers: requiredOnAccessoryIdentifiers.sorted(),
+            requiredOnAccessoryIdentifiers: Array(Set(requiredOnAccessoryIdentifiers)).sorted(),
             executeOnce: {
                 switch schedule {
                 case .calendar(_, let weekday), .significant(_, _, let weekday):

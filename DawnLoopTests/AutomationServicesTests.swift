@@ -1,4 +1,5 @@
 import XCTest
+import HomeKit
 import SwiftData
 @testable import DawnLoop
 
@@ -200,6 +201,27 @@ final class AutomationServicesTests: XCTestCase {
                 $0.requiredOnAccessoryIdentifiers.isEmpty
             }
         )
+    }
+
+    func testMockUpsertScheduledTrigger_SortsRequiredOnAccessoryIdentifiers() async throws {
+        let homeID = "test-home-uuid-001"
+        let actionSet = try await controller.upsertActionSet(
+            homeIdentifier: homeID,
+            identifier: nil,
+            name: "precondition.test.scene",
+            requests: []
+        )
+        _ = try await controller.upsertScheduledTrigger(
+            homeIdentifier: homeID,
+            identifier: nil,
+            name: "precondition.test.trigger",
+            schedule: .calendar(fireDate: Date(), weekday: nil),
+            actionSetIdentifier: actionSet.identifier,
+            requiredOnAccessoryIdentifiers: ["zebra-id", "alpha-id", "alpha-id"],
+            isEnabled: true
+        )
+        let trigger = try XCTUnwrap(controller.storedTriggers(for: homeID).first)
+        XCTAssertEqual(trigger.requiredOnAccessoryIdentifiers, ["alpha-id", "zebra-id"])
     }
 
     func testSyncAlarm_FirstStepSceneAlwaysTurnsLightOnAndAppliesStepZeroBrightness() async throws {
