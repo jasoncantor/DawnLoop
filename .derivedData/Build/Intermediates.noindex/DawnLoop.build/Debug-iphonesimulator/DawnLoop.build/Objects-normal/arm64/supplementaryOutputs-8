@@ -1,0 +1,23 @@
+{
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Alarms/AlarmEditorState.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmEditorState.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmEditorState.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmEditorState.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmEditorState.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmEditorState.swiftdeps"
+  },
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Alarms/AlarmEditorView.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmEditorView.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmEditorView.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmEditorView.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmEditorView.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmEditorView.swiftdeps"
+  },
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/MainFlow/AlarmListView.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmListView.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmListView.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmListView.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmListView.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AlarmListView.swiftdeps"
+  }
+}

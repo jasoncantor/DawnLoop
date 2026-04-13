@@ -1,0 +1,280 @@
+{
+  "source": "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/MainFlow/AlarmListView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "DawnLoop",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 422
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Alarm?",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 469
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset Onboarding?",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 490
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nuke DawnLoop HomeKit?",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 498
+        }
+      },
+      {
+        "comment": "",
+        "key": "DawnLoop",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 507
+        }
+      },
+      {
+        "comment": "",
+        "key": "Light Alarms",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 384
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 397
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duplicate",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 400
+        }
+      },
+      {
+        "comment": "",
+        "key": "Repair",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 404
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Alarm",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 430
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset Onboarding",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 439
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nuke HomeKit",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 443
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 477
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 483
+        }
+      },
+      {
+        "comment": "",
+        "key": "This removes the alarm and its HomeKit automations.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 487
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 491
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 494
+        }
+      },
+      {
+        "comment": "",
+        "key": "This sends the app back to the onboarding flow on the next screen refresh.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 496
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nuke",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 499
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 502
+        }
+      },
+      {
+        "comment": "",
+        "key": "This removes DawnLoop-created HomeKit scenes and triggers, then clears local automation bindings.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 504
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 515
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resetting HomeKit",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 530
+        }
+      },
+      {
+        "comment": "",
+        "key": "Removing DawnLoop-created scenes, triggers, and bindings.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 533
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld selected light%@ ready for light alarms",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 563
+        }
+      },
+      {
+        "comment": "",
+        "key": "Change Home or Lights",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 567
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Alarms Yet",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 592
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create your first Light Alarm to brighten selected lights before wake-up.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 596
+        }
+      },
+      {
+        "comment": "",
+        "key": "Finish Home Setup",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 619
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choose an Apple Home and the lights DawnLoop should control before creating alarms.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 623
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disable alarm",
+        "location": {
+          "startingColumn": 60,
+          "startingLine": 655
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enable alarm",
+        "location": {
+          "startingColumn": 78,
+          "startingLine": 655
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 673
+        }
+      },
+      {
+        "comment": "",
+        "key": "Next: %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 676
+        }
+      }
+    ]
+  },
+  "version": 1
+}

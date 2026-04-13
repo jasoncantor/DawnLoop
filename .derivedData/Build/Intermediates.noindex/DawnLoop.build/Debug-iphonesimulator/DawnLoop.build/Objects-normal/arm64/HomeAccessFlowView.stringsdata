@@ -1,0 +1,40 @@
+{
+  "source": "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Onboarding/HomeAccessFlowView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Preparing your home...",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "You're All Set",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your Home is connected and ready. Let's set up your first Light Alarm.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 130
+        }
+      },
+      {
+        "comment": "",
+        "key": "Review Compatible Lights",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 153
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,23 @@
+{
+  "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps"
+  },
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Services/AutomationRepairService.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AutomationRepairService.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AutomationRepairService.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AutomationRepairService.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AutomationRepairService.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/AutomationRepairService.swiftdeps"
+  },
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Services/PendingCheckedContinuations.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/PendingCheckedContinuations.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/PendingCheckedContinuations.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/PendingCheckedContinuations.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/PendingCheckedContinuations.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/PendingCheckedContinuations.swiftdeps"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "source": "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Onboarding/OnboardingView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Back",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 44
+        }
+      }
+    ]
+  },
+  "version": 1
+}

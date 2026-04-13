@@ -1,0 +1,30 @@
+{
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/MainFlow/MainFlowView.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/MainFlowView.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/MainFlowView.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/MainFlowView.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/MainFlowView.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/MainFlowView.swiftdeps"
+  },
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Models/OnboardingModels.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingModels.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingModels.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingModels.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingModels.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingModels.swiftdeps"
+  },
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Onboarding/OnboardingState.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingState.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingState.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingState.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingState.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingState.swiftdeps"
+  },
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Onboarding/OnboardingView.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingView.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingView.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingView.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingView.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/OnboardingView.swiftdeps"
+  }
+}

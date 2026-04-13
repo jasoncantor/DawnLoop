@@ -1,0 +1,23 @@
+{
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Onboarding/HomeAccessBlockerView.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessBlockerView.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessBlockerView.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessBlockerView.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessBlockerView.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessBlockerView.swiftdeps"
+  },
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Onboarding/HomeAccessFlowView.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessFlowView.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessFlowView.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessFlowView.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessFlowView.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessFlowView.swiftdeps"
+  },
+  "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Onboarding/HomeAccessService.swift" : {
+    "const-values" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessService.swiftconstvalues",
+    "dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessService.d",
+    "diagnostics" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessService.dia",
+    "object" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessService.o",
+    "swift-dependencies" : "/Users/jasoncantor/Downloads/DawnLoop/.derivedData/Build/Intermediates.noindex/DawnLoop.build/Debug-iphonesimulator/DawnLoop.build/Objects-normal/arm64/HomeAccessService.swiftdeps"
+  }
+}

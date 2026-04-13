@@ -1,0 +1,344 @@
+{
+  "source": "/Users/jasoncantor/Downloads/DawnLoop/DawnLoopApp/Alarms/AlarmEditorView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Alarm",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 458
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Alarm",
+        "location": {
+          "startingColumn": 63,
+          "startingLine": 458
+        }
+      },
+      {
+        "comment": "",
+        "key": "Alarm Name",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 21
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "Uses your local %@ time when available for previews. HomeKit still creates the real solar automation.",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@. Maximum density is 1 step per minute, capped at 30 steps.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 104
+        }
+      },
+      {
+        "comment": "",
+        "key": "Based On",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "Time",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "Offset",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duration",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld min",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "Steps",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 95
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 98
+        }
+      },
+      {
+        "comment": "",
+        "key": "Schedule",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "Repeat",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "Repeat",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 151
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Brightness: %lld%%",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 159
+        }
+      },
+      {
+        "comment": "",
+        "key": "Target Brightness: %lld%%",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "Brightness",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 190
+        }
+      },
+      {
+        "comment": "",
+        "key": "Gradient",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 197
+        }
+      },
+      {
+        "comment": "",
+        "key": "Transition Style",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 206
+        }
+      },
+      {
+        "comment": "",
+        "key": "Brightness",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 237
+        }
+      },
+      {
+        "comment": "",
+        "key": "Warmth",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 247
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add an alarm name to see preview",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 267
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select at least one light to see preview",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 271
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preview unavailable",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 261
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preview",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 279
+        }
+      },
+      {
+        "comment": "",
+        "key": "No lights available",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 298
+        }
+      },
+      {
+        "comment": "",
+        "key": "Lights",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 332
+        }
+      },
+      {
+        "comment": "",
+        "key": "Color Mode",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 339
+        }
+      },
+      {
+        "comment": "",
+        "key": "Warmth: %lld mireds",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 350
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hue: %lld°",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 369
+        }
+      },
+      {
+        "comment": "",
+        "key": "Saturation: %lld%%",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 383
+        }
+      },
+      {
+        "comment": "",
+        "key": "None of your selected lights support color temperature. They'll use brightness only.",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 417
+        }
+      },
+      {
+        "comment": "",
+        "key": "None of your selected lights support full color. They'll fall back to available features.",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 426
+        }
+      },
+      {
+        "comment": "",
+        "key": "Color",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 438
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enabled",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 445
+        }
+      },
+      {
+        "comment": "",
+        "key": "Status",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 448
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 462
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 470
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 493
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ · %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 758
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,6 @@
+Target dependency graph (3 targets)
+Target 'DawnLoopUITests' in project 'DawnLoop'
+➜ Explicit dependency on target 'DawnLoop' in project 'DawnLoop'
+Target 'DawnLoopTests' in project 'DawnLoop'
+➜ Explicit dependency on target 'DawnLoop' in project 'DawnLoop'
+Target 'DawnLoop' in project 'DawnLoop' (no dependencies)
