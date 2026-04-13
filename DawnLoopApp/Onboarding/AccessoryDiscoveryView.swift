@@ -18,7 +18,7 @@ struct AccessoryDiscoveryView: View {
                     .font(Theme.Typography.title2)
                     .foregroundStyle(Theme.Colors.textPrimary)
                 
-                Text("Choose which lights to include in your sunrise alarm")
+                Text("Choose which lights to include in your Light Alarm")
                     .font(Theme.Typography.body)
                     .foregroundStyle(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.center)

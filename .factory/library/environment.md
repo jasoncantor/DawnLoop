@@ -48,3 +48,5 @@ Real end-to-end validation later depends on:
 - Prefer simulator work for UI, layout, pure business logic, and repository tests.
 - Reserve real-device testing for Home permission, accessory discovery against a real Home, widgets, App Intents, and HomeKit automation behavior.
 - Do not introduce private APIs or foreground timer execution for scheduled alarms.
+- For the current brightness-step mission, automated validation is intentionally simulator-only; do not wait on physical-device or HomeKit setup.
+- Shared simulator commands should resolve an available iPhone simulator dynamically instead of assuming a fixed device name.

@@ -1,0 +1,29 @@
+{
+  "featureId": "dawnloop-alarm-persistence-contract-fix",
+  "reviewedAt": "2026-04-10T19:12:00Z",
+  "commitId": "88815c3bfc39749e089c41b350e01bfdf372d249",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature correctly adds dedicated schedule and validation-state persistence, but the repository leaves stale WakeAlarmSchedule and ValidationStateRecord rows behind when an alarm is deleted, so the persistence contract is still broken for delete flows.",
+    "issues": [
+      {
+        "severity": "non-blocking",
+        "file": "DawnLoopApp/Services/WakeAlarmRepository.swift",
+        "line": 303,
+        "title": "Deleting an alarm leaks its dedicated schedule and validation-state records",
+        "description": "`deleteAlarm(_:)` and `deleteAlarm(byId:)` only delete the `WakeAlarm` row. The feature introduced `WakeAlarmSchedule` and `ValidationStateRecord` as separate persistence models keyed by `alarmId`, but neither delete path removes those records or clears their relationships. After deleting an alarm, `fetchSchedule(for:)` and `fetchValidationState(for:)` can still return orphaned rows for the deleted ID, which violates the stated contract that saved alarms round-trip through dedicated models cleanly and will accumulate stale records over time.",
+        "evidence": [
+          "DawnLoopApp/Services/WakeAlarmRepository.swift:303-339 deletes only the WakeAlarm object",
+          "DawnLoopApp/Services/WakeAlarmRepository.swift:439-548 still fetches schedule/validation rows by alarmId independently of WakeAlarm existence",
+          "DawnLoopTests/WakeAlarmRepositoryTests.swift:548-569 only verifies `deleteSchedule(for:)`; there is no test that deleting an alarm removes associated dedicated records"
+        ],
+        "recommendation": "Extend both alarm deletion paths to remove any `WakeAlarmSchedule` and `ValidationStateRecord` rows for the alarm ID in the same transaction, and add repository tests covering delete cleanup for both dedicated models."
+      }
+    ]
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": "b6e27196c0569c5167f5b49c4010f2cd3e53414d",
+  "summary": "Review failed: dedicated persistence was added, but deleting an alarm still leaves orphaned schedule and validation-state records behind."
+}

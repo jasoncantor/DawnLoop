@@ -1,51 +1,57 @@
 {
   "featureId": "dawnloop-homekit-test-seam-refactor",
-  "reviewedAt": "2026-04-09T23:47:18.878319+00:00",
+  "reviewedAt": "2026-04-10T03:57:52.728764+00:00",
   "commitId": "d49561f",
   "transcriptSkeletonReviewed": true,
   "diffReviewed": true,
   "status": "fail",
   "codeReview": {
-    "summary": "The refactor improves the seam shape by adding an async authorization hook and removing direct HMHome construction from the suite, but it still does not prove the required readiness, home-selection, and accessory-discovery behaviors through real service paths. The current tests mostly assert placeholder outcomes produced by empty adapter fixtures or helper-only models, so the prior blocking scrutiny findings remain unresolved.",
+    "summary": "The rerun fix review still fails. The refactor removed direct HMHome/HMAccessory construction, but the blocking scrutiny findings remain unresolved: the readiness tests still cannot drive denied-after-request behavior, several assertions are still placeholder-level, home selection still lacks a successful real-path test, and accessory discovery still does not cover the real discoverAccessories(in:) path. The seeded UI shortcut also still bypasses normal readiness evaluation.",
     "issues": [
       {
         "file": "DawnLoopTests/HomeAccessStateTests.swift",
         "line": 49,
         "severity": "blocking",
-        "description": "`HomeAccessMockAdapter.requestAuthorization()` still ignores the actor's configured `_requestAuthorizationResult` and always returns an authorized status. As a result, the `not determined` flow cannot be driven through controllable adapter inputs as required, and the suite still cannot prove permission-request behavior or denied-after-request handling via the real `checkReadiness()` / `startHomeAccessFlow()` path."
+        "description": "`HomeAccessMockAdapter.requestAuthorization()` still returns a hard-coded authorized status and never consults `_requestAuthorizationResult`, so the not-determined flow cannot be driven through controllable inputs to prove denied-after-request behavior through `checkReadiness()` or `startHomeAccessFlow()`."
       },
       {
         "file": "DawnLoopTests/HomeAccessStateTests.swift",
-        "line": 166,
+        "line": 129,
         "severity": "blocking",
-        "description": "The rewritten readiness tests for `noHomeHub`, `noCompatibleAccessories`, and the ready state still do not assert the real outcomes of the service logic. They never provide a home fixture that exercises `hasHomeHub(homes:)` or `fetchCompatibleAccessories(in:)`, and instead only check `readiness != .unknown` or enum helper properties. This leaves the prior blocker unresolved: the suite still does not verify the real decision tree beyond the empty-home case."
+        "description": "Multiple readiness tests still only assert broad progression such as `XCTAssertNotEqual(state.readiness, .unknown)` instead of validating concrete outcomes for permission-request, no-home-hub, and no-compatible-accessories branches, so the real readiness decision tree remains only partially proven."
       },
       {
         "file": "DawnLoopTests/HomeSelectionServiceTests.swift",
-        "line": 112,
+        "line": 124,
         "severity": "blocking",
-        "description": "`testSelectHome_WithValidHome_PersistsSelection` still does not set up a valid adapter home and explicitly expects `false`, while the rest of the suite mostly checks empty results or pre-seeded SwiftData rows. The tests therefore still do not validate actual home enumeration, successful selection, persistence, or visible active-home behavior through the real service path."
+        "description": "`testSelectHome_WithValidHome_PersistsSelection` still does not set up an adapter-backed valid home and explicitly expects `false`, leaving successful enumeration, selection, and persistence through `HomeSelectionService.selectHome(_:)` unverified."
       },
       {
         "file": "DawnLoopTests/AccessoryDiscoveryServiceTests.swift",
-        "line": 140,
+        "line": 107,
         "severity": "blocking",
-        "description": "The accessory-discovery suite still never exercises `discoverAccessories(in:)` with a real home/accessory graph. It validates helper capability-detection logic on custom mock structs and persistence toggles, but it does not prove grouping by room, filtering unsupported devices from actual discovery results, or stale-result clearing when switching homes through the service method required by the feature."
+        "description": "The accessory discovery suite still never exercises `AccessoryDiscoveryService.discoverAccessories(in:)` with a controllable home/accessory graph, so real-path grouping by room, filtering unsupported devices from discovery results, and stale-result clearing are still unproven."
+      },
+      {
+        "file": "DawnLoopApp/Onboarding/HomeAccessService.swift",
+        "line": 190,
+        "severity": "blocking",
+        "description": "The `readyTesting` branch still marks Home access ready whenever `--seed-test-home` is active and `fetchHomes()` is empty, which bypasses the normal HomeKit readiness path instead of proving it through controlled adapter outputs."
       }
     ]
   },
   "sharedStateObservations": [
     {
       "area": "skills",
-      "observation": "The apple-integration-worker skill says readiness/discovery tests must drive the real decision path through controlled adapter outputs and that handoffs must exactly reflect validator outcomes. This worker marked `followedProcedure: true`, but the transcript and current tests show several cases were still reduced to placeholder assertions like `XCTAssertNotEqual(..., .unknown)` or helper-only model checks instead of real service-path verification.",
-      "evidence": "apple-integration-worker/SKILL.md step 4 and step 8; handoff 2026-04-09T23-08-05-334Z__dawnloop-homekit-test-seam-refactor__ac6f077c-e682-49d0-9f17-ac29df3096b3.json; DawnLoopTests/HomeAccessStateTests.swift:166-195, DawnLoopTests/HomeSelectionServiceTests.swift:112-119, DawnLoopTests/AccessoryDiscoveryServiceTests.swift:140-260"
+      "observation": "The apple-integration-worker skill says readiness and discovery tests must drive real decision paths through controlled adapter outputs, but this worker handoff still claimed full coverage even though the tests retained placeholder assertions and omitted the real discovery path.",
+      "evidence": "`.factory/missions/f4eaaa2b-ccf0-4261-b42d-e38d0bc996ef/handoffs/2026-04-09T23-08-05-334Z__dawnloop-homekit-test-seam-refactor__ac6f077c-e682-49d0-9f17-ac29df3096b3.json` says the suites exercise the full decision tree, but `DawnLoopTests/HomeAccessStateTests.swift:129, 176, 193, 220, 237`, `DawnLoopTests/HomeSelectionServiceTests.swift:124-127`, and `DawnLoopTests/AccessoryDiscoveryServiceTests.swift` still show placeholder or helper-only coverage."
     },
     {
-      "area": "knowledge",
-      "observation": "UI-test home-selection reset still only clears `activeHomeIdentifier` / `activeHomeName` from UserDefaults even though active-home state is stored in SwiftData `HomeReference` rows. That persistence detail remains undocumented shared state and can still mislead workers investigating home-selection UI behavior.",
-      "evidence": "DawnLoopApp/App/DawnLoopApp.swift:84-86 removes only UserDefaults keys, while DawnLoopApp/Services/HomeSelectionService.swift:95-145 reads and persists active-home state through SwiftData `HomeReference` records."
+      "area": "library",
+      "observation": "The repo still contains a split `--seed-test-home` path where SwiftData seeding and `readyTesting` can make onboarding appear ready without the normal HomeKit readiness evaluation, and that behavior is still not documented in the shared library guidance.",
+      "evidence": "`DawnLoopApp/App/DawnLoopApp.swift:68-168` seeds test homes/accessories, while `DawnLoopApp/Onboarding/HomeAccessService.swift:190-194` short-circuits readiness to `.readyTesting` when no HomeKit homes are returned. The shared library files reviewed (`architecture.md`, `environment.md`, `user-testing.md`) do not describe this special-case test path."
     }
   ],
-  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-home-readiness-discovery-review-fixes.json",
-  "summary": "Fail. The seam refactor removes one compile blocker and introduces a better protocol hook, but it still does not fully resolve the earlier blocking scrutiny findings because the current tests do not drive or assert the real readiness, selection, and discovery behaviors end to end."
+  "addressesFailureFrom": ".factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-homekit-test-seam-refactor.json",
+  "summary": "Rerun fix review result: fail. The same blocking scrutiny issues remain in the current repo state, so the prior failure is not resolved."
 }

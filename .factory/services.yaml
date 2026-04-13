@@ -8,18 +8,26 @@ commands:
       echo "Bootstrap pending: Xcode project not created yet.";
     fi
   build: >-
-    if [ -d "DawnLoop.xcworkspace" ]; then
-      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build;
+    SIMULATOR_UDID=$(python3 .factory/resolve_simulator_udid.py) && if [ -d "DawnLoop.xcworkspace" ]; then
+      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build;
     elif [ -d "DawnLoop.xcodeproj" ]; then
-      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build;
+      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build;
     else
       echo "Bootstrap pending: Xcode project not created yet.";
     fi
   test: >-
-    if [ -d "DawnLoop.xcworkspace" ]; then
-      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3;
+    SIMULATOR_UDID=$(python3 .factory/resolve_simulator_udid.py) && if [ -d "DawnLoop.xcworkspace" ]; then
+      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build-for-testing && xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO test-without-building -parallel-testing-enabled YES -maximum-parallel-testing-workers 1;
     elif [ -d "DawnLoop.xcodeproj" ]; then
-      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -parallel-testing-enabled YES -maximum-parallel-testing-workers 3;
+      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO build-for-testing && xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO test-without-building -parallel-testing-enabled YES -maximum-parallel-testing-workers 1;
+    else
+      echo "Bootstrap pending: Xcode project not created yet.";
+    fi
+  planner_tests: >-
+    SIMULATOR_UDID=$(python3 .factory/resolve_simulator_udid.py) && if [ -d "DawnLoop.xcworkspace" ]; then
+      xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO test -parallel-testing-enabled NO -only-testing:DawnLoopTests/WakeAlarmPlannerPreviewTests -only-testing:DawnLoopTests/AutomationServicesTests -only-testing:DawnLoopTests/AlarmEditorValidationTests;
+    elif [ -d "DawnLoop.xcodeproj" ]; then
+      xcodebuild -project DawnLoop.xcodeproj -scheme DawnLoop -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" -derivedDataPath .derivedData CODE_SIGNING_ALLOWED=NO test -parallel-testing-enabled NO -only-testing:DawnLoopTests/WakeAlarmPlannerPreviewTests -only-testing:DawnLoopTests/AutomationServicesTests -only-testing:DawnLoopTests/AlarmEditorValidationTests;
     else
       echo "Bootstrap pending: Xcode project not created yet.";
     fi

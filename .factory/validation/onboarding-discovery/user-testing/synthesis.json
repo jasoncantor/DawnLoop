@@ -1,0 +1,58 @@
+{
+  "milestone": "onboarding-discovery",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 14,
+    "passed": 8,
+    "failed": 0,
+    "blocked": 6
+  },
+  "passedAssertions": [
+    "VAL-ONBOARD-001",
+    "VAL-ONBOARD-008",
+    "VAL-HOME-001",
+    "VAL-HOME-002",
+    "VAL-HOME-003",
+    "VAL-HOME-004",
+    "VAL-HOME-005",
+    "VAL-HOME-006"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    {
+      "id": "VAL-ONBOARD-002",
+      "blockedBy": "Requires manual real-iPhone Home permission prompt validation; simulator/xcodebuild cannot prove system Apple Home authorization prompt."
+    },
+    {
+      "id": "VAL-ONBOARD-003",
+      "blockedBy": "Requires manual real-iPhone denied/restricted Home access validation evidence."
+    },
+    {
+      "id": "VAL-ONBOARD-004",
+      "blockedBy": "Requires manual real-iPhone validation for no-Home-configured Apple Home state."
+    },
+    {
+      "id": "VAL-ONBOARD-005",
+      "blockedBy": "Requires manual real-iPhone validation for missing home hub state."
+    },
+    {
+      "id": "VAL-ONBOARD-006",
+      "blockedBy": "Requires manual real-iPhone validation for no-compatible-accessories state."
+    },
+    {
+      "id": "VAL-ONBOARD-007",
+      "blockedBy": "Requires manual real-iPhone validation that successful live Apple Home access lands in usable setup state."
+    }
+  ],
+  "appliedUpdates": [],
+  "previousRound": null,
+  "orchestratorNotes": [
+    {
+      "timestamp": "2026-04-10T14:37:28Z",
+      "type": "user_testing_override",
+      "summary": "User-testing overridden to allow Milestone 2 progress.",
+      "justification": "The user explicitly chose to override the blocked real-device onboarding assertions and move to Milestone 2. Assertions VAL-ONBOARD-002 through VAL-ONBOARD-007 were deferred to feature dawnloop-onboarding-real-device-validation-followup and reset to pending in validation-state.json."
+    }
+  ]
+}

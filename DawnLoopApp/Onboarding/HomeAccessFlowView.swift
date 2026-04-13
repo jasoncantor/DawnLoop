@@ -1,5 +1,4 @@
 import SwiftUI
-import HomeKit
 
 /// Flow view that handles onboarding completion and Home access orchestration
 struct HomeAccessFlowView: View {
@@ -28,12 +27,12 @@ struct HomeAccessFlowView: View {
 /// Initial view that checks Home access readiness and routes appropriately
 struct HomeAccessCheckView: View {
     @Environment(AppEnvironment.self) private var environment
+    @State private var hasTransitioned = false
     
     var body: some View {
         Group {
             switch environment.homeAccessState.readiness {
-            case .unknown, .checkingPermission:
-                // Show loading during initial check
+            case .unknown:
                 ProgressView()
                     .scaleEffect(1.5)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -57,32 +56,16 @@ struct HomeAccessCheckView: View {
                 HomeAccessBlockerView(blockerState: .noCompatibleAccessories)
                 
             case .ready:
-                // Home is ready - determine next step based on discovery state
                 ReadyTransitionView()
+                    .onAppear {
+                        if !hasTransitioned {
+                            hasTransitioned = true
+                            environment.onboardingState.moveToHomeSelection()
+                        }
+                    }
             }
         }
-        .task {
-            await evaluateNextStep()
-        }
     }
-    
-    private func evaluateNextStep() async {
-        // Small delay to allow UI to settle
-        try? await Task.sleep(nanoseconds: 100_000_000)
-        
-        switch environment.homeAccessState.readiness {
-        case .ready:
-            // Always show home selection to make active-home choice visible (VAL-HOME-001)
-            // Even with a single home, the user sees the home visibly selected
-            // before moving deeper into setup. Tests using --seed-test-home will
-            // have homes available and can verify this visible selection flow.
-            environment.onboardingState.moveToHomeSelection()
-            
-        default:
-            break
-        }
-    }
-    
 }
 
 /// Transition view shown briefly when home access is ready
@@ -144,7 +127,7 @@ struct AlarmSetupReadyView: View {
                             .foregroundStyle(Theme.Colors.textPrimary)
                             .multilineTextAlignment(.center)
                         
-                        Text("Your Home is connected and ready. Let's set up your first wake-light alarm.")
+                        Text("Your Home is connected and ready. Let's set up your first Light Alarm.")
                             .font(Theme.Typography.body)
                             .foregroundStyle(Theme.Colors.textSecondary)
                             .multilineTextAlignment(.center)

@@ -3,28 +3,28 @@ import XCTest
 
 @MainActor
 final class OnboardingStateTests: XCTestCase {
+    private let suiteName = "OnboardingStateTests"
+    private var testDefaults: UserDefaults!
     
-    override func setUp() {
-        super.setUp()
-        // Reset UserDefaults before each test
-        UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
+    override func setUp() async throws {
+        testDefaults = UserDefaults(suiteName: suiteName)
+        testDefaults.removePersistentDomain(forName: suiteName)
     }
     
-    override func tearDown() {
-        // Clean up after each test
-        UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
-        super.tearDown()
+    override func tearDown() async throws {
+        testDefaults.removePersistentDomain(forName: suiteName)
+        testDefaults = nil
     }
     
     func testInitialState_IsNotCompleted() {
-        let state = OnboardingState()
+        let state = OnboardingState(userDefaults: testDefaults)
         
         XCTAssertFalse(state.hasCompletedOnboarding)
         XCTAssertEqual(state.currentScreen, .welcome)
     }
     
     func testCompleteOnboarding_SetsCompletedTrue() {
-        let state = OnboardingState()
+        let state = OnboardingState(userDefaults: testDefaults)
         
         state.completeOnboarding()
         
@@ -32,17 +32,17 @@ final class OnboardingStateTests: XCTestCase {
     }
     
     func testCompleteOnboarding_PersistsToUserDefaults() {
-        let state = OnboardingState()
+        let state = OnboardingState(userDefaults: testDefaults)
         
         state.completeOnboarding()
         
         // Create a new state instance to verify persistence
-        let newState = OnboardingState()
+        let newState = OnboardingState(userDefaults: testDefaults)
         XCTAssertTrue(newState.hasCompletedOnboarding)
     }
     
     func testResetOnboarding_ClearsCompletion() {
-        let state = OnboardingState()
+        let state = OnboardingState(userDefaults: testDefaults)
         
         state.completeOnboarding()
         XCTAssertTrue(state.hasCompletedOnboarding)

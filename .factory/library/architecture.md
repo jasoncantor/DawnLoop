@@ -53,6 +53,14 @@ The app should keep business rules in services/use-cases, not in views:
 - `AlarmValidationService`
 - `FeatureFlagService`
 
+### Project Validation Configuration
+
+For this mission, the Xcode project and test-target configuration are part of the architecture surface, not incidental build noise:
+
+- the shared DawnLoop simulator validation path must build and run both `DawnLoopTests` and `DawnLoopUITests`
+- deployment-target alignment between the app target and both test targets is required for the shared simulator flow to work
+- workers should treat the shared simulator commands in `.factory/services.yaml` as the canonical validation entrypoint, matching the CI-style `build-for-testing` then `test-without-building` flow
+
 ### Platform Adapters
 
 All Apple-framework integrations stay behind protocols:
@@ -96,6 +104,16 @@ The exact Xcode layout may use local packages or grouped folders, but workers sh
 3. Preview requests a pure step plan from the planner.
 4. Save writes app-owned metadata to SwiftData.
 5. If the alarm is enabled, automation generation is invoked.
+
+For wake-step density, the planner and editor must preserve these invariants:
+
+- selected `stepCount` remains canonical through create/edit/persistence paths
+- preview and automation generation derive from the same step sequence
+- dense ramps redistribute brightness across the full configured start-to-target range instead of silently collapsing to a smaller fixed ladder
+- when a validation fixture has enough brightness range to support unique integer brightness values, dense redistributed steps should be strictly increasing across the sequence
+- the first and last steps always preserve the configured brightness endpoints
+- duration-based clamping still limits density to one step per minute with a 30-step global cap
+- any helper text about step density or preview expectations must remain grounded in this canonical planner behavior
 
 ### 3. Automation Generation
 
@@ -152,6 +170,7 @@ Practical planning guidance:
 - step count must be configurable in code
 - safe means the plan is coarse enough to keep HomeKit object count manageable and reliable during create/edit/delete/repair
 - edit flows should avoid duplicate or conflicting automations even if the underlying implementation chooses reuse, replace, or mixed diff behavior
+- automation generation must persist the same ordered brightness/count values that the planner preview exposed for a given alarm configuration
 
 ## Capability Model
 
@@ -194,6 +213,7 @@ Specific UI labels can vary, but these concepts should stay consistent across li
 - Simulator-first: UI rendering, navigation, view models, repositories, planner logic, mocked HomeKit states
 - Real-device-only: Home permission prompts, live Home discovery, home-hub readiness, HomeKit automation behavior, widget interaction fidelity, Siri / Shortcuts behavior
 - Features should keep mockable seams even when the milestone also requires real-device proof later
+- For the current brightness-step mission, automated validation is intentionally simulator-only and should use the shared CI-style `build-for-testing` then `test-without-building` flow with a dynamically resolved available iPhone simulator
 
 ## Observability
 

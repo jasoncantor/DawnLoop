@@ -25,20 +25,20 @@ enum Theme {
         /// Sky gradient end (daylight)
         static let skyEnd = Color(red: 0.68, green: 0.85, blue: 0.90)
         
-        /// Background - deep night
-        static let background = Color(red: 0.07, green: 0.08, blue: 0.15)
-        
+        /// Background - follows the system surface in light and dark mode
+        static let background = Color(uiColor: .systemBackground)
+
         /// Card/elevated surface
-        static let surface = Color(red: 0.12, green: 0.13, blue: 0.20)
-        
-        /// Primary text on dark backgrounds
-        static let textPrimary = Color.white
-        
+        static let surface = Color(uiColor: .secondarySystemBackground)
+
+        /// Primary text that adapts to the current color scheme
+        static let textPrimary = Color.primary
+
         /// Secondary/muted text
-        static let textSecondary = Color(white: 0.7)
-        
+        static let textSecondary = Color.secondary
+
         /// Tertiary/placeholder text
-        static let textTertiary = Color(white: 0.5)
+        static let textTertiary = Color(uiColor: .tertiaryLabel)
         
         /// Primary accent color (dawn purple)
         static let primary = dawnPurple

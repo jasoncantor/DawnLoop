@@ -1,0 +1,86 @@
+DawnLoop Community License 1.0
+
+Copyright (c) 2026 Jason Cantor
+All rights reserved.
+
+This license allows people to read, fork, modify, build, and install this
+software for personal, educational, evaluation, and internal non-commercial
+use, while reserving public app store distribution and DawnLoop branding to the
+copyright holder.
+
+1. Grant of rights
+
+Subject to the conditions below, you are granted a limited, revocable,
+non-exclusive, non-transferable license to:
+
+- use, reproduce, and modify the source code;
+- compile and run the software;
+- install the software on devices you own or control; and
+- share source-code modifications for non-commercial purposes, provided this
+  license and all copyright notices remain intact.
+
+2. Allowed self-install use
+
+You may build this project yourself and install it directly on your own devices,
+or on devices within your household or organization for internal evaluation or
+internal non-commercial use.
+
+3. Restrictions
+
+You may not, without prior written permission from the copyright holder:
+
+- distribute, publish, sell, sublicense, or otherwise make available the app or
+  any compiled binary through the Apple App Store, TestFlight, Google Play, the
+  Microsoft Store, or any other public app marketplace or managed app catalog;
+- distribute the software or any derivative work as a hosted commercial product
+  or paid service;
+- use the name "DawnLoop", the app icon, screenshots, marketing copy, bundle
+  identifiers, or other brand assets in a way that suggests the original app,
+  an official build, or endorsement by the copyright holder;
+- remove or alter copyright, attribution, or license notices; or
+- use this software for unlawful purposes.
+
+4. Derivative works
+
+You may create modified versions for the permitted uses above. If you share a
+modified version in source form, you must:
+
+- include a copy of this license;
+- clearly mark that your version is modified;
+- change the app name, bundle identifier, and branding if you distribute it to
+  anyone outside your household or organization; and
+- avoid any representation that your version is the official DawnLoop app.
+
+5. Trademark and brand reservation
+
+No trademark, trade name, logo, or brand license is granted by this license.
+"DawnLoop" and related branding remain reserved to the copyright holder.
+
+6. Ownership
+
+The software is licensed, not sold. All rights not expressly granted are
+reserved by the copyright holder.
+
+7. Termination
+
+This license terminates automatically if you violate any term. Upon termination,
+you must stop using and distributing the software and destroy copies in your
+possession or control, except where retention is required by law.
+
+8. Disclaimer of warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.
+
+9. Limitation of liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER SHALL NOT BE
+LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+10. Clarification
+
+This is a source-available license. It is not an OSI-approved open-source
+license.

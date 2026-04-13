@@ -1,9 +1,12 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Dedicated view for Home access blocker/recovery states
 struct HomeAccessBlockerView: View {
     @Environment(AppEnvironment.self) private var environment
-    @State private var homeAccessState = HomeAccessState()
+    @Environment(\.openURL) private var openURL
     
     let blockerState: HomeAccessReadiness
     
@@ -47,13 +50,13 @@ struct HomeAccessBlockerView: View {
                 
                 Button(blockerCopy.secondaryAction) {
                     Task {
-                        await homeAccessState.retry()
+                        await environment.homeAccessState.retry()
                         updateReadiness()
                     }
                 }
                 .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.Colors.textSecondary)
-                .disabled(homeAccessState.isLoading)
+                .disabled(environment.homeAccessState.isLoading)
             }
             .padding(.horizontal, Theme.Spacing.large)
             .padding(.bottom, Theme.Spacing.xxLarge)
@@ -61,14 +64,14 @@ struct HomeAccessBlockerView: View {
         }
         .background(Theme.Colors.background.ignoresSafeArea())
         .overlay {
-            if homeAccessState.isLoading {
+            if environment.homeAccessState.isLoading {
                 ProgressView()
                     .scaleEffect(1.5)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Theme.Colors.background.opacity(0.8))
             }
         }
-        .onChange(of: homeAccessState.readiness) { _, newReadiness in
+        .onChange(of: environment.homeAccessState.readiness) { _, newReadiness in
             handleReadinessChange(newReadiness)
         }
     }
@@ -182,32 +185,35 @@ struct HomeAccessBlockerView: View {
     }
     
     private func openSettings() {
-        if let url = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(url)
+        if let url = settingsURL {
+            openURL(url)
         }
     }
     
     private func openHomeApp() {
-        // Try to open the Home app
         if let url = URL(string: "com.apple.home://") {
-            UIApplication.shared.open(url)
+            openURL(url)
         }
     }
     
     private func showHubInfo() {
-        // In a real implementation, this would show an educational sheet
-        // For now, we'll open Apple's support page
         if let url = URL(string: "https://support.apple.com/en-us/HT207057") {
-            UIApplication.shared.open(url)
+            openURL(url)
         }
     }
     
     private func showCompatibleLightsInfo() {
-        // In a real implementation, this would show compatible devices
-        // For now, we'll open Apple's Home accessories page
         if let url = URL(string: "https://www.apple.com/ios/home/accessories/") {
-            UIApplication.shared.open(url)
+            openURL(url)
         }
+    }
+
+    private var settingsURL: URL? {
+#if canImport(UIKit)
+        URL(string: UIApplication.openSettingsURLString)
+#else
+        nil
+#endif
     }
     
     private func updateReadiness() {

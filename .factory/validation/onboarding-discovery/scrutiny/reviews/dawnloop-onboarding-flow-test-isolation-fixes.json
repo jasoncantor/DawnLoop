@@ -34,6 +34,6 @@
       "evidence": "Transcript skeleton for session `7c3bae6b-1d6e-44e7-99bf-70452437fee2` shows the worker first ran `OnboardingFlowTests`, then added `LaunchArgumentHandler`, then added `handleSimulatorAutoComplete()` after seeing `Good Morning` never appeared. The resulting code in `HomeAccessFlowView.swift:99-108` completes onboarding whenever `--reset-onboarding` is present and readiness is blocked."
     }
   ],
-  "addressesFailureFrom": "/Users/jasoncantor/Downloads/DawnLoop/.factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-bootstrap-app-shell-theme.json",
+  "addressesFailureFrom": ".factory/validation/onboarding-discovery/scrutiny/reviews/dawnloop-bootstrap-app-shell-theme.json",
   "summary": "Reviewed the fix feature handoff, transcript skeleton, skill instructions, prior failed review, and both relevant diffs (`01e75ee` and `3ebea2b`). The fix correctly adds app-side handling for the reset launch argument, but it does not adequately address the original completion-path failure because it makes blocker states auto-complete onboarding under test mode, allowing relaunch coverage to pass without a real successful visible flow."
 }

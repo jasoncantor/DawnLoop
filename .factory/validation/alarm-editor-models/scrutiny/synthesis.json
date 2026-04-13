@@ -1,0 +1,49 @@
+{
+  "milestone": "alarm-editor-models",
+  "round": 2,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "shared .factory/services.yaml test command",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "shared .factory/services.yaml build command",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "shared .factory/services.yaml lint command",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "countsFeatureReviewsOnly": true,
+    "total": 5,
+    "passed": 4,
+    "failed": 1,
+    "failedFeatures": [
+      "dawnloop-alarm-persistence-contract-fix"
+    ]
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [],
+  "rejectedObservations": [
+    {
+      "observation": "Fail the milestone solely because swift-format lint emits many warnings.",
+      "reason": "duplicate/already-triaged: the configured lint validator exits successfully and mission guidance says not to reopen work for broad formatting churn alone."
+    }
+  ],
+  "previousRound": null,
+  "nonBlockingIssues": [
+    {
+      "featureId": "dawnloop-alarm-persistence-contract-fix",
+      "severity": "non_blocking",
+      "description": "`deleteAlarm(_:)` and `deleteAlarm(byId:)` only delete the `WakeAlarm` row. The feature introduced `WakeAlarmSchedule` and `ValidationStateRecord` as separate persistence models keyed by `alarmId`, but neither delete path removes those records or clears their relationships. After deleting an alarm, `fetchSchedule(for:)` and `fetchValidationState(for:)` can still return orphaned rows for the deleted ID, which violates the stated contract that saved alarms round-trip through dedicated models cleanly and will accumulate stale records over time.",
+      "suggestedFix": "Extend both alarm deletion paths to remove any `WakeAlarmSchedule` and `ValidationStateRecord` rows for the alarm ID in the same transaction, and add repository tests covering delete cleanup for both dedicated models."
+    }
+  ]
+}

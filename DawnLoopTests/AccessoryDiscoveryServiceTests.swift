@@ -1,19 +1,18 @@
 import XCTest
-import HomeKit
 import SwiftData
+import HomeKit
 @testable import DawnLoop
 
 /// Mock HomeKit adapter for AccessoryDiscoveryService testing
 /// Drives real AccessoryDiscoveryService behavior through controlled adapter outputs
-@preconcurrency
-actor AccessoryDiscoveryMockAdapter: HomeKitAdapterProtocol {
-    private var _compatibleAccessories: [HMAccessory] = []
+final class AccessoryDiscoveryMockAdapter: HomeKitAdapterProtocol {
+    private var _compatibleAccessories: [AccessorySnapshot] = []
     private var _authorizationStatus: HMHomeManagerAuthorizationStatus = [.determined, .authorized]
-    private var _homes: [HMHome] = []
+    private var _homes: [HomeSnapshot] = []
 
     // MARK: - Test Control Methods
 
-    func setCompatibleAccessories(_ accessories: [HMAccessory]) {
+    func setCompatibleAccessories(_ accessories: [AccessorySnapshot]) {
         _compatibleAccessories = accessories
     }
 
@@ -21,33 +20,25 @@ actor AccessoryDiscoveryMockAdapter: HomeKitAdapterProtocol {
         _authorizationStatus = status
     }
 
-    func setHomes(_ homes: [HMHome]) {
+    func setHomes(_ homes: [HomeSnapshot]) {
         _homes = homes
     }
 
     // MARK: - HomeKitAdapterProtocol Implementation
-
-    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
-        HMHomeManagerAuthorizationStatus([.determined, .authorized])
-    }
 
     /// Returns the configured authorization status for test control
     func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
         return _authorizationStatus
     }
 
-    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
-        HMHomeManagerAuthorizationStatus([.determined, .authorized])
-    }
-
     /// Returns configured homes (empty by default for discovery tests)
-    func fetchHomes() async throws -> [HMHome] {
+    func fetchHomes() async throws -> [HomeSnapshot] {
         return _homes
     }
 
     /// Returns configured compatible accessories
     /// Tests control this via setCompatibleAccessories()
-    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
+    func fetchCompatibleAccessories(in homeIdentifier: String) async -> [AccessorySnapshot] {
         return _compatibleAccessories
     }
 }
@@ -126,8 +117,7 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
     var mockAdapter: AccessoryDiscoveryMockAdapter!
     var service: AccessoryDiscoveryService!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
 
         let schema = Schema([HomeReference.self, AccessoryReference.self, OnboardingCompletion.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
@@ -143,11 +133,10 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
         service = AccessoryDiscoveryService(adapter: mockAdapter, modelContainer: modelContainer)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         modelContainer = nil
         mockAdapter = nil
         service = nil
-        super.tearDown()
     }
 
     // MARK: - VAL-HOME-006: Switching homes clears stale accessory results
@@ -438,5 +427,41 @@ final class AccessoryDiscoveryServiceTests: XCTestCase {
     func testSelectedAccessories_NoAccessoriesPersisted_ReturnsEmpty() async {
         let selected = await service.selectedAccessories()
         XCTAssertTrue(selected.isEmpty)
+    }
+
+    func testDiscoverAccessories_PersistsGroupedAccessories() async {
+        let home = HomeSnapshot(
+            id: "home-1",
+            name: "My Home",
+            roomCount: 2,
+            accessoryCount: 2,
+            homeHubState: .connected
+        )
+        mockAdapter.setCompatibleAccessories([
+            AccessorySnapshot(
+                id: "light-1",
+                homeIdentifier: "home-1",
+                name: "Bedroom Light",
+                roomName: "Bedroom",
+                capability: .brightnessOnly,
+                isReachable: true
+            ),
+            AccessorySnapshot(
+                id: "light-2",
+                homeIdentifier: "home-1",
+                name: "Kitchen Light",
+                roomName: "Kitchen",
+                capability: .tunableWhite,
+                isReachable: true
+            )
+        ])
+
+        let result = await service.discoverAccessories(in: home)
+
+        guard case .success(let groups) = result else {
+            return XCTFail("Expected grouped accessories")
+        }
+        XCTAssertEqual(groups.count, 2)
+        XCTAssertEqual(groups.flatMap(\.accessories).count, 2)
     }
 }

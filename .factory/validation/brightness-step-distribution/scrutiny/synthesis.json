@@ -1,0 +1,47 @@
+{
+  "milestone": "brightness-step-distribution",
+  "round": 2,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": false,
+      "command": "shared .factory/services.yaml test command",
+      "exitCode": 65
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "shared .factory/services.yaml build command",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "shared .factory/services.yaml lint command",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "countsFeatureReviewsOnly": true,
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [
+    {
+      "featureId": "__validator:test__",
+      "severity": "blocking",
+      "description": "Shared `.factory/services.yaml` test command failed with exit code 65 (see `validatorsRun.test`). Feature scrutiny reviews can still pass while the shared test gate is red."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills",
+      "suggestion": "The apple-integration-worker skill requires reading `.factory/library/architecture.md`, `.factory/library/automation-strategy.md`, `.factory/library/environment.md`, and `.factory/library/user-testing.md`, but the fix-session transcript skeleton only shows mission files, services, and direct repo inspection before editing the parity test.",
+      "evidence": "worker-transcripts.jsonl entry for session 0f6195b0-991f-4884-8b57-fd96e2e510e4 includes Read calls for mission.md, validation-contract.md, AGENTS.md, .factory/services.yaml, validation-state.json, and repo files, but no reads of the required library docs before the change.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}

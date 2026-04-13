@@ -6,7 +6,10 @@ struct RootView: View {
     
     var body: some View {
         Group {
-            if environment.onboardingState.hasCompletedOnboarding {
+            // Show main flow only if onboarding is complete AND we're not in the middle of home access flow.
+            // This allows the home access flow (home selection, accessory discovery) to complete
+            // even after onboarding is marked complete.
+            if environment.onboardingState.hasCompletedOnboarding && !environment.onboardingState.showingHomeAccessFlow {
                 MainFlowView()
             } else {
                 OnboardingView()

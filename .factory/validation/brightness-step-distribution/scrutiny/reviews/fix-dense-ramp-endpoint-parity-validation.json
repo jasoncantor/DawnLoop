@@ -1,0 +1,21 @@
+{
+  "featureId": "fix-dense-ramp-endpoint-parity-validation",
+  "reviewedAt": "2026-04-11T18:55:25Z",
+  "commitId": "370a26a2260433d5a066b2bb0e4e737a2816b24e",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix commit resolves the prior blocking endpoint-parity issue by making the remaining dense-ramp endpoint assertion use a non-repeating schedule, and the combined original+fix commits now provide complete in-scope coverage for the already-implemented brightness redistribution behavior.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The apple-integration-worker skill requires reading `.factory/library/architecture.md`, `.factory/library/automation-strategy.md`, `.factory/library/environment.md`, and `.factory/library/user-testing.md`, but the fix-session transcript skeleton only shows mission files, services, and direct repo inspection before editing the parity test.",
+      "evidence": "worker-transcripts.jsonl entry for session 0f6195b0-991f-4884-8b57-fd96e2e510e4 includes Read calls for mission.md, validation-contract.md, AGENTS.md, .factory/services.yaml, validation-state.json, and repo files, but no reads of the required library docs before the change."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/brightness-step-distribution/scrutiny/reviews/redistribute-brightness-across-selected-steps.json",
+  "summary": "Review passed. The original redistribution tests and the follow-up fix now jointly cover the in-scope behavior: redistribution expectations already existed, and commit 370a26a cleanly fixes the last unreliable VAL-CROSS-001 endpoint assertion by removing repeating-weekday ordering from the final parity test."
+}

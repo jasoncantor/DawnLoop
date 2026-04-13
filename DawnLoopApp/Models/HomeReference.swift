@@ -15,19 +15,36 @@ final class HomeReference {
     /// Whether this is the currently active home selection
     var isActive: Bool
     
+    /// Number of rooms in the home (for UI display)
+    var roomCount: Int
+    
+    /// Number of accessories in the home (for UI display)
+    var accessoryCount: Int
+    
     /// When this record was created or last updated
     var updatedAt: Date
     
-    init(homeKitIdentifier: String, name: String, isActive: Bool = true) {
+    init(homeKitIdentifier: String, name: String, isActive: Bool = true, roomCount: Int = 0, accessoryCount: Int = 0) {
         self.homeKitIdentifier = homeKitIdentifier
         self.name = name
         self.isActive = isActive
+        self.roomCount = roomCount
+        self.accessoryCount = accessoryCount
         self.updatedAt = Date()
     }
     
     /// Updates the reference from a live HMHome object
     func update(from home: HMHome) {
         self.name = home.name
+        self.roomCount = home.rooms.count
+        self.accessoryCount = home.accessories.count
+        self.updatedAt = Date()
+    }
+
+    func update(from home: HomeSnapshot) {
+        self.name = home.name
+        self.roomCount = home.roomCount
+        self.accessoryCount = home.accessoryCount
         self.updatedAt = Date()
     }
 }
@@ -64,7 +81,7 @@ struct HomeViewModel: Identifiable, Equatable, Sendable {
         self.homeKitIdentifier = reference.homeKitIdentifier
         self.name = reference.name
         self.isActive = reference.isActive
-        self.roomCount = 0
-        self.accessoryCount = 0
+        self.roomCount = reference.roomCount
+        self.accessoryCount = reference.accessoryCount
     }
 }

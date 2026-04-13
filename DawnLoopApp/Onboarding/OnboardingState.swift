@@ -7,10 +7,11 @@ import SwiftData
 final class OnboardingState {
     private let onboardingKey = "hasCompletedOnboarding"
     private let homeAccessStartedKey = "hasStartedHomeAccessFlow"
+    private let defaults: UserDefaults
     
     var hasCompletedOnboarding: Bool {
         didSet {
-            UserDefaults.standard.set(hasCompletedOnboarding, forKey: onboardingKey)
+            defaults.set(hasCompletedOnboarding, forKey: onboardingKey)
         }
     }
     
@@ -18,8 +19,9 @@ final class OnboardingState {
     var currentScreen: OnboardingScreen = .welcome
     var discoveryStep: DiscoveryStep = .none
     
-    init() {
-        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: onboardingKey)
+    init(userDefaults: UserDefaults = .standard) {
+        self.defaults = userDefaults
+        self.hasCompletedOnboarding = userDefaults.bool(forKey: onboardingKey)
     }
     
     /// Called from the final onboarding CTA to start Home access handling.
@@ -89,11 +91,11 @@ enum OnboardingScreen: Int, CaseIterable {
     var description: String {
         switch self {
         case .welcome:
-            return "Gentle sunrise alarms that transform your mornings using the lights you already have."
+            return "Gentle light alarms that transform your mornings using the lights you already have."
         case .howItWorks:
             return "DawnLoop creates smart automations in Apple Home that gradually brighten your lights before your alarm time."
         case .ready:
-            return "Connect to Apple Home and set up your first wake-light alarm in under a minute."
+            return "Connect to Apple Home and set up your first Light Alarm in under a minute."
         }
     }
     

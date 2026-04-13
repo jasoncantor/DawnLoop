@@ -1,0 +1,76 @@
+{
+  "groupId": "core",
+  "testedAt": "2026-04-11T19:09:29.811768+00:00",
+  "surface": "iPhone Simulator / xcodebuild",
+  "isolation": {
+    "surface": "iPhone Simulator / xcodebuild",
+    "missionDir": ".factory/missions/21b7f05f-dfbe-4267-aef3-7a797cd4555e",
+    "evidenceDir": ".factory/missions/21b7f05f-dfbe-4267-aef3-7a797cd4555e/evidence/brightness-step-distribution/core"
+  },
+  "toolsUsed": [
+    "Read",
+    "Grep",
+    "Glob",
+    "xcodebuild build-for-testing",
+    "xcodebuild test",
+    "xcodebuild test-without-building"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-PATH-001",
+      "status": "pass",
+      "reason": "The shared CI-style simulator path built for testing and launched both DawnLoopTests and DawnLoopUITests through test-without-building without deployment-target or test-bundle configuration errors; only documented unrelated legacy tests failed afterward.",
+      "evidence": [
+        "brightness-step-distribution/core/shared_test_path.log"
+      ]
+    },
+    {
+      "id": "VAL-STEP-001",
+      "status": "pass",
+      "reason": "Targeted planner tests passed for custom step-count retention on create/load plus preview endpoint preservation.",
+      "evidence": [
+        "brightness-step-distribution/core/planner_tests.log"
+      ]
+    },
+    {
+      "id": "VAL-STEP-002",
+      "status": "pass",
+      "reason": "Dense-ramp planner tests passed for exact step count, preserved endpoints, and a strictly increasing redistributed brightness sequence.",
+      "evidence": [
+        "brightness-step-distribution/core/planner_tests.log"
+      ]
+    },
+    {
+      "id": "VAL-STEP-003",
+      "status": "pass",
+      "reason": "Planner density-guardrail tests passed for duration-driven clamping and the preserved global 30-step cap.",
+      "evidence": [
+        "brightness-step-distribution/core/planner_tests.log"
+      ]
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "status": "pass",
+      "reason": "Automation parity tests passed for dense-ramp brightness matching, endpoint preservation, and planner/automation step-count parity.",
+      "evidence": [
+        "brightness-step-distribution/core/planner_tests.log"
+      ]
+    }
+  ],
+  "frictions": [
+    {
+      "description": "The repo's shared simulator command exercises the full suite, so validating VAL-PATH-001 requires separating milestone-targeted passes from known unrelated suite failures.",
+      "resolved": true,
+      "resolution": "Captured both the targeted planner/automation run and the shared build-for-testing + test-without-building run, then attributed only non-milestone failures to the shared path result.",
+      "affectedAssertions": [
+        "VAL-PATH-001",
+        "VAL-STEP-001",
+        "VAL-STEP-002",
+        "VAL-STEP-003",
+        "VAL-CROSS-001"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Validated 5 assertions via simulator/Xcode flows: all 5 passed. The shared CI-style build-for-testing + test-without-building path launched both test bundles without deployment-target/test-bundle configuration errors, and the brightness-targeted planner/automation assertions also passed. Known unrelated legacy suite failures occurred only after both bundles launched and were treated as out of scope per mission guidance."
+}

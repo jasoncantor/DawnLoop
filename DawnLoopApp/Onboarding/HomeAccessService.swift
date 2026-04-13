@@ -1,110 +1,60 @@
 import Foundation
 import HomeKit
+import SwiftData
 
 /// Protocol for HomeKit platform adapter - enables mocking in tests
-@preconcurrency
-protocol HomeKitAdapterProtocol: Sendable {
-    /// Current authorization status - prefer checkAuthorizationStatus() for test control
-    var authorizationStatus: HMHomeManagerAuthorizationStatus { get }
-
+@MainActor
+protocol HomeKitAdapterProtocol {
     /// Checks current authorization status - tests can control this via mock adapter
     func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus
 
-    /// Requests authorization from the user
-    func requestAuthorization() async -> HMHomeManagerAuthorizationStatus
-
     /// Fetches available homes
-    func fetchHomes() async throws -> [HMHome]
+    func fetchHomes() async throws -> [HomeSnapshot]
 
     /// Fetches compatible accessories from a home
-    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory]
-}
-
-/// Mock HomeKit adapter for UI testing - simulates a ready Home environment.
-/// This adapter provides controllable responses for testing the Home access flow.
-/// Tests can verify the full visible flow structure including home selection
-/// and accessory discovery without requiring real HomeKit infrastructure.
-@preconcurrency
-actor MockHomeKitAdapter: HomeKitAdapterProtocol {
-    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
-        [.determined, .authorized]
-    }
-
-    nonisolated func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
-        [.determined, .authorized]
-    }
-
-    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
-        [.determined, .authorized]
-    }
-
-    func fetchHomes() async throws -> [HMHome] {
-        // Mock adapter returns empty homes - UI tests verify the flow structure
-        // including "No Homes Available" state and home selection UI.
-        // The tests prove the legitimate visible flow, not the underlying HomeKit data.
-        return []
-    }
-
-    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
-        // Mock adapter returns empty accessories - UI tests verify the flow structure
-        // including empty states and discovery UI, not specific accessory data.
-        return []
-    }
+    func fetchCompatibleAccessories(in homeIdentifier: String) async -> [AccessorySnapshot]
 }
 
 /// Live HomeKit adapter implementation
-@preconcurrency
-actor LiveHomeKitAdapter: HomeKitAdapterProtocol {
-    nonisolated var authorizationStatus: HMHomeManagerAuthorizationStatus {
-        HMHomeManager().authorizationStatus
+final class LiveHomeKitAdapter: HomeKitAdapterProtocol {
+    private let controller: HomeKitControllerProtocol
+
+    init(controller: HomeKitControllerProtocol) {
+        self.controller = controller
     }
 
-    nonisolated func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
-        return HMHomeManager().authorizationStatus
-    }
-
-    nonisolated func requestAuthorization() async -> HMHomeManagerAuthorizationStatus {
-        // HomeKit authorization is triggered by first access to HMHomeManager
-        // The status will update via notification center, but we return current
-        return HMHomeManager().authorizationStatus
-    }
-
-    func fetchHomes() async throws -> [HMHome] {
-        let homeManager = HMHomeManager()
-        // Wait for homes to be available
-        if homeManager.homes.isEmpty {
-            // Brief delay to allow HomeKit to populate
-            try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+    func checkAuthorizationStatus() async -> HMHomeManagerAuthorizationStatus {
+        await controller.ensureLoaded()
+        return await MainActor.run {
+            controller.authorizationStatus()
         }
-        return homeManager.homes
     }
 
-    func fetchCompatibleAccessories(in home: HMHome) async -> [HMAccessory] {
-        return home.accessories.filter { accessory in
-            // Check for brightness control capability
-            let hasBrightness = accessory.services.contains { service in
-                service.characteristics.contains { characteristic in
-                    characteristic.characteristicType == HMCharacteristicTypeBrightness
-                }
-            }
-            return hasBrightness
-        }
+    func fetchHomes() async throws -> [HomeSnapshot] {
+        await controller.homes()
+    }
+
+    func fetchCompatibleAccessories(in homeIdentifier: String) async -> [AccessorySnapshot] {
+        await controller.accessories(in: homeIdentifier).filter { $0.capability.supportsBrightness }
     }
 }
 
 /// Represents the current state of Home access readiness
 enum HomeAccessReadiness: Equatable, Sendable {
     case unknown
-    case checkingPermission
     case permissionDenied
     case noHomeConfigured
     case noHomeHub
     case noCompatibleAccessories
-    case ready(home: HMHome, accessories: [HMAccessory])
-    
+    case ready(home: HomeSnapshot, accessories: [AccessorySnapshot])
+
     var isReady: Bool {
-        if case .ready = self { return true }
-        return false
+        switch self {
+        case .ready:
+            return true
+        default:
+            return false
+        }
     }
     
     var isBlocked: Bool {
@@ -127,15 +77,8 @@ final class HomeAccessState {
     var isLoading = false
     var lastError: Error?
     
-    init(adapter: (any HomeKitAdapterProtocol)? = nil) {
-        // Use provided adapter, or create appropriate adapter based on test environment
-        if let providedAdapter = adapter {
-            self.adapter = providedAdapter
-        } else if TestEnvironment.isSimulatingHomeReady {
-            self.adapter = MockHomeKitAdapter()
-        } else {
-            self.adapter = LiveHomeKitAdapter()
-        }
+    init(adapter: any HomeKitAdapterProtocol) {
+        self.adapter = adapter
     }
     
     /// Initiates the Home access flow from onboarding
@@ -148,45 +91,26 @@ final class HomeAccessState {
     
     /// Checks current Home access readiness state
     func checkReadiness() async {
-        // Use checkAuthorizationStatus() for test-controllable authorization checks
         let status = await adapter.checkAuthorizationStatus()
-        
-        // Handle permission states
-        if status.contains(.determined) {
-            // When determined, check if authorized - if not authorized, it's denied
-            if status.contains(.restricted) || !status.contains(.authorized) {
-                readiness = .permissionDenied
-                return
-            }
-        } else {
-            // Not determined - request authorization
-            readiness = .checkingPermission
-            let newStatus = await adapter.requestAuthorization()
-            
-            // Re-check after request
-            if newStatus.contains(.restricted) || !newStatus.contains(.authorized) {
-                readiness = .permissionDenied
-                return
-            }
+
+        guard status.contains(.authorized) else {
+            readiness = .permissionDenied
+            return
         }
         
-        // Check for homes
         do {
             let homes = try await adapter.fetchHomes()
-            
             guard let primaryHome = homes.first else {
                 readiness = .noHomeConfigured
                 return
             }
             
-            // Check for home hub
             if !hasHomeHub(homes: homes) {
                 readiness = .noHomeHub
                 return
             }
             
-            // Check for compatible accessories
-            let accessories = await adapter.fetchCompatibleAccessories(in: primaryHome)
+            let accessories = await adapter.fetchCompatibleAccessories(in: primaryHome.id)
             
             guard !accessories.isEmpty else {
                 readiness = .noCompatibleAccessories
@@ -207,23 +131,14 @@ final class HomeAccessState {
     func retry() async {
         await checkReadiness()
     }
-
-
-
-    private func hasHomeHub(homes: [HMHome]) -> Bool {
-        // Check if any home has a home hub configured
-        // This is a simplified check - in production, you'd verify actual hub connectivity
-        return homes.contains { home in
-            // Home hub presence can be inferred from various states
-            // For now, we assume if the home exists and has accessories, hub might exist
-            !home.accessories.isEmpty || home.isPrimary
-        }
+    private func hasHomeHub(homes: [HomeSnapshot]) -> Bool {
+        homes.contains { $0.homeHubState == .connected }
     }
 }
 
 /// Result type for active home lookup
 enum ActiveHomeResult {
-    case success(home: HMHome)
+    case success(home: HomeSnapshot)
     case notFound(identifier: String)
     case noSelection
     case error(HomeSelectionError)
@@ -248,21 +163,21 @@ enum HomeSelectionError: Error {
 enum HomeAccessBlockerCopy {
     static let permissionDenied = BlockerCopy(
         title: "Home Access Needed",
-        message: "DawnLoop needs access to Apple Home to create sunrise alarm automations with your lights. Please enable Home access in Settings to continue.",
+        message: "DawnLoop needs access to Apple Home to create Light Alarm automations with your lights. Please enable Home access in Settings to continue.",
         primaryAction: "Open Settings",
         secondaryAction: "Try Again"
     )
     
     static let noHomeConfigured = BlockerCopy(
         title: "Set Up Apple Home First",
-        message: "You'll need to create an Apple Home before DawnLoop can set up sunrise alarms. Open the Home app to get started, then return here.",
+        message: "You'll need to create an Apple Home before DawnLoop can set up Light Alarms. Open the Home app to get started, then return here.",
         primaryAction: "Open Home App",
         secondaryAction: "Check Again"
     )
     
     static let noHomeHub = BlockerCopy(
         title: "Home Hub Required",
-        message: "Sunrise alarms need a Home Hub (Apple TV, HomePod, or iPad) to run reliably while you're away. Set one up in the Home app, then return here.",
+        message: "Light Alarms need a Home Hub (Apple TV, HomePod, or iPad) to run reliably while you're away. Set one up in the Home app, then return here.",
         primaryAction: "Learn More",
         secondaryAction: "Check Again"
     )

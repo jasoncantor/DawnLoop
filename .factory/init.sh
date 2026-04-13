@@ -11,6 +11,13 @@ if ! command -v xcrun >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 is required to resolve the simulator destination."
+  exit 1
+fi
+
+python3 .factory/resolve_simulator_udid.py >/dev/null
+
 if [ -d "DawnLoop.xcworkspace" ]; then
   xcodebuild -workspace DawnLoop.xcworkspace -scheme DawnLoop -resolvePackageDependencies >/dev/null
 elif [ -d "DawnLoop.xcodeproj" ]; then
