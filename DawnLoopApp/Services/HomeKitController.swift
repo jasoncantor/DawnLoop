@@ -251,10 +251,12 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
 
         let desiredEvent = event(for: schedule)
         let desiredRecurrences = recurrences(for: schedule)
-        let desiredPredicate = powerStatePredicate(
-            for: requiredOnAccessoryIdentifiers,
-            in: home
-        )
+        let desiredPredicate: NSPredicate? = nil
+        if !requiredOnAccessoryIdentifiers.isEmpty {
+            DawnLoopLogger.automation.info(
+                "Scheduling trigger without power-state precondition for \(name, privacy: .public); accessories=\(requiredOnAccessoryIdentifiers.sorted(), privacy: .public)"
+            )
+        }
         let desiredExecuteOnce = !isRepeating(schedule)
 
         let existingTrigger: HMTrigger? = if let identifier {
@@ -472,42 +474,6 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
         case .sunset:
             return .sunset
         }
-    }
-
-    private func powerStatePredicate(
-        for accessoryIdentifiers: [String],
-        in home: HMHome
-    ) -> NSPredicate? {
-        let accessoryIdentifiers = Array(Set(accessoryIdentifiers)).sorted()
-        let accessoriesByID = Dictionary(uniqueKeysWithValues: home.accessories.map { ($0.uniqueIdentifier.uuidString, $0) })
-        let predicates = accessoryIdentifiers.compactMap { accessoryIdentifier -> NSPredicate? in
-            guard
-                let accessory = accessoriesByID[accessoryIdentifier],
-                let characteristic = powerStateCharacteristic(for: accessory)
-            else {
-                return nil
-            }
-
-            return HMEventTrigger.predicateForEvaluatingTrigger(
-                characteristic,
-                relatedBy: .equalTo,
-                toValue: 1
-            )
-        }
-
-        guard !predicates.isEmpty else {
-            return nil
-        }
-        if predicates.count == 1 {
-            return predicates[0]
-        }
-        return NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
-    }
-
-    private func powerStateCharacteristic(for accessory: HMAccessory) -> HMCharacteristic? {
-        accessory.services
-            .flatMap(\.characteristics)
-            .first(where: { $0.characteristicType == HMCharacteristicTypePowerState })
     }
 
     private func matchesEvent(_ events: [HMEvent], desired: HMEvent) -> Bool {
