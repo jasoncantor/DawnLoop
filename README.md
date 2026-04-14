@@ -2,6 +2,19 @@
 
 DawnLoop is an iPhone-first SwiftUI app that turns Apple Home lights into gradual sunrise-style alarms. It lets you choose lights from your Apple Home setup, define a wake-up target based on a fixed time or solar events, preview the ramp, and generate the underlying Apple Home automations for you.
 
+## Download
+
+- App Store: [DawnLoop on the App Store](https://apps.apple.com/app/dawnloop/id6762026316)
+- Prefer not to pay for the App Store version? You can clone this repository and build/run DawnLoop yourself in Xcode by following the setup steps below.
+
+## Bugs and issues
+
+If you run into a bug or have an issue, please open an issue in this repository so I can see it and fix it:
+
+- [Create a new issue](https://github.com/jasoncantor/DawnLoop/issues/new)
+
+This is my first app using HomeKit, and it’s working pretty well for me so far, but reports are very helpful.
+
 ## Why DawnLoop?
 
 Traditional alarms wake you with sound. DawnLoop uses the lights you already own to make mornings feel more natural:
