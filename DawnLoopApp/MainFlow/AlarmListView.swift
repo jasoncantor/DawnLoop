@@ -499,6 +499,7 @@ struct AlarmListView: View {
         } message: {
             Text("This sends the app back to the onboarding flow on the next screen refresh.")
         }
+#endif
         .alert("Nuke DawnLoop HomeKit?", isPresented: $store.showingResetConfirmation) {
             Button("Nuke", role: .destructive) {
                 Task { await store.resetHomeKitArtifacts() }
@@ -507,7 +508,6 @@ struct AlarmListView: View {
         } message: {
             Text("This removes DawnLoop-created HomeKit scenes and triggers, then clears local automation bindings.")
         }
-#endif
         .alert("DawnLoop", isPresented: .init(
             get: { store.alertMessage != nil },
             set: { isPresented in
