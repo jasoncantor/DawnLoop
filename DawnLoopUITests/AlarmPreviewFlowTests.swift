@@ -61,4 +61,17 @@ final class AlarmPreviewFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Repair Test Alarm"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Needs Repair"].exists)
     }
+
+    func testNukeHomeKitRecoveryActionIsAvailable() throws {
+        let app = configuredApp()
+        let nukeButton = app.buttons["nukeHomeKitButton"]
+
+        XCTAssertTrue(nukeButton.waitForExistence(timeout: 5))
+        nukeButton.tap()
+
+        let confirmationAlert = app.alerts["Nuke DawnLoop HomeKit?"]
+        XCTAssertTrue(confirmationAlert.waitForExistence(timeout: 5))
+        confirmationAlert.buttons["Nuke"].tap()
+        XCTAssertTrue(app.alerts["DawnLoop"].waitForExistence(timeout: 5))
+    }
 }

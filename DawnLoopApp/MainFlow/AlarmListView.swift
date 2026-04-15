@@ -410,6 +410,14 @@ struct AlarmListView: View {
                         }
                     }
                 }
+
+                Section {
+                    RecoveryToolsCard {
+                        store.showingResetConfirmation = true
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                }
             } else {
                 Section {
                     AlarmSetupRequiredView(onStart: store.startSetupFlow)
@@ -438,10 +446,6 @@ struct AlarmListView: View {
                 Menu {
                     Button("Reset Onboarding") {
                         store.showingOnboardingResetConfirmation = true
-                    }
-
-                    Button("Nuke HomeKit", role: .destructive) {
-                        store.showingResetConfirmation = true
                     }
                 } label: {
                     Image(systemName: "gearshape")
@@ -495,6 +499,7 @@ struct AlarmListView: View {
         } message: {
             Text("This sends the app back to the onboarding flow on the next screen refresh.")
         }
+#endif
         .alert("Nuke DawnLoop HomeKit?", isPresented: $store.showingResetConfirmation) {
             Button("Nuke", role: .destructive) {
                 Task { await store.resetHomeKitArtifacts() }
@@ -503,7 +508,6 @@ struct AlarmListView: View {
         } message: {
             Text("This removes DawnLoop-created HomeKit scenes and triggers, then clears local automation bindings.")
         }
-#endif
         .alert("DawnLoop", isPresented: .init(
             get: { store.alertMessage != nil },
             set: { isPresented in
@@ -603,6 +607,37 @@ private struct EmptyAlarmStateView: View {
                 .accessibilityIdentifier("createFirstAlarmButton")
         }
         .padding(Theme.Spacing.xLarge)
+    }
+}
+
+private struct RecoveryToolsCard: View {
+    let onNuke: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
+            Label("HomeKit Recovery", systemImage: "wrench.and.screwdriver.fill")
+                .font(Theme.Typography.title3)
+                .foregroundStyle(Theme.Colors.textPrimary)
+
+            Text("If sync gets stuck or alarms drift badly, clear DawnLoop's HomeKit scenes, triggers, and local bindings so you can repair or recreate them cleanly.")
+                .font(Theme.Typography.callout)
+                .foregroundStyle(Theme.Colors.textSecondary)
+
+            Button(role: .destructive, action: onNuke) {
+                Label("Nuke HomeKit", systemImage: "trash")
+                    .font(Theme.Typography.bodyBold)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.Colors.warning)
+            .accessibilityIdentifier("nukeHomeKitButton")
+        }
+        .padding(Theme.Spacing.large)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.large)
+                .fill(Theme.Colors.surface)
+        )
+        .padding(.vertical, Theme.Spacing.small)
     }
 }
 
