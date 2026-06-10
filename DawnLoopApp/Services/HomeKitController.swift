@@ -53,8 +53,20 @@ struct HomeKitNamespaceCleanupResult: Equatable, Sendable {
 }
 
 enum HomeKitTriggerSchedule: Equatable, Sendable {
-    case calendar(fireDate: Date, weekday: Int?)
-    case significant(reference: AlarmTimeReference, offsetMinutes: Int, weekday: Int?)
+    /// `weekdays` are HomeKit recurrence weekdays (1 = Sunday ... 7 = Saturday).
+    /// `nil` (or empty) means a one-shot trigger; otherwise one trigger repeats on every listed day.
+    case calendar(fireDate: Date, weekdays: [Int]?)
+    case significant(reference: AlarmTimeReference, offsetMinutes: Int, weekdays: [Int]?)
+
+    var recurrenceWeekdays: [Int]? {
+        switch self {
+        case .calendar(_, let weekdays), .significant(_, _, let weekdays):
+            guard let weekdays, !weekdays.isEmpty else {
+                return nil
+            }
+            return weekdays
+        }
+    }
 }
 
 @MainActor
@@ -194,35 +206,47 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
             throw HomeKitControllerError.homeNotFound(homeIdentifier)
         }
 
+        // Build the replacement actions before touching the existing action set so a
+        // failure here can't leave a previously working scene stripped of its actions.
+        let actions = try writeActions(for: requests, in: home)
+        guard !actions.isEmpty else {
+            throw HomeKitControllerError.noWritableCharacteristics
+        }
+
         let actionSet: HMActionSet
         let created: Bool
 
         if let identifier, let existing = home.actionSets.first(where: { $0.uniqueIdentifier.uuidString == identifier }) {
             actionSet = existing
             created = false
+        } else if let existingByName = home.actionSets.first(where: { $0.name == name }) {
+            // Adopt an orphaned scene with our deterministic name (left by a reinstall
+            // or interrupted sync) - HomeKit enforces unique names, so creating a new
+            // one would fail forever with a name collision.
+            actionSet = existingByName
+            created = false
         } else {
             actionSet = try await home.addActionSet(named: name)
             created = true
         }
 
-        if actionSet.name != name {
-            try await actionSet.updateName(name)
-        }
-
-        for action in actionSet.actions {
-            try await actionSet.removeAction(action)
-        }
-
-        let actions = try writeActions(for: requests, in: home)
-        guard !actions.isEmpty else {
-            if created {
-            try? await home.removeActionSet(actionSet)
+        do {
+            if actionSet.name != name {
+                try await actionSet.updateName(name)
             }
-            throw HomeKitControllerError.noWritableCharacteristics
-        }
 
-        for action in actions {
-            try await actionSet.addAction(action)
+            for action in actionSet.actions {
+                try await actionSet.removeAction(action)
+            }
+
+            for action in actions {
+                try await actionSet.addAction(action)
+            }
+        } catch {
+            if created {
+                try? await home.removeActionSet(actionSet)
+            }
+            throw error
         }
 
         return HomeKitMutationResult(
@@ -262,10 +286,15 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
         }
         let desiredExecuteOnce = !isRepeating(schedule)
 
-        let existingTrigger: HMTrigger? = if let identifier {
+        // Resolve by identifier first, then adopt any orphaned trigger carrying our
+        // deterministic name so re-creation never collides on HomeKit name uniqueness.
+        var existingTrigger: HMTrigger? = if let identifier {
             existingTrigger(with: identifier, in: home)
         } else {
             nil
+        }
+        if existingTrigger == nil {
+            existingTrigger = home.triggers.first { $0.name == name }
         }
         let trigger: HMEventTrigger
         let created: Bool
@@ -288,31 +317,38 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
             try await home.addTrigger(trigger)
         }
 
-        if trigger.name != name {
-            try await trigger.updateName(name)
-        }
-        if !matchesEvent(trigger.events, desired: desiredEvent) {
-            try await trigger.updateEvents([desiredEvent])
-        }
-        if !matchesRecurrences(trigger.recurrences, desired: desiredRecurrences) {
-            try await trigger.updateRecurrences(desiredRecurrences)
-        }
-        if !matchesPredicate(trigger.predicate, desired: desiredPredicate) {
-            try await updatePredicate(for: trigger, desired: desiredPredicate)
-        }
-        if trigger.executeOnce != desiredExecuteOnce {
-            try await trigger.updateExecuteOnce(desiredExecuteOnce)
-        }
+        do {
+            if trigger.name != name {
+                try await trigger.updateName(name)
+            }
+            if !matchesEvent(trigger.events, desired: desiredEvent) {
+                try await trigger.updateEvents([desiredEvent])
+            }
+            if !matchesRecurrences(trigger.recurrences, desired: desiredRecurrences) {
+                try await trigger.updateRecurrences(desiredRecurrences)
+            }
+            if !matchesPredicate(trigger.predicate, desired: desiredPredicate) {
+                try await updatePredicate(for: trigger, desired: desiredPredicate)
+            }
+            if trigger.executeOnce != desiredExecuteOnce {
+                try await trigger.updateExecuteOnce(desiredExecuteOnce)
+            }
 
-        for existingActionSet in trigger.actionSets where existingActionSet.uniqueIdentifier.uuidString != actionSetIdentifier {
-            try await trigger.removeActionSet(existingActionSet)
-        }
-        if !trigger.actionSets.contains(where: { $0.uniqueIdentifier.uuidString == actionSetIdentifier }) {
-            try await trigger.addActionSet(actionSet)
-        }
+            for existingActionSet in trigger.actionSets where existingActionSet.uniqueIdentifier.uuidString != actionSetIdentifier {
+                try await trigger.removeActionSet(existingActionSet)
+            }
+            if !trigger.actionSets.contains(where: { $0.uniqueIdentifier.uuidString == actionSetIdentifier }) {
+                try await trigger.addActionSet(actionSet)
+            }
 
-        if trigger.isEnabled != isEnabled {
-            try await trigger.enable(isEnabled)
+            if trigger.isEnabled != isEnabled {
+                try await trigger.enable(isEnabled)
+            }
+        } catch {
+            if created {
+                try? await home.removeTrigger(trigger)
+            }
+            throw error
         }
 
         return HomeKitMutationResult(
@@ -400,7 +436,10 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
                 continue
             }
 
+            // Scope writes to lightbulb services so a combo accessory (e.g. fan + light)
+            // never has its non-light power state flipped by an alarm step.
             guard let characteristic = accessory.services
+                .filter({ $0.serviceType == HMServiceTypeLightbulb })
                 .flatMap(\.characteristics)
                 .first(where: { $0.characteristicType == request.characteristicType }) else {
                 continue
@@ -432,6 +471,7 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
                 throw HomeKitControllerError.preconditionAccessoryUnavailable(id)
             }
             guard let powerCharacteristic = accessory.services
+                .filter({ $0.serviceType == HMServiceTypeLightbulb })
                 .flatMap(\.characteristics)
                 .first(where: { $0.characteristicType == HMCharacteristicTypePowerState }) else {
                 throw HomeKitControllerError.preconditionAccessoryUnavailable(id)
@@ -453,12 +493,12 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
 
     private func event(for schedule: HomeKitTriggerSchedule) -> HMEvent {
         switch schedule {
-        case .calendar(let fireDate, let weekday):
+        case .calendar(let fireDate, _):
             let normalizedFireDate = fireDate.roundedToMinute()
             return HMCalendarEvent(
                 fire: calendarEventComponents(
                     for: normalizedFireDate,
-                    weekday: weekday
+                    isRepeating: isRepeating(schedule)
                 )
             )
         case .significant(let reference, let offsetMinutes, _):
@@ -470,29 +510,25 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
     }
 
     private func recurrences(for schedule: HomeKitTriggerSchedule) -> [DateComponents]? {
-        switch schedule {
-        case .calendar(_, let weekday), .significant(_, _, let weekday):
-            return weekday.map { [DateComponents(weekday: $0)] }
+        schedule.recurrenceWeekdays.map { weekdays in
+            weekdays.sorted().map { DateComponents(weekday: $0) }
         }
     }
 
     private func isRepeating(_ schedule: HomeKitTriggerSchedule) -> Bool {
-        switch schedule {
-        case .calendar(_, let weekday), .significant(_, _, let weekday):
-            return weekday != nil
-        }
+        schedule.recurrenceWeekdays != nil
     }
 
     private func calendarEventComponents(
         for fireDate: Date,
-        weekday: Int?,
+        isRepeating: Bool,
         calendar: Calendar = .current
     ) -> DateComponents {
-        if weekday == nil {
-            return calendar.dateComponents([.month, .day, .hour, .minute], from: fireDate)
+        if isRepeating {
+            return calendar.dateComponents([.hour, .minute], from: fireDate)
         }
 
-        return calendar.dateComponents([.hour, .minute], from: fireDate)
+        return calendar.dateComponents([.month, .day, .hour, .minute], from: fireDate)
     }
 
     private func significantOffset(minutes: Int) -> DateComponents? {
@@ -539,8 +575,8 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
     }
 
     private func matchesRecurrences(_ lhs: [DateComponents]?, desired rhs: [DateComponents]?) -> Bool {
-        let lhsWeekdays = lhs?.compactMap(\.weekday) ?? []
-        let rhsWeekdays = rhs?.compactMap(\.weekday) ?? []
+        let lhsWeekdays = Set(lhs?.compactMap(\.weekday) ?? [])
+        let rhsWeekdays = Set(rhs?.compactMap(\.weekday) ?? [])
         return lhsWeekdays == rhsWeekdays
     }
 
@@ -586,7 +622,15 @@ extension HomeKitController: @preconcurrency HMHomeManagerDelegate {
     func homeManager(_ manager: HMHomeManager, didUpdate status: HMHomeManagerAuthorizationStatus) {
         Task { @MainActor in
             DawnLoopLogger.homeKit.debug("Home authorization updated: \(status.rawValue)")
-            finishLoading()
+            // The homes database only loads once authorized, so keep waiting for
+            // homeManagerDidUpdateHomes when authorized. Unblocking here would let the
+            // rest of the app read a transiently empty homes array and treat the user's
+            // configured home and lights as gone. Denied and restricted states never
+            // produce a homes callback, so unblock for those.
+            if !status.contains(.authorized),
+               status.contains(.determined) || status.contains(.restricted) {
+                finishLoading()
+            }
         }
     }
 }
@@ -769,12 +813,7 @@ final class MockHomeKitController: HomeKitControllerProtocol {
             schedule: schedule,
             actionSetIdentifier: actionSetIdentifier,
             requiredOnAccessoryIdentifiers: Array(Set(requiredOnAccessoryIdentifiers)).sorted(),
-            executeOnce: {
-                switch schedule {
-                case .calendar(_, let weekday), .significant(_, _, let weekday):
-                    return weekday == nil
-                }
-            }(),
+            executeOnce: schedule.recurrenceWeekdays == nil,
             isEnabled: isEnabled
         )
         triggers[homeIdentifier] = homeTriggers
@@ -828,8 +867,11 @@ final class MockHomeKitController: HomeKitControllerProtocol {
 }
 
 private extension Date {
+    /// Rounds to the nearest whole minute so trigger times stay as close as possible
+    /// to the canonical step plan instead of always firing early.
     func roundedToMinute(calendar: Calendar = .current) -> Date {
-        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: self)
+        let reference = addingTimeInterval(30)
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: reference)
         return calendar.date(from: components) ?? self
     }
 }

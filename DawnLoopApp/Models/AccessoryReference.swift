@@ -211,8 +211,10 @@ enum AccessoryCapabilityDetector {
         var hasHue = false
         var hasSaturation = false
         var hasColorTemp = false
-        
-        for service in accessory.services {
+
+        // Only lightbulb services count: a fan or speaker exposing a Brightness
+        // characteristic is not a light DawnLoop should offer or control.
+        for service in accessory.services where service.serviceType == HMServiceTypeLightbulb {
             for characteristic in service.characteristics {
                 switch characteristic.characteristicType {
                 case HMCharacteristicTypeBrightness:

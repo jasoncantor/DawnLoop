@@ -31,6 +31,18 @@ enum Theme {
         /// Card/elevated surface
         static let surface = Color(uiColor: .secondarySystemBackground)
 
+        /// More elevated card surface for dense dashboard content
+        static let elevatedSurface = Color(uiColor: .tertiarySystemBackground)
+
+        /// Subtle separator/border color for custom cards
+        static let hairline = Color(uiColor: .separator).opacity(0.24)
+
+        /// Success/healthy status color
+        static let success = Color(red: 0.16, green: 0.62, blue: 0.39)
+
+        /// Calm secondary accent for Home/status metadata
+        static let morningTeal = Color(red: 0.16, green: 0.55, blue: 0.61)
+
         /// Primary text that adapts to the current color scheme
         static let textPrimary = Color.primary
 
@@ -93,6 +105,41 @@ enum Theme {
             ],
             startPoint: .leading,
             endPoint: .trailing
+        )
+
+        /// App background wash that stays quiet behind cards and forms
+        static let appBackground = LinearGradient(
+            colors: [
+                Colors.skyEnd.opacity(0.20),
+                Colors.background,
+                Colors.dawnPink.opacity(0.14)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+
+        /// Compact dashboard accent - a true dawn sky, deep purple into sunrise
+        static let dashboard = LinearGradient(
+            colors: [
+                Colors.dawnPurple,
+                Colors.dawnPurple.opacity(0.92),
+                Colors.dawnPink.opacity(0.95),
+                Colors.sunriseOrange
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+
+        /// Soft radial sun glow for hero artwork and card decoration
+        static let sunGlow = RadialGradient(
+            colors: [
+                Colors.morningGold.opacity(0.55),
+                Colors.sunriseOrange.opacity(0.25),
+                Color.clear
+            ],
+            center: .center,
+            startRadius: 0,
+            endRadius: 160
         )
     }
     

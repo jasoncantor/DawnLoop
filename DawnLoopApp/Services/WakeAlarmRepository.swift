@@ -153,6 +153,13 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
                 homeIdentifier: alarm.homeIdentifier
             )
 
+            // update() treats nil as "no change", but a save must mirror the incoming
+            // alarm exactly - otherwise color targets cleared by a mode switch would
+            // stay stale forever and keep leaking into the generated HomeKit scenes.
+            existing.targetColorTemperature = alarm.targetColorTemperature
+            existing.targetHue = alarm.targetHue
+            existing.targetSaturation = alarm.targetSaturation
+
             // Preserve enabled state separately (VAL-ALARM-006)
             existing.setEnabled(alarm.isEnabled)
             existing.setSkipped(alarm.isSkipped)
@@ -191,6 +198,11 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
                     weekdaySchedule: schedule
                 )
                 context.insert(newSchedule)
+                // Set the backlink on the context-managed alarm; the passed-in object
+                // may be a detached editor copy whose mutation would never persist.
+                if let alarmInContext = try fetchAlarmInContext(alarmId, context: context) {
+                    alarmInContext.scheduleRecordId = newSchedule.id
+                }
                 alarm.scheduleRecordId = newSchedule.id
             }
 
@@ -198,6 +210,12 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
         } else {
             try await deleteSchedule(for: alarm.id)
         }
+    }
+
+    private func fetchAlarmInContext(_ alarmId: UUID, context: ModelContext) throws -> WakeAlarm? {
+        var descriptor = FetchDescriptor<WakeAlarm>()
+        descriptor.predicate = #Predicate { $0.id == alarmId }
+        return try context.fetch(descriptor).first
     }
 
     /// Save an alarm with both schedule and validation state
@@ -224,6 +242,9 @@ final class WakeAlarmRepository: WakeAlarmRepositoryProtocol {
                     state: state
                 )
                 context.insert(newRecord)
+                if let alarmInContext = try fetchAlarmInContext(alarmId, context: context) {
+                    alarmInContext.validationStateRecordId = newRecord.id
+                }
                 alarm.validationStateRecordId = newRecord.id
             }
 

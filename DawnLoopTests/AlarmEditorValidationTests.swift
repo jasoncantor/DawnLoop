@@ -36,6 +36,62 @@ final class AlarmEditorValidationTests: XCTestCase {
         )
     }
 
+    // MARK: - Repeat Schedule Selection
+
+    func testRepeatPreset_CustomSelectionSticksWithoutChangingSchedule() {
+        XCTAssertEqual(editorState.repeatPreset, .once)
+        XCTAssertEqual(editorState.repeatSchedule, .never)
+
+        editorState.setRepeatPreset(.custom)
+
+        XCTAssertEqual(editorState.repeatPreset, .custom)
+        XCTAssertEqual(editorState.repeatSchedule, .never)
+    }
+
+    func testRepeatPreset_PresetSelectionUpdatesSchedule() {
+        editorState.setRepeatPreset(.weekdays)
+        XCTAssertEqual(editorState.repeatPreset, .weekdays)
+        XCTAssertEqual(editorState.repeatSchedule, .weekdays)
+
+        editorState.setRepeatPreset(.everyDay)
+        XCTAssertEqual(editorState.repeatPreset, .everyDay)
+        XCTAssertEqual(editorState.repeatSchedule, .everyDay)
+
+        editorState.setRepeatPreset(.once)
+        XCTAssertEqual(editorState.repeatPreset, .once)
+        XCTAssertEqual(editorState.repeatSchedule, .never)
+    }
+
+    func testRepeatPreset_CustomDayToggleBuildsCustomSchedule() {
+        editorState.setRepeatPreset(.custom)
+
+        editorState.toggleRepeatDay(.monday)
+        editorState.toggleRepeatDay(.wednesday)
+
+        XCTAssertEqual(editorState.repeatPreset, .custom)
+        XCTAssertTrue(editorState.repeatSchedule.monday)
+        XCTAssertTrue(editorState.repeatSchedule.wednesday)
+        XCTAssertFalse(editorState.repeatSchedule.sunday)
+        XCTAssertFalse(editorState.repeatSchedule.tuesday)
+        XCTAssertEqual(editorState.repeatSchedule.displayText, "Mon, Wed")
+    }
+
+    func testRepeatPreset_LoadExistingCustomScheduleSelectsCustom() {
+        let alarm = WakeAlarm(
+            name: "Custom Alarm",
+            wakeTimeSeconds: 7 * 3600,
+            selectedAccessoryIdentifiers: ["acc-1"],
+            homeIdentifier: "test-home"
+        )
+        let schedule = WeekdaySchedule(monday: true, wednesday: true)
+        let accessory = createAccessory(id: "acc-1", name: "Test Light", capability: .brightnessOnly)
+
+        editorState.load(alarm: alarm, availableAccessories: [accessory], schedule: schedule)
+
+        XCTAssertEqual(editorState.repeatPreset, .custom)
+        XCTAssertEqual(editorState.repeatSchedule, schedule)
+    }
+
     // MARK: - VAL-ALARM-001: Invalid editor input blocks save without losing entered values
 
     func testValidate_EmptyName_ReturnsErrorAndBlocksSave() {

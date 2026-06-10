@@ -427,10 +427,39 @@ final class WakeAlarmPlannerPreviewTests: XCTestCase {
         // Act
         editorState.regeneratePreview()
 
-        // Assert
+        // Assert - guard against passing vacuously with no preview at all
+        XCTAssertNotNil(editorState.currentPreview,
+                       "Choosing full color must commit usable defaults and produce a preview")
+        XCTAssertFalse(editorState.previewSteps.isEmpty)
         XCTAssertNil(editorState.previewDegradationExplanation,
                     "Should not show degradation when all accessories support the mode")
         XCTAssertFalse(editorState.previewHasMixedCapabilities,
                       "Should not indicate mixed capabilities when all same")
+    }
+
+    func testPreview_FullColorWithTunableWhiteMix_KeepsColorAndAddsWarmFallback() {
+        // Arrange - one full-color and one tunable-white light in full color mode
+        editorState.alarmName = "Test Alarm"
+        editorState.selectedAccessoryIds = ["acc-1", "acc-2"]
+        editorState.availableAccessories = [
+            createAccessory(id: "acc-1", name: "Color Light", capability: .fullColor),
+            createAccessory(id: "acc-2", name: "Warm Light", capability: .tunableWhite)
+        ]
+        editorState.colorMode = .fullColor
+
+        // Act
+        editorState.regeneratePreview()
+
+        // Assert - the plan must keep color for the capable light and carry a real
+        // warm fallback for the tunable-white light instead of silently dropping
+        // to brightness-only.
+        XCTAssertNotNil(editorState.currentPreview)
+        let lastStep = editorState.previewSteps.last
+        XCTAssertNotNil(lastStep?.hue, "Full-color lights keep the configured hue")
+        XCTAssertNotNil(lastStep?.saturation, "Full-color lights keep the configured saturation")
+        XCTAssertEqual(lastStep?.colorTemperature, WakeAlarmStepPlanner.fallbackWarmColorTemperature,
+                      "Tunable-white lights get a warm fallback, not nothing")
+        XCTAssertEqual(editorState.previewDegradationExplanation,
+                      "Some lights will use warm light instead of color.")
     }
 }

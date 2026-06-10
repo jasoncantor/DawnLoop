@@ -71,6 +71,40 @@ enum SolarEventCalculator {
 
 /// Days of the week for repeat scheduling
 struct WeekdaySchedule: Codable, Sendable, Equatable {
+    enum Weekday: Int, CaseIterable, Sendable {
+        case sunday = 1
+        case monday = 2
+        case tuesday = 3
+        case wednesday = 4
+        case thursday = 5
+        case friday = 6
+        case saturday = 7
+
+        var shortTitle: String {
+            switch self {
+            case .sunday: return "S"
+            case .monday: return "M"
+            case .tuesday: return "T"
+            case .wednesday: return "W"
+            case .thursday: return "T"
+            case .friday: return "F"
+            case .saturday: return "S"
+            }
+        }
+
+        var displayName: String {
+            switch self {
+            case .sunday: return "Sunday"
+            case .monday: return "Monday"
+            case .tuesday: return "Tuesday"
+            case .wednesday: return "Wednesday"
+            case .thursday: return "Thursday"
+            case .friday: return "Friday"
+            case .saturday: return "Saturday"
+            }
+        }
+    }
+
     var sunday: Bool
     var monday: Bool
     var tuesday: Bool
@@ -187,6 +221,22 @@ struct WeekdaySchedule: Codable, Sendable, Equatable {
         case 6: return friday
         case 7: return saturday
         default: return false
+        }
+    }
+
+    func contains(_ weekday: Weekday) -> Bool {
+        isEnabled(on: weekday.rawValue)
+    }
+
+    mutating func toggle(_ weekday: Weekday) {
+        switch weekday {
+        case .sunday: sunday.toggle()
+        case .monday: monday.toggle()
+        case .tuesday: tuesday.toggle()
+        case .wednesday: wednesday.toggle()
+        case .thursday: thursday.toggle()
+        case .friday: friday.toggle()
+        case .saturday: saturday.toggle()
         }
     }
 

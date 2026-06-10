@@ -64,15 +64,20 @@ final class HomeSelectionService: HomeSelectionServiceProtocol {
         // Verify the home still exists
         do {
             let homes = try await adapter.fetchHomes()
-            
+
             guard let home = homes.first(where: { $0.id == activeId }) else {
-                // Home no longer exists - clear the selection (VAL-HOME-002)
-                await clearActiveHome()
+                // An empty homes list is most likely HomeKit still loading (or a
+                // transient failure) - clearing the persisted selection here would
+                // permanently lose the user's configured home. Only clear when the
+                // home is genuinely missing from a non-empty list (VAL-HOME-002).
+                if !homes.isEmpty {
+                    await clearActiveHome()
+                }
                 return .notFound(identifier: activeId)
             }
-            
+
             return .success(home: home)
-            
+
         } catch {
             return .error(.homeKitError(underlying: error.localizedDescription))
         }

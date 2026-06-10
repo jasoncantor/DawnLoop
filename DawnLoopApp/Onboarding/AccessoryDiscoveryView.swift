@@ -96,12 +96,17 @@ struct AccessoryDiscoveryView: View {
                 .padding(.bottom, Theme.Spacing.xxLarge)
                 .padding(.top, Theme.Spacing.large)
                 .background(
-                    Theme.Colors.surface
-                        .ignoresSafeArea(edges: .bottom)
+                    .regularMaterial,
+                    ignoresSafeAreaEdges: .bottom
                 )
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(Theme.Colors.hairline)
+                        .frame(height: 1)
+                }
             }
         }
-        .background(Theme.Colors.background.ignoresSafeArea())
+        .background(Theme.Gradients.appBackground.ignoresSafeArea())
         .task {
             await loadAccessories()
         }
@@ -206,24 +211,24 @@ struct AccessoryRow: View {
                 // Selection indicator
                 ZStack {
                     Circle()
-                        .stroke(accessory.isSelected ? Theme.Colors.primary : Theme.Colors.textTertiary, lineWidth: 2)
+                        .stroke(accessory.isSelected ? Theme.Colors.sunriseOrange : Theme.Colors.textTertiary, lineWidth: 2)
                         .frame(width: 24, height: 24)
-                    
+
                     if accessory.isSelected {
                         Circle()
-                            .fill(Theme.Colors.primary)
+                            .fill(Theme.Colors.sunriseOrange)
                             .frame(width: 16, height: 16)
-                        
+
                         Image(systemName: "checkmark")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.white)
                     }
                 }
-                
+
                 // Accessory icon
                 Image(systemName: iconForCapability(accessory.capability))
                     .font(.system(size: 20))
-                    .foregroundStyle(accessory.isSelected ? Theme.Colors.primary : Theme.Colors.textSecondary)
+                    .foregroundStyle(accessory.isSelected ? Theme.Colors.sunriseOrange : Theme.Colors.textSecondary)
                     .frame(width: 32)
                 
                 // Accessory info
@@ -249,17 +254,21 @@ struct AccessoryRow: View {
             .padding(Theme.Spacing.medium)
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.medium)
-                    .fill(accessory.isSelected ? Theme.Colors.primary.opacity(0.08) : Theme.Colors.surface)
+                    .fill(
+                        accessory.isSelected
+                            ? Theme.Colors.sunriseOrange.opacity(0.10)
+                            : Theme.Colors.elevatedSurface
+                    )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.medium)
                     .stroke(
-                        accessory.isSelected ? Theme.Colors.primary.opacity(0.2) : Color.clear,
+                        accessory.isSelected ? Theme.Colors.sunriseOrange.opacity(0.30) : Theme.Colors.hairline,
                         lineWidth: 1
                     )
             )
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(PressableButtonStyle())
     }
     
     private func iconForCapability(_ capability: AccessoryCapability) -> String {

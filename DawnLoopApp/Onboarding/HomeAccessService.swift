@@ -100,26 +100,29 @@ final class HomeAccessState {
         
         do {
             let homes = try await adapter.fetchHomes()
-            guard let primaryHome = homes.first else {
+            guard !homes.isEmpty else {
                 readiness = .noHomeConfigured
                 return
             }
-            
+
             if !hasHomeHub(homes: homes) {
                 readiness = .noHomeHub
                 return
             }
-            
-            let accessories = await adapter.fetchCompatibleAccessories(in: primaryHome.id)
-            
-            guard !accessories.isEmpty else {
-                readiness = .noCompatibleAccessories
-                return
+
+            // Any home with compatible lights makes the setup viable - gating on the
+            // arbitrary first home would hard-block multi-home users whose lights
+            // live in another home before they ever get to choose one.
+            for home in homes {
+                let accessories = await adapter.fetchCompatibleAccessories(in: home.id)
+                if !accessories.isEmpty {
+                    readiness = .ready(home: home, accessories: accessories)
+                    return
+                }
             }
-            
-            // All checks passed
-            readiness = .ready(home: primaryHome, accessories: accessories)
-            
+
+            readiness = .noCompatibleAccessories
+
         } catch {
             lastError = error
             // If we can't fetch homes, assume none configured

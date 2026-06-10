@@ -52,7 +52,7 @@ struct OnboardingView: View {
             .padding(.bottom, Theme.Spacing.xxLarge)
             .padding(.top, Theme.Spacing.large)
         }
-        .background(Theme.Colors.background.ignoresSafeArea())
+        .background(Theme.Gradients.appBackground.ignoresSafeArea())
     }
     
     private var currentScreenBinding: Binding<OnboardingScreen> {
@@ -94,35 +94,29 @@ struct OnboardingScreenView: View {
     var body: some View {
         VStack(spacing: Theme.Spacing.xxxLarge) {
             Spacer()
-            
-            // Icon with animated glow
+
+            // Sunrise hero: soft sun glow with a warm gradient disc
             ZStack {
-                // Outer glow rings
-                ForEach(0..<3) { i in
-                    Circle()
-                        .fill(Theme.Gradients.warmGlow)
-                        .opacity(0.1 - Double(i) * 0.03)
-                        .frame(width: 160 + CGFloat(i * 40))
-                        .blur(radius: 20)
-                }
-                
-                // Icon background
                 Circle()
-                    .fill(Theme.Colors.surface)
+                    .fill(Theme.Gradients.sunGlow)
+                    .frame(width: 280, height: 280)
+
+                Circle()
+                    .fill(Theme.Gradients.warmGlow)
                     .frame(width: 120, height: 120)
                     .shadow(
-                        color: Theme.Colors.dawnPurple.opacity(0.3),
-                        radius: 20,
+                        color: Theme.Colors.sunriseOrange.opacity(0.45),
+                        radius: 24,
                         x: 0,
-                        y: 10
+                        y: 12
                     )
-                
-                // Icon
+
                 Image(systemName: screen.iconName)
                     .font(.system(size: 50, weight: .medium))
-                    .foregroundStyle(Theme.Gradients.warmGlow)
+                    .foregroundStyle(.white)
             }
-            
+            .frame(height: 280)
+
             // Text content
             VStack(spacing: Theme.Spacing.medium) {
                 Text(screen.title)
@@ -155,7 +149,11 @@ struct ProgressIndicator: View {
         HStack(spacing: Theme.Spacing.small) {
             ForEach(0..<totalSteps, id: \.self) { index in
                 Capsule()
-                    .fill(index < currentStep ? Theme.Colors.sunriseOrange : Theme.Colors.surface)
+                    .fill(
+                        index < currentStep
+                            ? AnyShapeStyle(Theme.Gradients.warmGlow)
+                            : AnyShapeStyle(Theme.Colors.hairline)
+                    )
                     .frame(width: index < currentStep ? 24 : 8, height: 8)
                     .animation(.easeInOut(duration: 0.3), value: currentStep)
             }
@@ -168,7 +166,7 @@ struct ProgressIndicator: View {
 struct PrimaryButton: View {
     let title: String
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             Text(title)
@@ -177,9 +175,25 @@ struct PrimaryButton: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
                 .background(Theme.Gradients.primaryButton)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium))
+                .clipShape(Capsule())
+                .shadow(
+                    color: Theme.Colors.dawnPurple.opacity(0.30),
+                    radius: 12,
+                    x: 0,
+                    y: 6
+                )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
+    }
+}
+
+/// Plain button style with a gentle press-down scale for tactile feedback
+struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 

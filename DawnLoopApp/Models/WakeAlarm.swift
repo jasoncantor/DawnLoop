@@ -284,9 +284,16 @@ final class WakeAlarm: @unchecked Sendable {
     var timeDisplayText: String {
         switch timeReference {
         case .clock:
-            let hours = wakeTimeSeconds / 3600
-            let minutes = (wakeTimeSeconds % 3600) / 60
-            return String(format: "%02d:%02d", hours, minutes)
+            // Respect the user's locale and 12/24-hour preference
+            let calendar = Calendar.current
+            var components = calendar.dateComponents([.year, .month, .day], from: Date())
+            components.hour = wakeTimeSeconds / 3600
+            components.minute = (wakeTimeSeconds % 3600) / 60
+            components.second = 0
+            guard let date = calendar.date(from: components) else {
+                return String(format: "%02d:%02d", wakeTimeSeconds / 3600, (wakeTimeSeconds % 3600) / 60)
+            }
+            return date.formatted(date: .omitted, time: .shortened)
         case .sunrise, .sunset:
             return Self.displayText(for: timeReference, offsetMinutes: timeOffsetMinutes)
         }

@@ -15,8 +15,10 @@ final class AutomationBinding {
     /// The step number in the alarm sequence (0-indexed)
     var stepNumber: Int
 
-    /// Repeating bindings are stored per weekday (1 = Sunday ... 7 = Saturday).
-    /// One-shot bindings use nil.
+    /// Legacy column: older versions stored repeating bindings per weekday
+    /// (1 = Sunday ... 7 = Saturday). Bindings are now one-per-step with the weekday
+    /// set carried on the trigger recurrence, so new bindings always use nil; stale
+    /// per-weekday rows are migrated away by the next sync.
     var weekday: Int?
 
     /// HomeKit Action Set identifier (for the scene/action at this step)
@@ -238,7 +240,13 @@ final class AutomationBindingService {
         for alarmId: UUID,
         using homeKitAdapter: any HomeKitAdapterProtocol
     ) async -> AlarmBindingSummary {
-        let bindings = await bindingsForAlarm(alarmId)
+        // Fetch and save through the same context so the verification marks persist
+        let context = ModelContext(modelContainer)
+        var descriptor = FetchDescriptor<AutomationBinding>()
+        descriptor.predicate = #Predicate { $0.alarmId == alarmId }
+        descriptor.sortBy = [SortDescriptor(\.stepNumber), SortDescriptor(\.weekday)]
+        let bindings = (try? context.fetch(descriptor)) ?? []
+
         var validCount = 0
         var invalidCount = 0
 
@@ -254,8 +262,6 @@ final class AutomationBindingService {
             }
         }
 
-        // Save validation results
-        let context = ModelContext(modelContainer)
         do {
             try context.save()
         } catch {

@@ -36,7 +36,7 @@ struct HomeAccessCheckView: View {
                 ProgressView()
                     .scaleEffect(1.5)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Theme.Colors.background)
+                    .background(Theme.Gradients.appBackground.ignoresSafeArea())
                     .task {
                         await environment.homeAccessState.startHomeAccessFlow()
                     }
@@ -81,7 +81,7 @@ struct ReadyTransitionView: View {
                 .padding(.top, Theme.Spacing.large)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.Colors.background)
+        .background(Theme.Gradients.appBackground.ignoresSafeArea())
     }
 }
 
@@ -160,7 +160,7 @@ struct AlarmSetupReadyView: View {
             .padding(.bottom, Theme.Spacing.xxLarge)
             .padding(.top, Theme.Spacing.large)
         }
-        .background(Theme.Colors.background.ignoresSafeArea())
+        .background(Theme.Gradients.appBackground.ignoresSafeArea())
     }
 }
 

@@ -80,6 +80,51 @@ final class AlarmEditorValidationUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Morning Glow"].exists)
     }
 
+    func testCreateAlarmWithCustomRepeatFlow() throws {
+        let app = launchConfiguredApp()
+
+        let createButton = app.buttons["Create Your First Alarm"]
+        XCTAssertTrue(createButton.waitForExistence(timeout: 5))
+        createButton.tap()
+
+        let nameField = app.textFields["Alarm Name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        nameField.tap()
+        nameField.typeText("Custom Repeat")
+
+        let customPreset = app.buttons["Custom"]
+        if !customPreset.waitForExistence(timeout: 2) {
+            app.swipeUp()
+        }
+        XCTAssertTrue(customPreset.waitForExistence(timeout: 5))
+        customPreset.tap()
+
+        let mondayButton = app.buttons["Monday"]
+        let wednesdayButton = app.buttons["Wednesday"]
+        XCTAssertTrue(mondayButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(wednesdayButton.waitForExistence(timeout: 5))
+        mondayButton.tap()
+        wednesdayButton.tap()
+        XCTAssertEqual(mondayButton.value as? String, "Selected")
+        XCTAssertEqual(wednesdayButton.value as? String, "Selected")
+        XCTAssertEqual(app.buttons["Tuesday"].value as? String, "Not selected")
+
+        app.buttons["Save"].tap()
+
+        XCTAssertTrue(app.staticTexts["Custom Repeat"].waitForExistence(timeout: 5))
+
+        app.staticTexts["Custom Repeat"].tap()
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+
+        if !customPreset.waitForExistence(timeout: 2) {
+            app.swipeUp()
+        }
+        XCTAssertTrue(customPreset.waitForExistence(timeout: 5))
+        XCTAssertEqual(mondayButton.value as? String, "Selected")
+        XCTAssertEqual(wednesdayButton.value as? String, "Selected")
+        XCTAssertEqual(app.buttons["Tuesday"].value as? String, "Not selected")
+    }
+
     func testEditAlarmFlow() throws {
         let app = launchConfiguredApp()
         createAlarm(named: "Morning Glow", in: app)

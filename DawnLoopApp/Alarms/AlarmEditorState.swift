@@ -40,6 +40,34 @@ struct AlarmEditorValidationState: Equatable, Sendable {
     }
 }
 
+enum AlarmRepeatPreset: CaseIterable, Hashable, Sendable {
+    case once
+    case weekdays
+    case everyDay
+    case custom
+
+    init(schedule: WeekdaySchedule) {
+        if schedule == .never {
+            self = .once
+        } else if schedule == .weekdays {
+            self = .weekdays
+        } else if schedule == .everyDay {
+            self = .everyDay
+        } else {
+            self = .custom
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .once: return "Once"
+        case .weekdays: return "Weekdays"
+        case .everyDay: return "Daily"
+        case .custom: return "Custom"
+        }
+    }
+}
+
 /// Represents the editable state of an alarm in the editor
 /// Preserves user inputs even when validation fails (VAL-ALARM-001)
 @Observable
@@ -55,13 +83,11 @@ final class AlarmEditorState {
         didSet { clearValidationError(for: \.wakeTime) }
     }
 
+    // The solar offset is preserved while switching the time basis so flipping
+    // through Clock and back doesn't silently wipe it; clock alarms ignore the
+    // offset and WakeAlarm zeroes it at save time.
     var timeReference: AlarmTimeReference = .clock {
-        didSet {
-            if timeReference == .clock {
-                timeOffsetMinutes = 0
-            }
-            clearValidationError(for: \.timeReference)
-        }
+        didSet { clearValidationError(for: \.timeReference) }
     }
 
     var timeOffsetMinutes: Int = 0 {
@@ -87,7 +113,10 @@ final class AlarmEditorState {
     }
 
     var colorMode: AlarmColorMode = .brightnessOnly {
-        didSet { clearValidationError(for: \.colorMode) }
+        didSet {
+            applyColorModeDefaults()
+            clearValidationError(for: \.colorMode)
+        }
     }
 
     var startBrightness: Int = 0 {
@@ -114,9 +143,51 @@ final class AlarmEditorState {
         didSet { clearValidationError(for: \.selectedAccessoryIds) }
     }
 
+    var repeatPreset: AlarmRepeatPreset = .once
+
     var repeatSchedule: WeekdaySchedule = .never
 
     var isEnabled: Bool = true
+
+    /// Defaults committed to state when a color mode is chosen so the values the
+    /// sliders display are the values that validate and save.
+    static let defaultColorTemperature = 300
+    static let defaultHue = 30
+    static let defaultSaturation = 80
+
+    /// Commits the displayed defaults for the active color mode into state.
+    /// Without this, validation demands values the UI shows but never set,
+    /// making Warm Light and Full Color alarms unsaveable.
+    private func applyColorModeDefaults() {
+        switch colorMode {
+        case .brightnessOnly:
+            break
+        case .colorTemperature:
+            if targetColorTemperature == nil {
+                targetColorTemperature = Self.defaultColorTemperature
+            }
+        case .fullColor:
+            if targetHue == nil {
+                targetHue = Self.defaultHue
+            }
+            if targetSaturation == nil {
+                targetSaturation = Self.defaultSaturation
+            }
+        }
+    }
+
+    /// Color targets restricted to the active mode. Values from a previously chosen
+    /// mode stay editable in the form but never leak into the saved alarm or preview.
+    var sanitizedColorTargets: (colorTemperature: Int?, hue: Int?, saturation: Int?) {
+        switch colorMode {
+        case .brightnessOnly:
+            return (nil, nil, nil)
+        case .colorTemperature:
+            return (targetColorTemperature, nil, nil)
+        case .fullColor:
+            return (nil, targetHue, targetSaturation)
+        }
+    }
 
     var maxStepCount: Int {
         WakeAlarmStepPlanner.maxStepCount(forDurationMinutes: durationMinutes)
@@ -176,7 +247,6 @@ final class AlarmEditorState {
         let caps = selectedCapabilities
         let hasBrightnessOnly = caps.contains { $0 == .brightnessOnly }
         let hasTunableWhite = caps.contains { $0 == .tunableWhite }
-        let hasFullColor = caps.contains { $0 == .fullColor }
 
         switch colorMode {
         case .brightnessOnly:
@@ -361,6 +431,7 @@ final class AlarmEditorState {
         self.targetSaturation = alarm.targetSaturation
         self.isEnabled = alarm.isEnabled
         self.repeatSchedule = schedule
+        self.repeatPreset = AlarmRepeatPreset(schedule: schedule)
         self.availableAccessories = availableAccessories
         self.timeReference = alarm.timeReference
         self.timeOffsetMinutes = alarm.timeOffsetMinutes
@@ -387,6 +458,9 @@ final class AlarmEditorState {
         let validSelectedIds = Set(storedIds).intersection(availableIds)
         self.selectedAccessoryIds = validSelectedIds
 
+        // Older alarms may have a color mode without committed values
+        applyColorModeDefaults()
+
         // Run validation to show invalidated accessory warnings
         _ = validate()
     }
@@ -398,6 +472,7 @@ final class AlarmEditorState {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour, .minute], from: wakeTime)
         let wakeTimeSeconds = (components.hour ?? 7) * 3600 + (components.minute ?? 0) * 60
+        let colorTargets = sanitizedColorTargets
 
         return WakeAlarm(
             id: editingAlarmId ?? UUID(),
@@ -411,9 +486,9 @@ final class AlarmEditorState {
             colorMode: colorMode,
             startBrightness: startBrightness,
             targetBrightness: targetBrightness,
-            targetColorTemperature: targetColorTemperature,
-            targetHue: targetHue,
-            targetSaturation: targetSaturation,
+            targetColorTemperature: colorTargets.colorTemperature,
+            targetHue: colorTargets.hue,
+            targetSaturation: colorTargets.saturation,
             isEnabled: isEnabled,
             selectedAccessoryIdentifiers: Array(selectedAccessoryIds),
             homeIdentifier: nil // Set by caller
@@ -436,6 +511,7 @@ final class AlarmEditorState {
         self.targetHue = nil
         self.targetSaturation = nil
         self.isEnabled = true
+        self.repeatPreset = .once
         self.repeatSchedule = .never
         self.selectedAccessoryIds = []
         self.availableAccessories = []
@@ -452,6 +528,36 @@ final class AlarmEditorState {
 
         // Clear preview on reset
         self.currentPreview = nil
+    }
+
+    // MARK: - Repeat Schedule
+
+    func setRepeatPreset(_ preset: AlarmRepeatPreset) {
+        repeatPreset = preset
+
+        switch preset {
+        case .once:
+            repeatSchedule = .never
+        case .weekdays:
+            repeatSchedule = .weekdays
+        case .everyDay:
+            repeatSchedule = .everyDay
+        case .custom:
+            break
+        }
+    }
+
+    func setRepeatSchedule(_ schedule: WeekdaySchedule) {
+        repeatSchedule = schedule
+        repeatPreset = AlarmRepeatPreset(schedule: schedule)
+    }
+
+    func toggleRepeatDay(_ weekday: WeekdaySchedule.Weekday) {
+        repeatSchedule.toggle(weekday)
+
+        if repeatPreset != .custom {
+            repeatPreset = AlarmRepeatPreset(schedule: repeatSchedule)
+        }
     }
 
     // MARK: - Preview Section
@@ -501,10 +607,12 @@ final class AlarmEditorState {
         }
         let capabilities = selectedAccessories.map { $0.capability }
 
-        // Create a temporary alarm for planning
+        // Create a temporary alarm for planning, using the same sanitized color
+        // targets as createAlarm() so preview and saved automations stay in parity
         let calendar = Calendar.current
         let components = calendar.dateComponents([.hour, .minute], from: wakeTime)
         let wakeTimeSeconds = (components.hour ?? 7) * 3600 + (components.minute ?? 0) * 60
+        let colorTargets = sanitizedColorTargets
 
         let tempAlarm = WakeAlarm(
             id: UUID(),
@@ -518,9 +626,9 @@ final class AlarmEditorState {
             colorMode: colorMode,
             startBrightness: startBrightness,
             targetBrightness: targetBrightness,
-            targetColorTemperature: targetColorTemperature,
-            targetHue: targetHue,
-            targetSaturation: targetSaturation,
+            targetColorTemperature: colorTargets.colorTemperature,
+            targetHue: colorTargets.hue,
+            targetSaturation: colorTargets.saturation,
             isEnabled: isEnabled,
             selectedAccessoryIdentifiers: Array(selectedAccessoryIds),
             homeIdentifier: nil

@@ -25,29 +25,34 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
     }
     
     /// Discovers compatible accessories in the given home and groups them by room
-    /// Clears any previous accessory results before loading new ones
+    /// Replaces previous accessory results only after a successful fetch
     func discoverAccessories(in home: HomeSnapshot) async -> AccessoryDiscoveryResult {
-        // Clear stale results first (VAL-HOME-006)
-        await clearDiscoveredAccessories()
-        
         let compatibleAccessories = await adapter.fetchCompatibleAccessories(in: home.id)
-        
+
+        // Don't wipe the persisted references (and the user's selections with them)
+        // on an empty fetch - that's usually HomeKit still loading, not a home that
+        // genuinely lost all of its lights.
         guard !compatibleAccessories.isEmpty else {
             return .noCompatibleAccessories
         }
-        
+
+        // Carry selection state over for accessories that are still present
+        let previouslySelectedIDs = await selectedAccessoryIDs()
+
         // Build room groups
         let groups = await buildRoomGroups(
             accessories: compatibleAccessories,
-            in: home
+            in: home,
+            selectedIDs: previouslySelectedIDs
         )
-        
-        // Persist discovered accessories
-        await persistDiscoveredAccessories(
-            compatibleAccessories,
-            in: home
+
+        // Replace stale results with the fresh fetch in one atomic save (VAL-HOME-006)
+        await replaceDiscoveredAccessories(
+            with: compatibleAccessories,
+            in: home,
+            selectedIDs: previouslySelectedIDs
         )
-        
+
         return .success(groups: groups)
     }
     
@@ -106,9 +111,22 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
     
     // MARK: - Private Helpers
     
+    private func selectedAccessoryIDs() async -> Set<String> {
+        let context = ModelContext(modelContainer)
+
+        do {
+            var descriptor = FetchDescriptor<AccessoryReference>()
+            descriptor.predicate = #Predicate { $0.isSelected }
+            return Set(try context.fetch(descriptor).map(\.homeKitIdentifier))
+        } catch {
+            return []
+        }
+    }
+
     private func buildRoomGroups(
         accessories: [AccessorySnapshot],
-        in home: HomeSnapshot
+        in home: HomeSnapshot,
+        selectedIDs: Set<String> = []
     ) async -> [RoomAccessoryGroup] {
         let viewModels = accessories.map { accessory in
             AccessoryViewModel(
@@ -117,7 +135,7 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
                 name: accessory.name,
                 roomName: accessory.roomName,
                 capability: accessory.capability,
-                isSelected: false,
+                isSelected: selectedIDs.contains(accessory.id),
                 isReachable: accessory.isReachable
             )
         }
@@ -138,25 +156,32 @@ final class AccessoryDiscoveryService: AccessoryDiscoveryServiceProtocol {
         return sortedGroups.map { RoomAccessoryGroup(roomName: $0.key, accessories: $0.value) }
     }
     
-    private func persistDiscoveredAccessories(
-        _ accessories: [AccessorySnapshot],
-        in home: HomeSnapshot
+    private func replaceDiscoveredAccessories(
+        with accessories: [AccessorySnapshot],
+        in home: HomeSnapshot,
+        selectedIDs: Set<String> = []
     ) async {
+        // Delete and re-insert in a single context/save so a failure can't leave
+        // the store wiped without the replacement rows.
         let context = ModelContext(modelContainer)
-        
-        for accessory in accessories {
-            let reference = AccessoryReference(
-                homeKitIdentifier: accessory.id,
-                name: accessory.name,
-                homeIdentifier: home.id,
-                roomName: accessory.roomName,
-                capability: accessory.capability
-            )
-            
-            context.insert(reference)
-        }
-        
+
         do {
+            let existing = try context.fetch(FetchDescriptor<AccessoryReference>())
+            existing.forEach(context.delete)
+
+            for accessory in accessories {
+                let reference = AccessoryReference(
+                    homeKitIdentifier: accessory.id,
+                    name: accessory.name,
+                    homeIdentifier: home.id,
+                    roomName: accessory.roomName,
+                    capability: accessory.capability,
+                    isSelected: selectedIDs.contains(accessory.id)
+                )
+
+                context.insert(reference)
+            }
+
             try context.save()
         } catch {
             DawnLoopLogger.persistence.error("Could not persist accessory references: \(error.localizedDescription)")

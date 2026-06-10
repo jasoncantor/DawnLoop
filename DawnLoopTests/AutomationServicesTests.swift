@@ -168,10 +168,139 @@ final class AutomationServicesTests: XCTestCase {
         try await generationService.syncAlarm(alarm, schedule: .weekdays)
 
         XCTAssertEqual(controller.upsertActionSetCallCount, WakeAlarmStepPlanner.defaultStepCount)
-        XCTAssertEqual(
-            controller.upsertScheduledTriggerCallCount,
-            WakeAlarmStepPlanner.defaultStepCount * WeekdaySchedule.weekdays.activeDaysCount
+        // One trigger per step; the repeat days ride on each trigger's recurrence set.
+        XCTAssertEqual(controller.upsertScheduledTriggerCallCount, WakeAlarmStepPlanner.defaultStepCount)
+
+        let triggers = controller.storedTriggers(for: "test-home-uuid-001")
+        XCTAssertEqual(triggers.count, WakeAlarmStepPlanner.defaultStepCount)
+        XCTAssertTrue(
+            triggers.allSatisfy {
+                Set($0.schedule.recurrenceWeekdays ?? []) == Set(WeekdaySchedule.weekdays.weekdayNumbers)
+            }
         )
+    }
+
+    func testSyncAlarm_RampCrossingMidnight_ShiftsRecurrenceWeekdaysBack() async throws {
+        // Wake at 00:05 on weekdays with a 30-minute ramp: most steps fire the
+        // evening before, so their recurrences must run on the previous weekdays.
+        let alarm = WakeAlarm(
+            name: "Just After Midnight",
+            wakeTimeSeconds: 5 * 60,
+            durationMinutes: 30,
+            gradientCurve: .linear,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        let accessories = await controller.accessories(in: "test-home-uuid-001")
+            .filter { $0.id == "test-accessory-living-room-001" }
+
+        let bindings = generationService.expectedBindings(
+            for: alarm,
+            schedule: .weekdays,
+            accessories: accessories
+        )
+        XCTAssertEqual(bindings.count, WakeAlarmStepPlanner.defaultStepCount)
+
+        let configuredWeekdays = Set(WeekdaySchedule.weekdays.weekdayNumbers) // Mon-Fri
+        let shiftedWeekdays = Set([1, 2, 3, 4, 5]) // Sun-Thu
+
+        let firstStep = try XCTUnwrap(bindings.first(where: { $0.stepNumber == 0 }))
+        XCTAssertEqual(
+            Set(firstStep.triggerSchedule.recurrenceWeekdays ?? []),
+            shiftedWeekdays,
+            "Steps firing before midnight must recur on the previous weekday"
+        )
+
+        let wakeStep = try XCTUnwrap(bindings.max(by: { $0.stepNumber < $1.stepNumber }))
+        XCTAssertEqual(
+            Set(wakeStep.triggerSchedule.recurrenceWeekdays ?? []),
+            configuredWeekdays,
+            "The wake step itself fires on the configured weekdays"
+        )
+    }
+
+    func testValidateAlarm_RepeatingAlarm_StaysValidAfterOccurrencePasses() async throws {
+        let alarm = WakeAlarm(
+            name: "Every Morning",
+            wakeTimeSeconds: 7 * 3600,
+            durationMinutes: 30,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        try await repository.saveAlarm(alarm, schedule: .everyDay, validationState: .needsSync)
+        try await generationService.syncAlarm(alarm, schedule: .everyDay)
+
+        // Simulate the alarm having fired: the stored next-occurrence dates are now in
+        // the past, but the HomeKit triggers (time-of-day + weekday recurrence) are
+        // unchanged and perfectly healthy.
+        let context = ModelContext(modelContainer)
+        var descriptor = FetchDescriptor<AutomationBinding>()
+        let alarmID = alarm.id
+        descriptor.predicate = #Predicate { $0.alarmId == alarmID }
+        for binding in try context.fetch(descriptor) {
+            if let scheduledTime = binding.scheduledTime {
+                binding.scheduledTime = Calendar.current.date(byAdding: .day, value: -7, to: scheduledTime)
+            }
+        }
+        try context.save()
+
+        let summary = await repairService.validateAlarm(alarm, schedule: .everyDay)
+
+        XCTAssertEqual(
+            summary.state, .valid,
+            "A healthy repeating alarm must not be flagged for repair just because its last occurrence passed"
+        )
+    }
+
+    func testValidateAlarm_FiredOneShot_DisablesItself() async throws {
+        let alarm = WakeAlarm(
+            name: "One Time Alarm",
+            wakeTimeSeconds: 7 * 3600,
+            durationMinutes: 30,
+            gradientCurve: .easeInOut,
+            colorMode: .brightnessOnly,
+            startBrightness: 0,
+            targetBrightness: 100,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        try await repository.saveAlarm(alarm, schedule: .never, validationState: .needsSync)
+        try await generationService.syncAlarm(alarm, schedule: .never)
+
+        // Backdate every step: the executeOnce triggers have all fired. The alarm
+        // itself was last edited before the fire (the normal create-then-fire timeline).
+        let context = ModelContext(modelContainer)
+        var descriptor = FetchDescriptor<AutomationBinding>()
+        let alarmID = alarm.id
+        descriptor.predicate = #Predicate { $0.alarmId == alarmID }
+        for binding in try context.fetch(descriptor) {
+            if let scheduledTime = binding.scheduledTime {
+                binding.scheduledTime = Calendar.current.date(byAdding: .day, value: -2, to: scheduledTime)
+            }
+        }
+        var alarmDescriptor = FetchDescriptor<WakeAlarm>()
+        alarmDescriptor.predicate = #Predicate { $0.id == alarmID }
+        let storedAlarm = try XCTUnwrap(try context.fetch(alarmDescriptor).first)
+        storedAlarm.updatedAt = try XCTUnwrap(Calendar.current.date(byAdding: .day, value: -3, to: Date()))
+        try context.save()
+
+        let maybeRefetched = await repository.fetchAlarm(byId: alarm.id)
+        let refetchedForValidation = try XCTUnwrap(maybeRefetched)
+        let summary = await repairService.validateAlarm(refetchedForValidation, schedule: .never)
+
+        XCTAssertEqual(summary.state, .valid)
+        let refetched = await repository.fetchAlarm(byId: alarm.id)
+        XCTAssertEqual(refetched?.isEnabled, false, "A fired one-time alarm should turn itself off")
     }
 
     func testSyncAlarm_DoesNotGateTriggersOnCurrentLightPowerState() async throws {
@@ -215,7 +344,7 @@ final class AutomationServicesTests: XCTestCase {
             homeIdentifier: homeID,
             identifier: nil,
             name: "precondition.test.trigger",
-            schedule: .calendar(fireDate: Date(), weekday: nil),
+            schedule: .calendar(fireDate: Date(), weekdays: nil),
             actionSetIdentifier: actionSet.identifier,
             requiredOnAccessoryIdentifiers: ["zebra-id", "alpha-id", "alpha-id"],
             isEnabled: true
@@ -314,15 +443,24 @@ final class AutomationServicesTests: XCTestCase {
         try await generationService.syncAlarm(alarm, schedule: .weekdays)
 
         let triggers = controller.storedTriggers(for: "test-home-uuid-001")
-        XCTAssertFalse(triggers.isEmpty)
-        XCTAssertTrue(
-            triggers.allSatisfy {
-                if case .significant(let reference, _, let weekday) = $0.schedule {
-                    return reference == .sunrise && weekday != nil
-                }
-                return false
+        XCTAssertEqual(triggers.count, WakeAlarmStepPlanner.defaultStepCount)
+
+        var offsets: [Int] = []
+        for trigger in triggers {
+            guard case .significant(let reference, let offsetMinutes, let weekdays) = trigger.schedule else {
+                XCTFail("Expected significant-time trigger, got \(trigger.schedule)")
+                return
             }
-        )
+            XCTAssertEqual(reference, .sunrise)
+            XCTAssertEqual(Set(weekdays ?? []), Set(WeekdaySchedule.weekdays.weekdayNumbers))
+            offsets.append(offsetMinutes)
+        }
+
+        // 30-minute ramp ending at sunrise - 15: first step fires 45 minutes
+        // before sunrise, the wake step exactly at the configured offset.
+        XCTAssertEqual(offsets.min(), -45)
+        XCTAssertEqual(offsets.max(), -15)
+        XCTAssertEqual(Set(offsets).count, offsets.count, "Each step needs a distinct solar offset")
 
         let bindings = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
         XCTAssertFalse(bindings.isEmpty)
@@ -348,7 +486,7 @@ final class AutomationServicesTests: XCTestCase {
         try await generationService.syncAlarm(alarm, schedule: .weekdays)
 
         XCTAssertEqual(controller.upsertActionSetCallCount, 20)
-        XCTAssertEqual(controller.upsertScheduledTriggerCallCount, 20 * WeekdaySchedule.weekdays.activeDaysCount)
+        XCTAssertEqual(controller.upsertScheduledTriggerCallCount, 20)
     }
 
     // MARK: - VAL-CROSS-001: Automation generation uses the redistributed plan

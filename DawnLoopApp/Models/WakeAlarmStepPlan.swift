@@ -71,6 +71,10 @@ struct WakeAlarmStepPlanner {
     static let defaultStepCount = 10
     static let maxConfigurableStepCount = 30
 
+    /// Warm white fallback (~2700K) used when a plan degrades to color temperature
+    /// but the alarm has no configured warmth value. Within the editor's 153-454 range.
+    static let fallbackWarmColorTemperature = 370
+
     static func maxStepCount(forDurationMinutes durationMinutes: Int) -> Int {
         max(1, min(durationMinutes, maxConfigurableStepCount))
     }
@@ -224,9 +228,19 @@ struct WakeAlarmStepPlanner {
             degradation = .none
 
         case .colorTemperature:
-            if allSupportColorTemp {
-                adjustedSteps = fullPlan
-                degradation = .none
+            if canUseColorTemp {
+                // Lights that support warmth keep it (with a warm fallback when no value
+                // was configured); brightness-only lights simply skip the warmth write.
+                adjustedSteps = fullPlan.map { step in
+                    WakeAlarmStep(
+                        timestamp: step.timestamp,
+                        brightness: step.brightness,
+                        colorTemperature: step.colorTemperature ?? fallbackWarmColorTemperature,
+                        hue: nil,
+                        saturation: nil
+                    )
+                }
+                degradation = allSupportColorTemp ? .none : .colorTemperatureUnavailable
             } else {
                 // Degrade to brightness-only for all accessories
                 adjustedSteps = fullPlan.map { step in
@@ -246,14 +260,16 @@ struct WakeAlarmStepPlanner {
                 adjustedSteps = fullPlan
                 degradation = .none
             } else if canUseColorTemp {
-                // Degrade to color temperature
+                // Keep hue/saturation for lights that can show color and add a warm
+                // fallback so tunable-white lights really do get "warm light instead
+                // of color" - per-accessory capability gating picks the right writes.
                 adjustedSteps = fullPlan.map { step in
                     WakeAlarmStep(
                         timestamp: step.timestamp,
                         brightness: step.brightness,
-                        colorTemperature: step.colorTemperature,
-                        hue: nil,
-                        saturation: nil
+                        colorTemperature: step.colorTemperature ?? fallbackWarmColorTemperature,
+                        hue: step.hue,
+                        saturation: step.saturation
                     )
                 }
                 degradation = .fullColorUnavailable

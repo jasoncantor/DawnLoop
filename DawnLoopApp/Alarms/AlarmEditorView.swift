@@ -16,6 +16,12 @@ struct AlarmEditorView: View {
 
         NavigationStack {
             Form {
+                    Section {
+                        AlarmEditorSummaryCard(state: state)
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                    }
+
                     // MARK: - Name Section
                     Section {
                         TextField("Alarm Name", text: $state.alarmName)
@@ -112,39 +118,33 @@ struct AlarmEditorView: View {
 
                     Section {
                         Picker("Repeat", selection: Binding(
-                            get: { repeatPreset(for: state.repeatSchedule) },
-                            set: { preset in
-                                switch preset {
-                                case .once:
-                                    state.repeatSchedule = .never
-                                case .weekdays:
-                                    state.repeatSchedule = .weekdays
-                                case .everyDay:
-                                    state.repeatSchedule = .everyDay
-                                case .custom:
-                                    break
-                                }
-                            }
+                            get: { state.repeatPreset },
+                            set: { state.setRepeatPreset($0) }
                         )) {
-                            ForEach(RepeatPreset.allCases, id: \.self) { preset in
+                            ForEach(AlarmRepeatPreset.allCases, id: \.self) { preset in
                                 Text(preset.title).tag(preset)
                             }
                         }
                         .pickerStyle(.segmented)
 
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: Theme.Spacing.small) {
-                            ForEach(WeekdayDescriptor.allCases, id: \.self) { day in
+                            ForEach(WeekdaySchedule.Weekday.allCases, id: \.self) { day in
+                                let isEnabled = state.repeatSchedule.contains(day)
+
                                 Button(day.shortTitle) {
-                                    toggle(day, in: state)
+                                    state.toggleRepeatDay(day)
                                 }
+                                .buttonStyle(.plain)
                                 .font(Theme.Typography.footnote)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, Theme.Spacing.small)
                                 .background(
                                     Capsule()
-                                        .fill(day.isEnabled(in: state.repeatSchedule) ? Theme.Colors.sunriseOrange : Theme.Colors.surface)
+                                        .fill(isEnabled ? Theme.Colors.sunriseOrange : Theme.Colors.surface)
                                 )
-                                .foregroundStyle(day.isEnabled(in: state.repeatSchedule) ? Color.white : Theme.Colors.textSecondary)
+                                .foregroundStyle(isEnabled ? Color.white : Theme.Colors.textSecondary)
+                                .accessibilityLabel(day.displayName)
+                                .accessibilityValue(isEnabled ? "Selected" : "Not selected")
                             }
                         }
                     } header: {
@@ -155,33 +155,25 @@ struct AlarmEditorView: View {
 
                     // MARK: - Brightness Section
                     Section {
-                        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                            Text("Start Brightness: \(state.startBrightness)%")
-                                .font(Theme.Typography.body)
-                            Slider(
-                                value: .init(
-                                    get: { Double(state.startBrightness) },
-                                    set: { state.startBrightness = Int($0) }
-                                ),
-                                in: 0...100,
-                                step: 1
-                            )
-                            .tint(Theme.Colors.sunriseOrange)
-                        }
+                        EditorSliderRow(
+                            title: "Start Brightness",
+                            valueText: "\(state.startBrightness)%",
+                            value: .init(
+                                get: { Double(state.startBrightness) },
+                                set: { state.startBrightness = Int($0) }
+                            ),
+                            bounds: 0...100
+                        )
 
-                        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                            Text("Target Brightness: \(state.targetBrightness)%")
-                                .font(Theme.Typography.body)
-                            Slider(
-                                value: .init(
-                                    get: { Double(state.targetBrightness) },
-                                    set: { state.targetBrightness = Int($0) }
-                                ),
-                                in: 0...100,
-                                step: 1
-                            )
-                            .tint(Theme.Colors.sunriseOrange)
-                        }
+                        EditorSliderRow(
+                            title: "Target Brightness",
+                            valueText: "\(state.targetBrightness)%",
+                            value: .init(
+                                get: { Double(state.targetBrightness) },
+                                set: { state.targetBrightness = Int($0) }
+                            ),
+                            bounds: 0...100
+                        )
 
                         if let error = state.validation.brightnessError {
                             ValidationErrorMessage(message: error)
@@ -214,13 +206,11 @@ struct AlarmEditorView: View {
                             VStack(alignment: .leading, spacing: Theme.Spacing.small) {
                                 // Preview degradation message for mixed capabilities (VAL-ALARM-004)
                                 if let explanation = state.previewDegradationExplanation {
-                                    HStack(spacing: Theme.Spacing.small) {
-                                        Image(systemName: "info.circle.fill")
-                                            .foregroundStyle(Theme.Colors.sunriseOrange)
-                                        Text(explanation)
-                                            .font(Theme.Typography.footnote)
-                                            .foregroundStyle(Theme.Colors.textSecondary)
-                                    }
+                                    EditorCallout(
+                                        message: explanation,
+                                        systemImage: "info.circle.fill",
+                                        tint: Theme.Colors.sunriseOrange
+                                    )
                                     .padding(.bottom, Theme.Spacing.small)
                                 }
 
@@ -280,17 +270,6 @@ struct AlarmEditorView: View {
                             .font(Theme.Typography.footnote)
                             .foregroundStyle(Theme.Colors.textSecondary)
                     }
-                    .onAppear {
-                        // Generate initial preview if valid
-                        state.regeneratePreview()
-                    }
-                    .onChange(of: state.canGeneratePreview) { _, canGenerate in
-                        if canGenerate {
-                            state.regeneratePreview()
-                        } else {
-                            state.clearPreview()
-                        }
-                    }
 
                     // MARK: - Accessories Section
                     Section {
@@ -319,13 +298,11 @@ struct AlarmEditorView: View {
                         }
 
                         if let error = state.validation.invalidatedAccessoryError {
-                            HStack(spacing: Theme.Spacing.small) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(Theme.Colors.sunriseOrange)
-                                Text(error)
-                                    .font(Theme.Typography.footnote)
-                                    .foregroundStyle(Theme.Colors.sunriseOrange)
-                            }
+                            EditorCallout(
+                                message: error,
+                                systemImage: "exclamationmark.triangle.fill",
+                                tint: Theme.Colors.sunriseOrange
+                            )
                             .padding(.vertical, Theme.Spacing.small)
                         }
                     } header: {
@@ -346,87 +323,69 @@ struct AlarmEditorView: View {
 
                         // Color temperature controls - only show if capability supports it (VAL-ALARM-002)
                         if state.colorMode == .colorTemperature && state.canShowColorTemperature {
-                            VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                                Text("Warmth: \(state.targetColorTemperature ?? 300) mireds")
-                                    .font(Theme.Typography.body)
-                                Slider(
-                                    value: .init(
-                                        get: { Double(state.targetColorTemperature ?? 300) },
-                                        set: { state.targetColorTemperature = Int($0) }
-                                    ),
-                                    in: 153...454,
-                                    step: 1
-                                )
-                                .tint(Theme.Colors.sunriseOrange)
-                            }
+                            EditorSliderRow(
+                                title: "Warmth",
+                                valueText: "\(state.targetColorTemperature ?? AlarmEditorState.defaultColorTemperature) mireds",
+                                value: .init(
+                                    get: { Double(state.targetColorTemperature ?? AlarmEditorState.defaultColorTemperature) },
+                                    set: { state.targetColorTemperature = Int($0) }
+                                ),
+                                bounds: 153...454
+                            )
                             .padding(.top, Theme.Spacing.small)
                         }
 
                         // Full color controls - only show if capability supports it (VAL-ALARM-002)
                         if state.colorMode == .fullColor && state.canShowFullColor {
                             VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
-                                VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                                    Text("Hue: \(state.targetHue ?? 0)°")
-                                        .font(Theme.Typography.body)
-                                    Slider(
-                                        value: .init(
-                                            get: { Double(state.targetHue ?? 0) },
-                                            set: { state.targetHue = Int($0) }
-                                        ),
-                                        in: 0...360,
-                                        step: 1
-                                    )
-                                    .tint(Theme.Colors.sunriseOrange)
-                                }
+                                EditorSliderRow(
+                                    title: "Hue",
+                                    valueText: "\(state.targetHue ?? AlarmEditorState.defaultHue)°",
+                                    value: .init(
+                                        get: { Double(state.targetHue ?? AlarmEditorState.defaultHue) },
+                                        set: { state.targetHue = Int($0) }
+                                    ),
+                                    bounds: 0...360
+                                )
 
-                                VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-                                    Text("Saturation: \(state.targetSaturation ?? 0)%")
-                                        .font(Theme.Typography.body)
-                                    Slider(
-                                        value: .init(
-                                            get: { Double(state.targetSaturation ?? 0) },
-                                            set: { state.targetSaturation = Int($0) }
-                                        ),
-                                        in: 0...100,
-                                        step: 1
-                                    )
-                                    .tint(Theme.Colors.sunriseOrange)
-                                }
+                                EditorSliderRow(
+                                    title: "Saturation",
+                                    valueText: "\(state.targetSaturation ?? AlarmEditorState.defaultSaturation)%",
+                                    value: .init(
+                                        get: { Double(state.targetSaturation ?? AlarmEditorState.defaultSaturation) },
+                                        set: { state.targetSaturation = Int($0) }
+                                    ),
+                                    bounds: 0...100
+                                )
                             }
                             .padding(.top, Theme.Spacing.small)
                         }
 
                         // Show degradation explanation for mixed capabilities (VAL-ALARM-002)
                         if let explanation = state.degradationExplanation {
-                            HStack(spacing: Theme.Spacing.small) {
-                                Image(systemName: "info.circle.fill")
-                                    .foregroundStyle(Theme.Colors.textTertiary)
-                                Text(explanation)
-                                    .font(Theme.Typography.footnote)
-                                    .foregroundStyle(Theme.Colors.textSecondary)
-                            }
+                            EditorCallout(
+                                message: explanation,
+                                systemImage: "info.circle.fill",
+                                tint: Theme.Colors.textSecondary
+                            )
                             .padding(.top, Theme.Spacing.small)
                         }
 
                         // Show message when color mode isn't supported by any selected accessory (VAL-ALARM-002)
                         if state.colorMode != .brightnessOnly && !state.selectedAccessoryIds.isEmpty {
                             if !state.canShowColorTemperature && state.colorMode == .colorTemperature {
-                                HStack(spacing: Theme.Spacing.small) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundStyle(Theme.Colors.sunriseOrange)
-                                    Text("None of your selected lights support color temperature. They'll use brightness only.")
-                                        .font(Theme.Typography.footnote)
-                                        .foregroundStyle(Theme.Colors.sunriseOrange)
-                                }
+                                EditorCallout(
+                                    message: "None of your selected lights support color temperature. They'll use brightness only.",
+                                    systemImage: "exclamationmark.triangle.fill",
+                                    tint: Theme.Colors.sunriseOrange
+                                )
                                 .padding(.top, Theme.Spacing.small)
                             } else if !state.canShowFullColor && state.colorMode == .fullColor {
-                                HStack(spacing: Theme.Spacing.small) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundStyle(Theme.Colors.sunriseOrange)
-                                    Text("None of your selected lights support full color. They'll fall back to available features.")
-                                        .font(Theme.Typography.footnote)
-                                        .foregroundStyle(Theme.Colors.sunriseOrange)
-                                }
+                                EditorCallout(
+                                    message: "None of your selected lights support full color. They'll fall back to available features.",
+                                    systemImage: "exclamationmark.triangle.fill",
+                                    tint: Theme.Colors.sunriseOrange
+                                )
                                 .padding(.top, Theme.Spacing.small)
                             }
                         }
@@ -451,7 +410,12 @@ struct AlarmEditorView: View {
                     }
                 }
                 .formStyle(.grouped)
+                .scrollContentBackground(.hidden)
+                .background(Theme.Gradients.appBackground.ignoresSafeArea())
                 .disabled(isSaving)
+                .onAppear {
+                    refreshPreview(state)
+                }
                 .onChange(of: previewRefreshState) { _, _ in
                     refreshPreview(state)
                 }
@@ -512,19 +476,162 @@ struct AlarmEditorView: View {
     }
 }
 
-private enum RepeatPreset: CaseIterable {
-    case once
-    case weekdays
-    case everyDay
-    case custom
+private struct AlarmEditorSummaryCard: View {
+    let state: AlarmEditorState
 
-    var title: String {
-        switch self {
-        case .once: return "Once"
-        case .weekdays: return "Weekdays"
-        case .everyDay: return "Daily"
-        case .custom: return "Custom"
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.large) {
+            HStack(alignment: .top, spacing: Theme.Spacing.medium) {
+                ZStack {
+                    Circle()
+                        .fill(Theme.Gradients.warmGlow)
+                    Image(systemName: "sunrise.fill")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 54, height: 54)
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
+                    Text(state.alarmName.isEmpty ? "New sunrise alarm" : state.alarmName)
+                        .font(Theme.Typography.title3)
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .lineLimit(2)
+
+                    Text(summaryText)
+                        .font(Theme.Typography.callout)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            HStack(spacing: Theme.Spacing.small) {
+                EditorMetricPill(value: timeText, label: "Wake", systemImage: "clock")
+                EditorMetricPill(value: "\(state.durationMinutes)m", label: "Ramp", systemImage: "timer")
+                EditorMetricPill(value: "\(state.stepCount)", label: "Steps", systemImage: "chart.bar.fill")
+            }
         }
+        .padding(Theme.Spacing.large)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.xLarge)
+                .fill(Theme.Colors.elevatedSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.Radius.xLarge)
+                        .stroke(Theme.Colors.hairline, lineWidth: 1)
+                )
+        )
+        .padding(.vertical, Theme.Spacing.small)
+    }
+
+    private var summaryText: String {
+        let lightCount = state.selectedAccessoryIds.count
+        let repeatText = state.repeatSchedule.displayText.lowercased()
+        let lightText = "\(lightCount) light\(lightCount == 1 ? "" : "s")"
+        return "\(lightText) • \(repeatText) • \(state.gradientCurve.displayName)"
+    }
+
+    private var timeText: String {
+        if state.timeReference == .clock {
+            return state.wakeTime.formatted(date: .omitted, time: .shortened)
+        }
+        return WakeAlarm.displayText(
+            for: state.timeReference,
+            offsetMinutes: state.timeOffsetMinutes
+        )
+    }
+}
+
+private struct EditorMetricPill: View {
+    let value: String
+    let label: String
+    let systemImage: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Label(label, systemImage: systemImage)
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+
+            Text(value)
+                .font(Theme.Typography.footnote.weight(.semibold))
+                .foregroundStyle(Theme.Colors.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Theme.Spacing.small)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.medium)
+                .fill(Theme.Colors.surface)
+        )
+    }
+}
+
+private struct EditorSliderRow: View {
+    let title: String
+    let valueText: String
+    @Binding var value: Double
+    let bounds: ClosedRange<Double>
+
+    init(
+        title: String,
+        valueText: String,
+        value: Binding<Double>,
+        bounds: ClosedRange<Double>
+    ) {
+        self.title = title
+        self.valueText = valueText
+        self._value = value
+        self.bounds = bounds
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(Theme.Colors.textPrimary)
+
+                Spacer(minLength: Theme.Spacing.medium)
+
+                Text(valueText)
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundStyle(Theme.Colors.sunriseOrange)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            Slider(value: $value, in: bounds, step: 1)
+                .tint(Theme.Colors.sunriseOrange)
+        }
+        .padding(.vertical, Theme.Spacing.xSmall)
+    }
+}
+
+private struct EditorCallout: View {
+    let message: String
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.small) {
+            Image(systemName: systemImage)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 18)
+
+            Text(message)
+                .font(Theme.Typography.footnote)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(Theme.Spacing.small)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.medium)
+                .fill(tint.opacity(0.10))
+        )
     }
 }
 
@@ -572,62 +679,8 @@ private func refreshPreview(_ state: AlarmEditorState) {
     }
 }
 
-private enum WeekdayDescriptor: CaseIterable {
-    case sun, mon, tue, wed, thu, fri, sat
-
-    var shortTitle: String {
-        switch self {
-        case .sun: return "S"
-        case .mon: return "M"
-        case .tue: return "T"
-        case .wed: return "W"
-        case .thu: return "T"
-        case .fri: return "F"
-        case .sat: return "S"
-        }
-    }
-
-    func isEnabled(in schedule: WeekdaySchedule) -> Bool {
-        switch self {
-        case .sun: return schedule.sunday
-        case .mon: return schedule.monday
-        case .tue: return schedule.tuesday
-        case .wed: return schedule.wednesday
-        case .thu: return schedule.thursday
-        case .fri: return schedule.friday
-        case .sat: return schedule.saturday
-        }
-    }
-}
-
-private func repeatPreset(for schedule: WeekdaySchedule) -> RepeatPreset {
-    if schedule == .never {
-        return .once
-    }
-    if schedule == .weekdays {
-        return .weekdays
-    }
-    if schedule == .everyDay {
-        return .everyDay
-    }
-    return .custom
-}
-
 private func offsetLabel(for reference: AlarmTimeReference, minutes: Int) -> String {
     WakeAlarm.displayText(for: reference, offsetMinutes: minutes)
-}
-
-@MainActor
-private func toggle(_ day: WeekdayDescriptor, in state: AlarmEditorState) {
-    switch day {
-    case .sun: state.repeatSchedule.sunday.toggle()
-    case .mon: state.repeatSchedule.monday.toggle()
-    case .tue: state.repeatSchedule.tuesday.toggle()
-    case .wed: state.repeatSchedule.wednesday.toggle()
-    case .thu: state.repeatSchedule.thursday.toggle()
-    case .fri: state.repeatSchedule.friday.toggle()
-    case .sat: state.repeatSchedule.saturday.toggle()
-    }
 }
 
 // MARK: - Preview Chart
@@ -654,9 +707,26 @@ struct AlarmPreviewChart: View {
                             .opacity(0.2)
                     }
 
+                    // Warm wash under the ramp - the room filling with light
+                    brightnessArea(in: geometry)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Theme.Colors.morningGold.opacity(0.45),
+                                    Theme.Colors.sunriseOrange.opacity(0.20),
+                                    Theme.Colors.sunriseOrange.opacity(0.02)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+
                     // Brightness curve
                     brightnessCurve(in: geometry)
-                        .stroke(Theme.Colors.sunriseOrange, lineWidth: 2)
+                        .stroke(
+                            Theme.Gradients.warmGlow,
+                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)
+                        )
 
                     // Step markers
                     ForEach(steps.indices, id: \.self) { index in
@@ -667,40 +737,61 @@ struct AlarmPreviewChart: View {
         }
     }
 
-    private func brightnessCurve(in geometry: GeometryProxy) -> Path {
-        var path = Path()
-
+    private func curvePoints(in geometry: GeometryProxy) -> [CGPoint] {
         let width = geometry.size.width
         let height = geometry.size.height
         let stepWidth = width / CGFloat(max(steps.count - 1, 1))
 
-        for (index, step) in steps.enumerated() {
-            let x = CGFloat(index) * stepWidth
-            let y = height - (CGFloat(step.brightness) / 100.0 * height)
+        return steps.enumerated().map { index, step in
+            CGPoint(
+                x: CGFloat(index) * stepWidth,
+                y: height - (CGFloat(step.brightness) / 100.0 * height)
+            )
+        }
+    }
 
+    private func brightnessCurve(in geometry: GeometryProxy) -> Path {
+        var path = Path()
+
+        for (index, point) in curvePoints(in: geometry).enumerated() {
             if index == 0 {
-                path.move(to: CGPoint(x: x, y: y))
+                path.move(to: point)
             } else {
-                path.addLine(to: CGPoint(x: x, y: y))
+                path.addLine(to: point)
             }
         }
 
         return path
     }
 
-    private func stepMarker(at index: Int, in geometry: GeometryProxy) -> some View {
-        let width = geometry.size.width
-        let height = geometry.size.height
-        let stepWidth = width / CGFloat(max(steps.count - 1, 1))
+    private func brightnessArea(in geometry: GeometryProxy) -> Path {
+        let points = curvePoints(in: geometry)
+        guard let first = points.first, let last = points.last else {
+            return Path()
+        }
 
+        var path = Path()
+        path.move(to: CGPoint(x: first.x, y: geometry.size.height))
+        for point in points {
+            path.addLine(to: point)
+        }
+        path.addLine(to: CGPoint(x: last.x, y: geometry.size.height))
+        path.closeSubpath()
+        return path
+    }
+
+    private func stepMarker(at index: Int, in geometry: GeometryProxy) -> some View {
+        let point = curvePoints(in: geometry)[index]
         let step = steps[index]
-        let x = CGFloat(index) * stepWidth
-        let y = height - (CGFloat(step.brightness) / 100.0 * height)
 
         return Circle()
             .fill(stepMarkerColor(for: step))
-            .frame(width: 6, height: 6)
-            .position(x: x, y: y)
+            .frame(width: 7, height: 7)
+            .overlay(
+                Circle()
+                    .stroke(Theme.Colors.elevatedSurface, lineWidth: 1.5)
+            )
+            .position(point)
     }
 
     private func stepMarkerColor(for step: WakeAlarmStep) -> Color {
@@ -747,23 +838,33 @@ struct AccessorySelectionRow: View {
                 // Accessory icon based on capability
                 Image(systemName: iconName)
                     .font(.system(size: 20))
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .foregroundStyle(isSelected ? Theme.Colors.sunriseOrange : Theme.Colors.textSecondary)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        Circle()
+                            .fill(isSelected ? Theme.Colors.sunriseOrange.opacity(0.12) : Theme.Colors.surface)
+                    )
 
                 // Accessory info
                 VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
                     Text(accessory.name)
                         .font(Theme.Typography.body)
                         .foregroundStyle(Theme.Colors.textPrimary)
+                        .lineLimit(1)
 
                     Text("\(accessory.roomName) · \(accessory.capability.displayName)")
                         .font(Theme.Typography.caption)
                         .foregroundStyle(Theme.Colors.textSecondary)
+                        .lineLimit(1)
                 }
 
                 Spacer()
             }
+            .padding(.vertical, Theme.Spacing.xSmall)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(accessory.name), \(accessory.roomName), \(accessory.capability.displayName)")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
 
     private var iconName: String {

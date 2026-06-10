@@ -66,6 +66,12 @@ struct HomeSelectionView: View {
                         .font(Theme.Typography.callout)
                         .foregroundStyle(Theme.Colors.textSecondary)
                         .multilineTextAlignment(.center)
+
+                    Button("Check Again") {
+                        Task { await loadHomes() }
+                    }
+                    .font(Theme.Typography.callout)
+                    .foregroundStyle(Theme.Colors.primary)
                 }
                 .padding(.horizontal, Theme.Spacing.large)
                 Spacer()
@@ -94,7 +100,7 @@ struct HomeSelectionView: View {
                     .padding(.bottom, Theme.Spacing.xxLarge)
             }
         }
-        .background(Theme.Colors.background.ignoresSafeArea())
+        .background(Theme.Gradients.appBackground.ignoresSafeArea())
         .task {
             await loadHomes()
         }
@@ -140,12 +146,16 @@ struct HomeCard: View {
                 // Home icon
                 ZStack {
                     Circle()
-                        .fill(home.isActive ? Theme.Colors.primary.opacity(0.15) : Theme.Colors.surface)
+                        .fill(
+                            home.isActive
+                                ? AnyShapeStyle(Theme.Gradients.warmGlow)
+                                : AnyShapeStyle(Theme.Colors.surface)
+                        )
                         .frame(width: 48, height: 48)
-                    
+
                     Image(systemName: "house.fill")
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(home.isActive ? Theme.Colors.primary : Theme.Colors.textSecondary)
+                        .foregroundStyle(home.isActive ? .white : Theme.Colors.textSecondary)
                 }
                 
                 // Home info
@@ -184,23 +194,23 @@ struct HomeCard: View {
             .padding(Theme.Spacing.large)
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.large)
-                    .fill(Theme.Colors.surface)
+                    .fill(Theme.Colors.elevatedSurface)
                     .shadow(
-                        color: home.isActive ? Theme.Colors.primary.opacity(0.1) : Color.black.opacity(0.05),
-                        radius: home.isActive ? 8 : 4,
+                        color: home.isActive ? Theme.Colors.sunriseOrange.opacity(0.18) : Color.black.opacity(0.05),
+                        radius: home.isActive ? 10 : 4,
                         x: 0,
-                        y: home.isActive ? 4 : 2
+                        y: home.isActive ? 5 : 2
                     )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.large)
                     .stroke(
-                        home.isActive ? Theme.Colors.primary.opacity(0.3) : Color.clear,
-                        lineWidth: 2
+                        home.isActive ? Theme.Colors.sunriseOrange.opacity(0.35) : Theme.Colors.hairline,
+                        lineWidth: home.isActive ? 1.5 : 1
                     )
             )
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(PressableButtonStyle())
     }
 }
 

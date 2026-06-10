@@ -62,7 +62,7 @@ struct HomeAccessBlockerView: View {
             .padding(.bottom, Theme.Spacing.xxLarge)
             .padding(.top, Theme.Spacing.large)
         }
-        .background(Theme.Colors.background.ignoresSafeArea())
+        .background(Theme.Gradients.appBackground.ignoresSafeArea())
         .overlay {
             if environment.homeAccessState.isLoading {
                 ProgressView()
@@ -221,9 +221,10 @@ struct HomeAccessBlockerView: View {
     }
     
     private func handleReadinessChange(_ newReadiness: HomeAccessReadiness) {
-        // If readiness changed to ready, update environment to proceed
+        // Route through home selection and accessory discovery like the main check
+        // path - completing onboarding here would skip choosing a home and lights.
         if newReadiness.isReady {
-            environment.onboardingState.completeOnboarding()
+            environment.onboardingState.moveToHomeSelection()
         }
     }
 }
