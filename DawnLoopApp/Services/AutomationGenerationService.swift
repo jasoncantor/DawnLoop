@@ -110,7 +110,8 @@ final class AutomationGenerationService {
         let scenePlans = scenePlans(for: alarm, accessories: accessories)
             .filter { expectedStepNumbers.contains($0.stepNumber) }
         let existingBindingsByKey = Dictionary(
-            uniqueKeysWithValues: existingBindings.map { (BindingKey(binding: $0), $0) }
+            existingBindings.map { (BindingKey(binding: $0), $0) },
+            uniquingKeysWith: { first, _ in first }
         )
         DawnLoopLogger.automation.info(
             "Scheduled run sync started for alarm \(alarm.id.uuidString, privacy: .public); steps=\(scenePlans.count, privacy: .public); bindings=\(expectedBindings.count, privacy: .public)"
@@ -118,6 +119,8 @@ final class AutomationGenerationService {
 
         var createdTriggers: [String] = []
         var createdActionSets: [String] = []
+        var activeBindingIDs: Set<UUID> = []
+        var activeTriggerIdentifiers: Set<String> = []
         let totalUnits = max(scenePlans.count + expectedBindings.count + 2, 1)
         var completedUnits = 0
 
@@ -197,14 +200,16 @@ final class AutomationGenerationService {
                 binding.hue = expected.step.hue
                 binding.saturation = expected.step.saturation
                 binding.markVerified()
+                activeBindingIDs.insert(binding.id)
+                activeTriggerIdentifiers.insert(triggerResult.identifier)
             }
 
-            let expectedKeys = Set(expectedBindings.map(\.bindingKey))
-            let staleBindings = existingBindings.filter { !expectedKeys.contains(BindingKey(binding: $0)) }
+            let staleBindings = existingBindings.filter { !activeBindingIDs.contains($0.id) }
             let staleLeftovers = try await deleteBindings(
                 staleBindings,
                 homeIdentifier: homeIdentifier,
-                activeStepNumbers: expectedStepNumbers,
+                activeActionSetIdentifiers: Set(actionSetByStep.filter { expectedStepNumbers.contains($0.key) }.map(\.value)),
+                activeTriggerIdentifiers: activeTriggerIdentifiers,
                 in: context
             )
             completedUnits += 1
@@ -254,6 +259,16 @@ final class AutomationGenerationService {
         let bindings = try fetchBindings(for: alarm.id, in: context)
         let homeIdentifier = alarm.homeIdentifier
 
+        guard homeIdentifier != nil || bindings.isEmpty else {
+            try await alarmRepository.updateValidationState(
+                for: alarm.id,
+                state: .homeUnavailable,
+                message: "Choose the original Apple Home to finish removing this alarm's automations.",
+                requiresUserAction: true
+            )
+            throw AutomationGenerationError.homeUnavailable
+        }
+
         var failedTriggerIdentifiers: Set<String> = []
         var failedActionSetIdentifiers: Set<String> = []
 
@@ -289,6 +304,12 @@ final class AutomationGenerationService {
         try context.save()
 
         if !failedTriggerIdentifiers.isEmpty || !failedActionSetIdentifiers.isEmpty {
+            try await alarmRepository.updateValidationState(
+                for: alarm.id,
+                state: .outOfSync,
+                message: "Some HomeKit automations could not be removed. Repair to retry cleanup.",
+                requiresUserAction: true
+            )
             throw AutomationGenerationError.cleanupIncomplete
         }
 
@@ -302,21 +323,50 @@ final class AutomationGenerationService {
         }
     }
 
+    func deleteAlarm(_ alarm: WakeAlarm) async throws {
+        // Keep the alarm and surviving bindings reachable until HomeKit cleanup
+        // succeeds. Deleting the local records first would orphan live triggers.
+        // A later repair should finish removal, not re-arm an alarm being deleted.
+        try await alarmRepository.setAlarmEnabled(alarm, enabled: false)
+        try await removeAutomations(for: alarm)
+        try await alarmRepository.deleteAlarm(byId: alarm.id)
+    }
+
     func resetDawnLoopArtifacts() async throws -> DawnLoopHomeKitResetSummary {
+        let availableHomeIDs = Set((await homeKitController.homes()).map(\.id))
         var homesVisited = 0
         var triggersRemoved = 0
         var actionSetsRemoved = 0
+        var failedRemovals = 0
 
         for prefix in DawnLoopHomeKitNamespace.allPrefixes {
             let cleanup = await homeKitController.removeObjects(prefixedBy: prefix)
             homesVisited = max(homesVisited, cleanup.homesVisited)
             triggersRemoved += cleanup.triggersRemoved
             actionSetsRemoved += cleanup.actionSetsRemoved
+            failedRemovals += cleanup.failedRemovals
         }
 
         let context = ModelContext(modelContainer)
         let bindings = try context.fetch(FetchDescriptor<AutomationBinding>())
         let alarms = await alarmRepository.fetchAllAlarms()
+        let boundAlarmIDs = Set(bindings.map(\.alarmId))
+        let hasUnavailableBoundHome = alarms.contains { alarm in
+            boundAlarmIDs.contains(alarm.id)
+                && alarm.homeIdentifier.map(availableHomeIDs.contains) != true
+        }
+
+        if failedRemovals > 0 || hasUnavailableBoundHome || (homesVisited == 0 && !bindings.isEmpty) {
+            for alarm in alarms {
+                try await alarmRepository.updateValidationState(
+                    for: alarm.id,
+                    state: .outOfSync,
+                    message: "HomeKit reset is incomplete. Your alarm bindings were kept so cleanup can be retried.",
+                    requiresUserAction: true
+                )
+            }
+            throw AutomationGenerationError.cleanupIncomplete
+        }
 
         bindings.forEach(context.delete)
         try context.save()
@@ -423,7 +473,7 @@ final class AutomationGenerationService {
                         relativeOffsetMinutes: relativeOffsetMinutes
                     ),
                     step: degradedPlan.steps[stepNumber],
-                    actionRequests: []
+                    actionRequests: actionRequests(for: degradedPlan.steps[stepNumber], accessories: accessories)
                 )
             )
         }
@@ -552,22 +602,17 @@ final class AutomationGenerationService {
     private func deleteBindings(
         _ bindings: [AutomationBinding],
         homeIdentifier: String,
-        activeStepNumbers: Set<Int>,
+        activeActionSetIdentifiers: Set<String>,
+        activeTriggerIdentifiers: Set<String>,
         in context: ModelContext
     ) async throws -> Int {
         var failedTriggerIdentifiers: Set<String> = []
         var failedActionSetIdentifiers: Set<String> = []
 
-        let actionSetIdentifiers = Set<String>(
-            bindings.compactMap { binding in
-                guard !activeStepNumbers.contains(binding.stepNumber) else {
-                    return nil
-                }
-                return binding.actionSetIdentifier
-            }
-        )
+        let actionSetIdentifiers = Set(bindings.compactMap(\.actionSetIdentifier))
+            .subtracting(activeActionSetIdentifiers)
 
-        for triggerIdentifier in Set(bindings.compactMap(\.triggerIdentifier)) {
+        for triggerIdentifier in Set(bindings.compactMap(\.triggerIdentifier)).subtracting(activeTriggerIdentifiers) {
             do {
                 try await homeKitController.deleteTrigger(homeIdentifier: homeIdentifier, identifier: triggerIdentifier)
             } catch {

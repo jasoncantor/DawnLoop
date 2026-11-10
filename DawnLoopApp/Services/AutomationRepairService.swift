@@ -89,7 +89,24 @@ final class AutomationRepairService {
             return nil
         }
 
-        try? await alarmRepository.setAlarmEnabled(alarm, enabled: false)
+        do {
+            try await alarmRepository.setAlarmEnabled(alarm, enabled: false)
+            try await generationService.removeAutomations(for: alarm)
+        } catch {
+            let summary = ValidationStateSummary(
+                state: .outOfSync,
+                message: "The one-time alarm finished, but cleanup needs attention. Repair to retry.",
+                requiresUserAction: true,
+                lastUpdated: now
+            )
+            try? await alarmRepository.updateValidationState(
+                for: alarm.id,
+                state: summary.state,
+                message: summary.message,
+                requiresUserAction: summary.requiresUserAction
+            )
+            return summary
+        }
         let summary = ValidationStateSummary(
             state: .valid,
             message: "One-time alarm finished. Turn it on again to reschedule it.",
@@ -107,10 +124,19 @@ final class AutomationRepairService {
 
     private func validationSummary(for alarm: WakeAlarm, schedule: WeekdaySchedule?) async -> ValidationStateSummary {
         guard alarm.isEnabled else {
+            let context = ModelContext(modelContainer)
+            let alarmID = alarm.id
+            var descriptor = FetchDescriptor<AutomationBinding>()
+            descriptor.predicate = #Predicate { $0.alarmId == alarmID }
+            // Leftover bindings mean disabling did not finish. Do not hide live
+            // HomeKit automations behind a healthy "disabled" label.
+            let cleanupNeeded = (try? context.fetch(descriptor).isEmpty) != true
             return ValidationStateSummary(
-                state: .valid,
-                message: "Alarm is disabled.",
-                requiresUserAction: false,
+                state: cleanupNeeded ? .outOfSync : .valid,
+                message: cleanupNeeded
+                    ? "Alarm is off, but HomeKit cleanup is incomplete. Repair to finish removing its automations."
+                    : "Alarm is disabled.",
+                requiresUserAction: cleanupNeeded,
                 lastUpdated: Date()
             )
         }
@@ -205,7 +231,7 @@ final class AutomationRepairService {
 
         let expectedKeys = Set(expectedBindings.map(\.bindingKey))
         let actualKeys = Set(bindings.map(BindingKey.init(binding:)))
-        if expectedKeys != actualKeys {
+        if expectedKeys != actualKeys || bindings.count != actualKeys.count {
             return ValidationStateSummary(
                 state: .outOfSync,
                 message: "Home automation bindings are missing or outdated.",
@@ -295,6 +321,24 @@ final class AutomationRepairService {
                 return ValidationStateSummary(
                     state: .outOfSync,
                     message: "Light settings drifted from this alarm and need repair.",
+                    requiresUserAction: true,
+                    lastUpdated: Date()
+                )
+            }
+
+            let liveSettingsMatch = await homeKitController.automationMatches(
+                homeIdentifier: homeIdentifier,
+                actionSetIdentifier: binding.actionSetIdentifier,
+                triggerIdentifier: binding.triggerIdentifier,
+                schedule: expected.triggerSchedule,
+                requests: expected.actionRequests
+            )
+            guard liveSettingsMatch else {
+                binding.markInvalid(reason: "HomeKit settings differ from the alarm plan")
+                try? context.save()
+                return ValidationStateSummary(
+                    state: .outOfSync,
+                    message: "HomeKit timing, light settings, or enabled state changed. Repair to restore this alarm.",
                     requiresUserAction: true,
                     lastUpdated: Date()
                 )

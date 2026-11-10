@@ -50,6 +50,7 @@ struct HomeKitNamespaceCleanupResult: Equatable, Sendable {
     let homesVisited: Int
     let triggersRemoved: Int
     let actionSetsRemoved: Int
+    let failedRemovals: Int
 }
 
 enum HomeKitTriggerSchedule: Equatable, Sendable {
@@ -77,6 +78,13 @@ protocol HomeKitControllerProtocol: AnyObject {
     func accessories(in homeIdentifier: String) async -> [AccessorySnapshot]
     func actionSetExists(homeIdentifier: String, identifier: String?) async -> Bool
     func triggerExists(homeIdentifier: String, identifier: String?) async -> Bool
+    func automationMatches(
+        homeIdentifier: String,
+        actionSetIdentifier: String?,
+        triggerIdentifier: String?,
+        schedule: HomeKitTriggerSchedule,
+        requests: [HomeKitActionRequest]
+    ) async -> Bool
     func upsertActionSet(
         homeIdentifier: String,
         identifier: String?,
@@ -192,6 +200,42 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
         }
 
         return home.triggers.contains { $0.uniqueIdentifier.uuidString == identifier }
+    }
+
+    /// Check the live Home graph, not just the IDs and values saved by our last sync.
+    func automationMatches(
+        homeIdentifier: String,
+        actionSetIdentifier: String?,
+        triggerIdentifier: String?,
+        schedule: HomeKitTriggerSchedule,
+        requests: [HomeKitActionRequest]
+    ) async -> Bool {
+        await ensureLoaded()
+        guard let home = home(with: homeIdentifier),
+              let actionSet = home.actionSets.first(where: { $0.uniqueIdentifier.uuidString == actionSetIdentifier }),
+              let trigger = home.triggers.first(where: { $0.uniqueIdentifier.uuidString == triggerIdentifier }) as? HMEventTrigger,
+              trigger.isEnabled,
+              trigger.executeOnce == !isRepeating(schedule),
+              trigger.actionSets.count == 1,
+              trigger.actionSets.first?.uniqueIdentifier == actionSet.uniqueIdentifier,
+              trigger.endEvents.isEmpty,
+              matchesEvent(trigger.events, desired: event(for: schedule)),
+              matchesRecurrences(trigger.recurrences, desired: recurrences(for: schedule)),
+              matchesPredicate(trigger.predicate, desired: nil),
+              let expectedActions = try? writeActions(for: requests, in: home),
+              expectedActions.count == requests.count,
+              actionSet.actions.count == expectedActions.count else {
+            return false
+        }
+
+        return expectedActions.allSatisfy { expected in
+            guard let expected = expected as? HMCharacteristicWriteAction<NSNumber> else { return false }
+            return actionSet.actions.contains { actual in
+                guard let actual = actual as? HMCharacteristicWriteAction<NSNumber> else { return false }
+                return actual.characteristic.uniqueIdentifier == expected.characteristic.uniqueIdentifier
+                    && actual.targetValue == expected.targetValue
+            }
+        }
     }
 
     func upsertActionSet(
@@ -324,6 +368,9 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
             if !matchesEvent(trigger.events, desired: desiredEvent) {
                 try await trigger.updateEvents([desiredEvent])
             }
+            if !trigger.endEvents.isEmpty {
+                try await trigger.updateEndEvents([])
+            }
             if !matchesRecurrences(trigger.recurrences, desired: desiredRecurrences) {
                 try await trigger.updateRecurrences(desiredRecurrences)
             }
@@ -388,6 +435,7 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
 
         var removedTriggers = 0
         var removedActionSets = 0
+        var failedRemovals = 0
 
         for home in homeManager.homes {
             let triggers = home.triggers.filter { $0.name.hasPrefix(prefix) }
@@ -397,6 +445,7 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
                     try await home.removeTrigger(trigger)
                     removedTriggers += 1
                 } catch {
+                    failedRemovals += 1
                     DawnLoopLogger.homeKit.error("Failed to remove trigger \(trigger.name): \(error.localizedDescription)")
                 }
             }
@@ -407,6 +456,7 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
                     try await home.removeActionSet(actionSet)
                     removedActionSets += 1
                 } catch {
+                    failedRemovals += 1
                     DawnLoopLogger.homeKit.error("Failed to remove action set \(actionSet.name): \(error.localizedDescription)")
                 }
             }
@@ -415,7 +465,8 @@ final class HomeKitController: NSObject, HomeKitControllerProtocol {
         return HomeKitNamespaceCleanupResult(
             homesVisited: homeManager.homes.count,
             triggersRemoved: removedTriggers,
-            actionSetsRemoved: removedActionSets
+            actionSetsRemoved: removedActionSets,
+            failedRemovals: failedRemovals
         )
     }
 
@@ -680,6 +731,8 @@ final class MockHomeKitController: HomeKitControllerProtocol {
     private var triggers: [String: [String: StoredTrigger]]
     private(set) var upsertActionSetCallCount = 0
     private(set) var upsertScheduledTriggerCallCount = 0
+    var failingTriggerDeletions: Set<String> = []
+    var failingActionSetDeletions: Set<String> = []
 
     init(
         status: HMHomeManagerAuthorizationStatus = [.determined, .authorized],
@@ -775,6 +828,40 @@ final class MockHomeKitController: HomeKitControllerProtocol {
         return triggers[homeIdentifier]?[identifier] != nil
     }
 
+    func automationMatches(
+        homeIdentifier: String,
+        actionSetIdentifier: String?,
+        triggerIdentifier: String?,
+        schedule: HomeKitTriggerSchedule,
+        requests: [HomeKitActionRequest]
+    ) async -> Bool {
+        guard let actionSetIdentifier, let triggerIdentifier,
+              let actionSet = actionSets[homeIdentifier]?[actionSetIdentifier],
+              let trigger = triggers[homeIdentifier]?[triggerIdentifier],
+              trigger.isEnabled,
+              trigger.executeOnce == (schedule.recurrenceWeekdays == nil),
+              trigger.actionSetIdentifier == actionSetIdentifier,
+              trigger.requiredOnAccessoryIdentifiers.isEmpty,
+              Set(trigger.schedule.recurrenceWeekdays ?? []) == Set(schedule.recurrenceWeekdays ?? []),
+              actionSet.requests.count == requests.count,
+              requests.allSatisfy({ actionSet.requests.contains($0) }) else {
+            return false
+        }
+
+        switch (trigger.schedule, schedule) {
+        case (.calendar(let actual, _), .calendar(let expected, _)):
+            let components: Set<Calendar.Component> = schedule.recurrenceWeekdays == nil
+                ? [.month, .day, .hour, .minute] : [.hour, .minute]
+            return Calendar.current.dateComponents(components, from: actual)
+                == Calendar.current.dateComponents(components, from: expected)
+        case (.significant(let actualReference, let actualOffset, _),
+              .significant(let expectedReference, let expectedOffset, _)):
+            return actualReference == expectedReference && actualOffset == expectedOffset
+        default:
+            return false
+        }
+    }
+
     func upsertActionSet(
         homeIdentifier: String,
         identifier: String?,
@@ -821,10 +908,16 @@ final class MockHomeKitController: HomeKitControllerProtocol {
     }
 
     func deleteActionSet(homeIdentifier: String, identifier: String) async throws {
+        if failingActionSetDeletions.contains(identifier) {
+            throw AutomationGenerationError.cleanupIncomplete
+        }
         actionSets[homeIdentifier]?[identifier] = nil
     }
 
     func deleteTrigger(homeIdentifier: String, identifier: String) async throws {
+        if failingTriggerDeletions.contains(identifier) {
+            throw AutomationGenerationError.cleanupIncomplete
+        }
         triggers[homeIdentifier]?[identifier] = nil
     }
 
@@ -832,6 +925,7 @@ final class MockHomeKitController: HomeKitControllerProtocol {
         var homesVisited = 0
         var removedTriggers = 0
         var removedActionSets = 0
+        var failedRemovals = 0
 
         for home in storedHomes {
             homesVisited += 1
@@ -839,21 +933,30 @@ final class MockHomeKitController: HomeKitControllerProtocol {
             let homeIdentifier = home.id
             let triggerMatches = storedTriggers(for: homeIdentifier).filter { $0.name.hasPrefix(prefix) }
             for trigger in triggerMatches {
-                triggers[homeIdentifier]?[trigger.identifier] = nil
-                removedTriggers += 1
+                do {
+                    try await deleteTrigger(homeIdentifier: homeIdentifier, identifier: trigger.identifier)
+                    removedTriggers += 1
+                } catch {
+                    failedRemovals += 1
+                }
             }
 
             let actionSetMatches = storedActionSets(for: homeIdentifier).filter { $0.name.hasPrefix(prefix) }
             for actionSet in actionSetMatches {
-                actionSets[homeIdentifier]?[actionSet.identifier] = nil
-                removedActionSets += 1
+                do {
+                    try await deleteActionSet(homeIdentifier: homeIdentifier, identifier: actionSet.identifier)
+                    removedActionSets += 1
+                } catch {
+                    failedRemovals += 1
+                }
             }
         }
 
         return HomeKitNamespaceCleanupResult(
             homesVisited: homesVisited,
             triggersRemoved: removedTriggers,
-            actionSetsRemoved: removedActionSets
+            actionSetsRemoved: removedActionSets,
+            failedRemovals: failedRemovals
         )
     }
 
