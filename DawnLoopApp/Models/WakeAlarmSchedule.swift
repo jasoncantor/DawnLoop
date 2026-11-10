@@ -23,7 +23,17 @@ enum SolarEventCalculator {
         isSunrise: Bool,
         calendar: Calendar
     ) -> Date? {
-        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
+        guard coordinate.latitude.isFinite, coordinate.longitude.isFinite,
+              (-90...90).contains(coordinate.latitude),
+              (-180...180).contains(coordinate.longitude) else {
+            return nil
+        }
+
+        // The solar formula uses the Gregorian day of year, regardless of the
+        // calendar selected in the user's regional settings.
+        var solarCalendar = Calendar(identifier: .gregorian)
+        solarCalendar.timeZone = calendar.timeZone
+        let dayOfYear = solarCalendar.ordinality(of: .day, in: .year, for: date) ?? 1
         let lngHour = coordinate.longitude / 15
         let approximateTime = Double(dayOfYear) + ((isSunrise ? 6 : 18) - lngHour) / 24
 
@@ -56,16 +66,25 @@ enum SolarEventCalculator {
 
         let localMeanTime = hourAngle + rightAscension - (0.06571 * approximateTime) - 6.622
         let utcHours = (localMeanTime - lngHour).normalizedHours
-        let localHours = utcHours + (Double(calendar.timeZone.secondsFromGMT(for: date)) / 3600)
 
-        let startOfDay = calendar.startOfDay(for: date)
-        let dayAdjustment = Int(floor(localHours / 24))
-        let secondsIntoDay = Int(round((localHours - Double(dayAdjustment * 24)) * 3600))
+        // utcHours is a clock reading, not a date. A western sunset can be after
+        // UTC midnight and an eastern sunrise before it. Choose the UTC date whose
+        // event actually belongs to the requested local day. Constructing an absolute
+        // UTC instant also avoids adding a stale GMT offset across a DST transition.
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let localDate = solarCalendar.dateComponents([.year, .month, .day], from: date)
+        guard let utcMidnight = utcCalendar.date(from: localDate) else { return nil }
 
-        guard let adjustedDay = calendar.date(byAdding: .day, value: dayAdjustment, to: startOfDay) else {
-            return nil
+        for dayOffset in -1...1 {
+            let candidate = utcMidnight.addingTimeInterval(
+                Double(dayOffset) * 86_400 + (utcHours * 3600).rounded()
+            )
+            if solarCalendar.isDate(candidate, inSameDayAs: date) {
+                return candidate
+            }
         }
-        return calendar.date(byAdding: .second, value: secondsIntoDay, to: adjustedDay)
+        return nil
     }
 }
 

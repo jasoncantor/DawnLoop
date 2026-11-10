@@ -404,26 +404,13 @@ final class AlarmListStore {
     func delete(_ item: AlarmListItem) async {
         cancelBackgroundValidation()
         do {
-            let alarm = await environment.alarmRepository.fetchAlarm(byId: item.id)
-            var cleanupFailed = false
-
-            if let alarm {
-                do {
-                    try await environment.automationGenerationService.removeAutomations(for: alarm)
-                } catch {
-                    cleanupFailed = true
-                    DawnLoopLogger.homeKit.error("Failed to remove HomeKit automations during delete: \(error.localizedDescription)")
-                }
+            if let alarm = await environment.alarmRepository.fetchAlarm(byId: item.id) {
+                try await environment.automationGenerationService.deleteAlarm(alarm)
             }
-
-            try await environment.alarmRepository.deleteAlarm(byId: item.id)
             await refresh()
-
-            if cleanupFailed {
-                alertMessage = "Alarm deleted, but some HomeKit automations may need manual cleanup."
-            }
         } catch {
-            alertMessage = error.localizedDescription
+            await refresh()
+            alertMessage = "Alarm could not be deleted. It has been kept so you can retry removing its HomeKit automations. \(error.localizedDescription)"
         }
     }
 

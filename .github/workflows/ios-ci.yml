@@ -1,0 +1,37 @@
+name: iOS CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator-tests:
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Xcode version
+        run: xcodebuild -version
+      - name: Build and test on an available iPhone simulator
+        # Keep CI on the same commands contributors use locally.
+        run: |
+          ruby -ryaml -e 'exec("bash", "-e", "-o", "pipefail", "-c", YAML.load_file(".factory/services.yaml").fetch("commands").fetch("test"))'
+      - name: Upload simulator test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-test-results
+          path: .derivedData/Logs/Test/
+          if-no-files-found: ignore
+          retention-days: 7

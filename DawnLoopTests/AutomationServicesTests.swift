@@ -655,4 +655,184 @@ final class AutomationServicesTests: XCTestCase {
             try await testService.removeAutomations(for: alarm, markDisabled: false)
         }
     }
+
+    // MARK: - Live HomeKit drift and recoverable cleanup
+
+    private func syncedReliabilityAlarm(timeReference: AlarmTimeReference = .clock) async throws -> WakeAlarm {
+        let alarm = WakeAlarm(
+            name: "Reliability Test",
+            wakeTimeSeconds: 7 * 3600,
+            timeReference: timeReference,
+            durationMinutes: 10,
+            stepCount: 3,
+            colorMode: .brightnessOnly,
+            isEnabled: true,
+            selectedAccessoryIdentifiers: ["test-accessory-living-room-001"],
+            homeIdentifier: "test-home-uuid-001"
+        )
+        try await repository.saveAlarm(alarm, schedule: .weekdays, validationState: .needsSync)
+        try await generationService.syncAlarm(alarm, schedule: .weekdays)
+        return alarm
+    }
+
+    private func assertDriftIsRepairable(_ alarm: WakeAlarm) async throws {
+        let before = await repairService.validateAlarm(alarm, schedule: .weekdays)
+        XCTAssertEqual(before.state, .outOfSync)
+        XCTAssertTrue(before.requiresUserAction)
+        let after = try await repairService.repairAlarm(alarm, schedule: .weekdays)
+        XCTAssertEqual(after.state, .valid)
+    }
+
+    func testValidateAlarm_DetectsTriggerDisabledInHomeAndRepairsIt() async throws {
+        let alarm = try await syncedReliabilityAlarm()
+        let homeID = try XCTUnwrap(alarm.homeIdentifier)
+        let trigger = try XCTUnwrap(controller.storedTriggers(for: homeID).first)
+        _ = try await controller.upsertScheduledTrigger(
+            homeIdentifier: homeID, identifier: trigger.identifier, name: trigger.name,
+            schedule: trigger.schedule, actionSetIdentifier: trigger.actionSetIdentifier,
+            requiredOnAccessoryIdentifiers: [], isEnabled: false
+        )
+        try await assertDriftIsRepairable(alarm)
+        XCTAssertTrue(controller.storedTriggers(for: homeID).allSatisfy(\.isEnabled))
+    }
+
+    func testValidateAlarm_DetectsChangedWeekdaysAndRepairsThem() async throws {
+        let alarm = try await syncedReliabilityAlarm()
+        let homeID = try XCTUnwrap(alarm.homeIdentifier)
+        let trigger = try XCTUnwrap(controller.storedTriggers(for: homeID).first)
+        guard case .calendar(let fireDate, _) = trigger.schedule else {
+            return XCTFail("Expected a clock trigger")
+        }
+        _ = try await controller.upsertScheduledTrigger(
+            homeIdentifier: homeID, identifier: trigger.identifier, name: trigger.name,
+            schedule: .calendar(fireDate: fireDate, weekdays: [1, 7]),
+            actionSetIdentifier: trigger.actionSetIdentifier,
+            requiredOnAccessoryIdentifiers: [], isEnabled: true
+        )
+        try await assertDriftIsRepairable(alarm)
+    }
+
+    func testValidateAlarm_DetectsChangedSolarOffsetAndRepairsIt() async throws {
+        let alarm = try await syncedReliabilityAlarm(timeReference: .sunrise)
+        let homeID = try XCTUnwrap(alarm.homeIdentifier)
+        let trigger = try XCTUnwrap(controller.storedTriggers(for: homeID).first)
+        guard case .significant(let reference, let offset, let weekdays) = trigger.schedule else {
+            return XCTFail("Expected a solar trigger")
+        }
+        _ = try await controller.upsertScheduledTrigger(
+            homeIdentifier: homeID, identifier: trigger.identifier, name: trigger.name,
+            schedule: .significant(reference: reference, offsetMinutes: offset + 30, weekdays: weekdays),
+            actionSetIdentifier: trigger.actionSetIdentifier,
+            requiredOnAccessoryIdentifiers: [], isEnabled: true
+        )
+        try await assertDriftIsRepairable(alarm)
+    }
+
+    func testValidateAlarm_DetectsSceneEditsWithoutLocalBindingChanges() async throws {
+        let alarm = try await syncedReliabilityAlarm()
+        let homeID = try XCTUnwrap(alarm.homeIdentifier)
+        let scene = try XCTUnwrap(controller.storedActionSets(for: homeID).first)
+        let changedRequests = scene.requests.map { request in
+            HomeKitActionRequest(
+                accessoryIdentifier: request.accessoryIdentifier,
+                characteristicType: request.characteristicType,
+                value: request.characteristicType == HMCharacteristicTypeBrightness ? .int(42) : request.value
+            )
+        }
+        _ = try await controller.upsertActionSet(
+            homeIdentifier: homeID, identifier: scene.identifier, name: scene.name, requests: changedRequests
+        )
+        try await assertDriftIsRepairable(alarm)
+        XCTAssertEqual(controller.storedActionSets(for: homeID).first { $0.identifier == scene.identifier }?.requests,
+                       scene.requests)
+    }
+
+    func testDisabledAlarm_FailedCleanupStaysVisibleAndCanBeRepaired() async throws {
+        let alarm = try await syncedReliabilityAlarm()
+        let homeID = try XCTUnwrap(alarm.homeIdentifier)
+        let triggerID = try XCTUnwrap(controller.storedTriggers(for: homeID).first?.identifier)
+        controller.failingTriggerDeletions = [triggerID]
+        try await repository.setAlarmEnabled(alarm, enabled: false)
+        let saved = await repository.fetchAlarm(byId: alarm.id)
+        let disabled = try XCTUnwrap(saved)
+        do {
+            try await generationService.removeAutomations(for: disabled, markDisabled: true)
+            XCTFail("A failed HomeKit deletion must not report success")
+        } catch {
+            XCTAssertTrue(error is AutomationGenerationError)
+        }
+        let summary = await repairService.validateAlarm(disabled, schedule: .weekdays)
+        XCTAssertEqual(summary.state, .outOfSync)
+        XCTAssertTrue(summary.requiresUserAction)
+        let survivors = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
+        XCTAssertEqual(survivors.count, 1)
+        XCTAssertEqual(survivors.first?.triggerIdentifier, triggerID)
+
+        controller.failingTriggerDeletions = []
+        let repaired = try await repairService.repairAlarm(disabled, schedule: .weekdays)
+        XCTAssertEqual(repaired.state, .valid)
+        XCTAssertTrue(controller.storedTriggers(for: homeID).isEmpty)
+        let after = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
+        XCTAssertTrue(after.isEmpty)
+    }
+
+    func testDeleteAlarm_PreservesAlarmAndBindingsUntilCleanupSucceeds() async throws {
+        let alarm = try await syncedReliabilityAlarm()
+        let homeID = try XCTUnwrap(alarm.homeIdentifier)
+        controller.failingTriggerDeletions = Set(controller.storedTriggers(for: homeID).map(\.identifier))
+        do {
+            try await generationService.deleteAlarm(alarm)
+            XCTFail("Deletion must wait for HomeKit cleanup")
+        } catch {
+            XCTAssertTrue(error is AutomationGenerationError)
+        }
+        let retained = await repository.fetchAlarm(byId: alarm.id)
+        XCTAssertNotNil(retained)
+        let bindings = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
+        XCTAssertEqual(bindings.count, alarm.stepCount)
+
+        controller.failingTriggerDeletions = []
+        try await generationService.deleteAlarm(alarm)
+        let deleted = await repository.fetchAlarm(byId: alarm.id)
+        XCTAssertNil(deleted)
+        XCTAssertTrue(controller.storedTriggers(for: homeID).isEmpty)
+    }
+
+    func testReset_FailedCleanupPreservesBindingsForRetry() async throws {
+        let alarm = try await syncedReliabilityAlarm()
+        let homeID = try XCTUnwrap(alarm.homeIdentifier)
+        controller.failingTriggerDeletions = Set(controller.storedTriggers(for: homeID).map(\.identifier))
+        do {
+            _ = try await generationService.resetDawnLoopArtifacts()
+            XCTFail("An incomplete reset must not erase the bindings")
+        } catch {
+            XCTAssertTrue(error is AutomationGenerationError)
+        }
+        let retained = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
+        XCTAssertEqual(retained.count, alarm.stepCount)
+        controller.failingTriggerDeletions = []
+        let summary = try await generationService.resetDawnLoopArtifacts()
+        XCTAssertEqual(summary.bindingsCleared, alarm.stepCount)
+        XCTAssertTrue(controller.storedTriggers(for: homeID).isEmpty)
+        let after = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
+        XCTAssertTrue(after.isEmpty)
+    }
+
+    func testRepair_DuplicateBindingsDoNotCrashOrDeleteActiveObjects() async throws {
+        let alarm = try await syncedReliabilityAlarm()
+        let context = ModelContext(modelContainer)
+        let original = try XCTUnwrap(try context.fetch(FetchDescriptor<AutomationBinding>()).first)
+        context.insert(AutomationBinding(
+            alarmId: alarm.id, stepNumber: original.stepNumber,
+            actionSetIdentifier: original.actionSetIdentifier, triggerIdentifier: original.triggerIdentifier,
+            scheduledTime: original.scheduledTime, brightness: original.brightness
+        ))
+        try context.save()
+        try await assertDriftIsRepairable(alarm)
+        let bindings = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
+        XCTAssertEqual(bindings.count, alarm.stepCount)
+        let homeID = try XCTUnwrap(alarm.homeIdentifier)
+        XCTAssertEqual(controller.storedActionSets(for: homeID).count, alarm.stepCount)
+        XCTAssertEqual(controller.storedTriggers(for: homeID).count, alarm.stepCount)
+    }
 }

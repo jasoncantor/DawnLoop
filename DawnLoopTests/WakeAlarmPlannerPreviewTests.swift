@@ -462,4 +462,71 @@ final class WakeAlarmPlannerPreviewTests: XCTestCase {
         XCTAssertEqual(editorState.previewDegradationExplanation,
                       "Some lights will use warm light instead of color.")
     }
+
+    // MARK: - Solar dates, time zones, and daylight saving time
+
+    func testSolarEvents_StayOnRequestedLocalDateAcrossUTCDateBoundary() throws {
+        let locations: [(String, SolarCoordinate)] = [
+            ("America/Los_Angeles", SolarCoordinate(latitude: 34.0522, longitude: -118.2437)),
+            ("America/New_York", SolarCoordinate(latitude: 40.7128, longitude: -74.0060)),
+            ("Asia/Tokyo", SolarCoordinate(latitude: 35.6762, longitude: 139.6503)),
+            ("Pacific/Auckland", SolarCoordinate(latitude: -36.8485, longitude: 174.7633))
+        ]
+        for (zone, coordinate) in locations {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = try XCTUnwrap(TimeZone(identifier: zone))
+            for month in [1, 6, 12] {
+                let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: month, day: 15, hour: 12)))
+                let sunrise = try XCTUnwrap(SolarEventCalculator.sunrise(on: day, coordinate: coordinate, calendar: calendar))
+                let sunset = try XCTUnwrap(SolarEventCalculator.sunset(on: day, coordinate: coordinate, calendar: calendar))
+                XCTAssertTrue(calendar.isDate(sunrise, inSameDayAs: day), "Sunrise changed date in \(zone), month \(month)")
+                XCTAssertTrue(calendar.isDate(sunset, inSameDayAs: day), "Sunset changed date in \(zone), month \(month)")
+                XCTAssertLessThan(sunrise, sunset)
+            }
+        }
+    }
+
+    func testSolarEvents_AreIndependentOfLookupTimeOnDSTTransitionDays() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let coordinate = SolarCoordinate(latitude: 40.7128, longitude: -74.0060)
+        for (month, day) in [(3, 8), (11, 1)] {
+            let midnight = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: month, day: day)))
+            let noon = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: 12)))
+            let earlySunrise = try XCTUnwrap(SolarEventCalculator.sunrise(on: midnight, coordinate: coordinate, calendar: calendar))
+            let lateSunrise = try XCTUnwrap(SolarEventCalculator.sunrise(on: noon, coordinate: coordinate, calendar: calendar))
+            XCTAssertEqual(earlySunrise, lateSunrise, "DST must not shift sunrise when the preview refreshes")
+            let earlySunset = try XCTUnwrap(SolarEventCalculator.sunset(on: midnight, coordinate: coordinate, calendar: calendar))
+            let lateSunset = try XCTUnwrap(SolarEventCalculator.sunset(on: noon, coordinate: coordinate, calendar: calendar))
+            XCTAssertEqual(earlySunset, lateSunset, "DST must not shift sunset when the preview refreshes")
+        }
+    }
+
+    func testSolarEvents_UseGregorianDayOfYearForAlternateCalendarSettings() throws {
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        var alternate = Calendar(identifier: .islamicCivil)
+        alternate.timeZone = gregorian.timeZone
+        let date = try XCTUnwrap(gregorian.date(from: DateComponents(year: 2026, month: 6, day: 15, hour: 12)))
+        let coordinate = SolarCoordinate(latitude: 40.7128, longitude: -74.0060)
+        let expected = try XCTUnwrap(SolarEventCalculator.sunrise(on: date, coordinate: coordinate, calendar: gregorian))
+        let actual = try XCTUnwrap(SolarEventCalculator.sunrise(on: date, coordinate: coordinate, calendar: alternate))
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testSolarEvents_InvalidCoordinatesAndPolarNightReturnNil() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Europe/Oslo"))
+        let date = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 12, day: 21, hour: 12)))
+        for coordinate in [
+            SolarCoordinate(latitude: .nan, longitude: 0),
+            SolarCoordinate(latitude: 0, longitude: .infinity),
+            SolarCoordinate(latitude: 91, longitude: 0),
+            SolarCoordinate(latitude: 0, longitude: 181),
+            SolarCoordinate(latitude: 69.6492, longitude: 18.9553)
+        ] {
+            XCTAssertNil(SolarEventCalculator.sunrise(on: date, coordinate: coordinate, calendar: calendar))
+            XCTAssertNil(SolarEventCalculator.sunset(on: date, coordinate: coordinate, calendar: calendar))
+        }
+    }
 }
