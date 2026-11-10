@@ -301,6 +301,10 @@ final class AutomationServicesTests: XCTestCase {
         XCTAssertEqual(summary.state, .valid)
         let refetched = await repository.fetchAlarm(byId: alarm.id)
         XCTAssertEqual(refetched?.isEnabled, false, "A fired one-time alarm should turn itself off")
+        let remainingBindings = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
+        XCTAssertTrue(remainingBindings.isEmpty)
+        XCTAssertTrue(controller.storedTriggers(for: "test-home-uuid-001").isEmpty)
+        XCTAssertTrue(controller.storedActionSets(for: "test-home-uuid-001").isEmpty)
     }
 
     func testSyncAlarm_DoesNotGateTriggersOnCurrentLightPowerState() async throws {
@@ -788,6 +792,7 @@ final class AutomationServicesTests: XCTestCase {
         }
         let retained = await repository.fetchAlarm(byId: alarm.id)
         XCTAssertNotNil(retained)
+        XCTAssertEqual(retained?.isEnabled, false, "Repair must not re-arm an alarm the user tried to delete")
         let bindings = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
         XCTAssertEqual(bindings.count, alarm.stepCount)
 
@@ -816,6 +821,25 @@ final class AutomationServicesTests: XCTestCase {
         XCTAssertTrue(controller.storedTriggers(for: homeID).isEmpty)
         let after = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
         XCTAssertTrue(after.isEmpty)
+    }
+
+    func testReset_UnavailableAlarmHomeKeepsBindingsEvenWhenAnotherHomeExists() async throws {
+        let alarm = try await syncedReliabilityAlarm()
+        let originalHomes = await controller.homes()
+        controller.setHomes([HomeSnapshot(
+            id: "other-home", name: "Other Home", roomCount: 0, accessoryCount: 0, homeHubState: .connected
+        )])
+        do {
+            _ = try await generationService.resetDawnLoopArtifacts()
+            XCTFail("Visiting a different Home must not erase inaccessible bindings")
+        } catch {
+            XCTAssertTrue(error is AutomationGenerationError)
+        }
+        let retained = await AutomationBindingService(modelContainer: modelContainer).bindingsForAlarm(alarm.id)
+        XCTAssertEqual(retained.count, alarm.stepCount)
+        controller.setHomes(originalHomes)
+        let summary = try await generationService.resetDawnLoopArtifacts()
+        XCTAssertEqual(summary.bindingsCleared, alarm.stepCount)
     }
 
     func testRepair_DuplicateBindingsDoNotCrashOrDeleteActiveObjects() async throws {

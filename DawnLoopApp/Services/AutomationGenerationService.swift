@@ -326,11 +326,14 @@ final class AutomationGenerationService {
     func deleteAlarm(_ alarm: WakeAlarm) async throws {
         // Keep the alarm and surviving bindings reachable until HomeKit cleanup
         // succeeds. Deleting the local records first would orphan live triggers.
+        // A later repair should finish removal, not re-arm an alarm being deleted.
+        try await alarmRepository.setAlarmEnabled(alarm, enabled: false)
         try await removeAutomations(for: alarm)
         try await alarmRepository.deleteAlarm(byId: alarm.id)
     }
 
     func resetDawnLoopArtifacts() async throws -> DawnLoopHomeKitResetSummary {
+        let availableHomeIDs = Set((await homeKitController.homes()).map(\.id))
         var homesVisited = 0
         var triggersRemoved = 0
         var actionSetsRemoved = 0
@@ -347,8 +350,13 @@ final class AutomationGenerationService {
         let context = ModelContext(modelContainer)
         let bindings = try context.fetch(FetchDescriptor<AutomationBinding>())
         let alarms = await alarmRepository.fetchAllAlarms()
+        let boundAlarmIDs = Set(bindings.map(\.alarmId))
+        let hasUnavailableBoundHome = alarms.contains { alarm in
+            boundAlarmIDs.contains(alarm.id)
+                && alarm.homeIdentifier.map(availableHomeIDs.contains) != true
+        }
 
-        if failedRemovals > 0 || (homesVisited == 0 && !bindings.isEmpty) {
+        if failedRemovals > 0 || hasUnavailableBoundHome || (homesVisited == 0 && !bindings.isEmpty) {
             for alarm in alarms {
                 try await alarmRepository.updateValidationState(
                     for: alarm.id,
